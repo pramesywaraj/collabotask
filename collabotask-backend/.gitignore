@@ -17,6 +17,9 @@ vendor/
 # Go workspace file
 go.work
 
+# Docs
+docs/
+
 # Environment variables
 .env
 .env.local
