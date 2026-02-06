@@ -75,9 +75,9 @@ func Load() (*Config, error) {
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
-			User:     getEnv("DB_USER", "postgres"),
+			User:     getEnv("DB_USER", ""),
 			Password: getEnv("DB_PASSWORD", ""),
-			Name:     getEnv("DB_NAME", "collabotask"),
+			Name:     getEnv("DB_NAME", ""),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 		Log: LogConfig{
