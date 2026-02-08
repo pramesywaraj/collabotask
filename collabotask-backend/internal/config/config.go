@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -14,6 +15,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Log      LogConfig
+	CORS     CORSConfig
 }
 
 type AppConfig struct {
@@ -45,6 +47,14 @@ type DatabaseConfig struct {
 type LogConfig struct {
 	Level  string
 	Format string
+}
+
+type CORSConfig struct {
+	AllowedOrigins   []string
+	AllowedMethods   []string
+	AllowedHeaders   []string
+	AllowCredentials bool
+	MaxAge           int
 }
 
 func getEnv(key, defaultValue string) string {
@@ -85,6 +95,13 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 	return defaultValue
 }
 
+func getEnvStringSlice(key string, defaultValue []string) []string {
+	if value := os.Getenv(key); value != "" {
+		return strings.Split(value, ",")
+	}
+	return defaultValue
+}
+
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
@@ -115,6 +132,13 @@ func Load() (*Config, error) {
 		Log: LogConfig{
 			Level:  getEnv("LOG_LEVEL", "info"),
 			Format: getEnv("LOG_FORMAT", "console"),
+		},
+		CORS: CORSConfig{
+			AllowedOrigins:   getEnvStringSlice("CORS_ALLOWED_ORIGINS", []string{"*"}),
+			AllowedMethods:   getEnvStringSlice("CORS_ALLOWED_METHODS", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+			AllowedHeaders:   getEnvStringSlice("CORS_ALLOWED_HEADERS", []string{"*"}),
+			AllowCredentials: getEnvBool("CORS_ALLOW_CREDENTIALS", true),
+			MaxAge:           getEnvInt("CORS_MAX_AGE", 3600),
 		},
 	}
 
