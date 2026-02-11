@@ -7,12 +7,12 @@ const (
 		RETURNING id, email, name, avatar_url, system_role, created_at, updated_at
 	`
 	getUserByIdQuery = `
-		SELECT id, email, name, avatar_url, system_role, created_at, updated_at
+		SELECT id, email, name, password_hash, avatar_url, system_role, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
 	getUserByEmailQuery = `
-		SELECT id, email, name, avatar_url, system_role, created_at, updated_at
+		SELECT id, email, name, password_hash, avatar_url, system_role, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
