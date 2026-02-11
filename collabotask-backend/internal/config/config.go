@@ -16,6 +16,7 @@ type Config struct {
 	Database DatabaseConfig
 	Log      LogConfig
 	CORS     CORSConfig
+	Auth     AuthConfig
 }
 
 type AppConfig struct {
@@ -55,6 +56,12 @@ type CORSConfig struct {
 	AllowedHeaders   []string
 	AllowCredentials bool
 	MaxAge           int
+}
+
+type AuthConfig struct {
+	JWTSecret     string
+	JWTExpiration time.Duration
+	BcryptCost    int
 }
 
 func getEnv(key, defaultValue string) string {
@@ -140,6 +147,11 @@ func Load() (*Config, error) {
 			AllowCredentials: getEnvBool("CORS_ALLOW_CREDENTIALS", true),
 			MaxAge:           getEnvInt("CORS_MAX_AGE", 3600),
 		},
+		Auth: AuthConfig{
+			JWTSecret:     getEnv("AUTH_JWT_SECRET", ""),
+			JWTExpiration: getEnvDuration("AUTH_JWT_EXPIRATION", 24*time.Hour),
+			BcryptCost:    getEnvInt("AUTH_BCRYPT_COST", 12),
+		},
 	}
 
 	if err := config.Validate(); err != nil {
@@ -155,6 +167,10 @@ func (c *Config) Validate() error {
 	}
 	if c.Database.User == "" {
 		return fmt.Errorf("DB_USER is required")
+	}
+
+	if c.Auth.JWTSecret == "" {
+		return fmt.Errorf("AUTH_JWT_SECRET is required")
 	}
 
 	validEnvs := map[string]bool{
