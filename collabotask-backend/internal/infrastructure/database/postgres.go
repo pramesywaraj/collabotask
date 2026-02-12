@@ -1,4 +1,4 @@
-package postgres
+package database
 
 import (
 	"collabotask/internal/config"
