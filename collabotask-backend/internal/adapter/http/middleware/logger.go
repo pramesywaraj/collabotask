@@ -3,21 +3,29 @@ package middleware
 import (
 	"time"
 
+	"collabotask/pkg/logger"
+
 	"github.com/gin-gonic/gin"
 )
 
-func Logger() gin.HandlerFunc {
+func Logger(log *logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
 		method := c.Request.Method
+		clientIP := c.ClientIP()
 
 		c.Next()
 
-		_ = start
-		_ = path
-		_ = method
+		status := c.Writer.Status()
+		latency := time.Since(start)
 
-		// TODO: plug in real logger here (status, latency, etc.)
+		log.WithFields(map[string]interface{}{
+			"method":    method,
+			"path":      path,
+			"status":    status,
+			"latency":   latency.Milliseconds(),
+			"client_ip": clientIP,
+		}).Info("request")
 	}
 }

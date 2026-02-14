@@ -1,10 +1,45 @@
 package middleware
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+	"strings"
 
-func Auth() gin.HandlerFunc {
+	"collabotask/internal/config"
+	infraauth "collabotask/internal/infrastructure/auth"
+
+	"github.com/gin-gonic/gin"
+)
+
+const ContextUserIDKey = "userID"
+
+func Auth(cfg *config.AuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// TODO: extract JWT from Authorization header, validate, and set userID in context
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "authorization header required",
+			})
+			return
+		}
+
+		const prefix = "Bearer "
+		if !strings.HasPrefix(authHeader, prefix) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "invalid authorization format",
+			})
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, prefix)
+		claims, err := infraauth.ValidateToken(cfg, tokenString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "invalid or expired token",
+			})
+			return
+		}
+
+		c.Set(ContextUserIDKey, claims.UserID)
 		c.Next()
 	}
 }
