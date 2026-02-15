@@ -8,6 +8,7 @@ import (
 	infraauth "collabotask/internal/infrastructure/auth"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 const ContextUserIDKey = "userID"
@@ -42,4 +43,14 @@ func Auth(cfg *config.AuthConfig) gin.HandlerFunc {
 		c.Set(ContextUserIDKey, claims.UserID)
 		c.Next()
 	}
+}
+
+func GetUserID(c *gin.Context) (uuid.UUID, bool) {
+	v, exists := c.Get(ContextUserIDKey)
+	if !exists {
+		return uuid.Nil, false
+	}
+
+	userID, ok := v.(uuid.UUID)
+	return userID, ok
 }
