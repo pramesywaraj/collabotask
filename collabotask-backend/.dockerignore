@@ -45,3 +45,8 @@ tmp/
 temp/
 *.tmp
 *.log
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore

@@ -5,15 +5,15 @@ services:
     image: postgres:16-alpine
     container_name: collabotask-db
     environment:
-      POSTGRES_USER: ${DB_USER:-collabotask}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-collabotask}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-collabotask}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-collabotask} -d ${POSTGRES_DB:-collabotask}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,22 +23,26 @@ services:
   app:
     build:
       context: .
-      dockerfile: docker/dockerfile
+      dockerfile: docker/Dockerfile
     container_name: collabotask-api
     ports:
      - "${SERVER_PORT:-8080}:8080"
     environment:
-      - SERVER_PORT=${SERVER_PORT:-8080}
-      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
-      - SERVER_TIMEOUT=${SERVER_TIMEOUT:-30s}
-      - DB_HOST=${DB_HOST:-postgres}
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_USER=${DB_USER:-username}
-      - DB_PASSWORD=${DB_PASSWORD:-pass}
-      - DB_NAME=${DB_NAME:-collabotask}
-      - DB_SSLMODE=${DB_SSLMODE:-disable}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - LOG_FORMAT=${LOG_FORMAT:-console}
+      APP_ENV: ${APP_ENV:-development}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      SERVER_HOST: ${SERVER_HOST:-0.0.0.0}
+      SERVER_TIMEOUT: ${SERVER_TIMEOUT:-30s}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      DB_NAME: ${DB_NAME:-collabotask}
+      DB_SSLMODE: disable
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-console}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      AUTH_JWT_EXPIRATION: ${AUTH_JWT_EXPIRATION:-24h}
+      AUTH_BCRYPT_COST: ${AUTH_BCRYPT_COST:-12}
     depends_on:
       postgres:
         condition: service_healthy
