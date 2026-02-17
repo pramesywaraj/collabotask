@@ -1,4 +1,4 @@
-package routesr
+package router
 
 import (
 	"collabotask/internal/adapter/http/handler"
