@@ -7,51 +7,23 @@ import (
 	"os/signal"
 	"syscall"
 
-	"collabotask/internal/adapter/http/handler"
-	"collabotask/internal/adapter/http/router"
-	"collabotask/internal/adapter/repository/postgres"
-	"collabotask/internal/config"
 	"collabotask/internal/infrastructure/database"
-	"collabotask/internal/server"
-	"collabotask/internal/usecase/auth"
-	"collabotask/pkg/logger"
+	"collabotask/internal/injection"
 )
 
 func main() {
-	cfg, err := config.Load()
+	app, err := injection.InitializeApp()
 	if err != nil {
-		panic("failed to load config: " + err.Error())
+		panic("failed to initialize app: " + err.Error())
 	}
 
-	log := logger.New(logger.Config{
-		Level:  cfg.Log.Level,
-		Format: cfg.Log.Format,
-	})
-
-	db, err := database.NewDB(cfg)
-	if err != nil {
-		log.Fatal("failed to connect to database: " + err.Error())
-	}
-
-	defer db.Close()
+	cfg := app.Config
+	log := app.Logger
+	srv := app.Server
 
 	if err := database.RunMigrations(cfg); err != nil {
 		log.Fatal("failed to run migrations: " + err.Error())
 	}
-
-	userRepo := postgres.NewUserRepository(db.Pool)
-	authUseCase := auth.NewAuthUseCase(userRepo, &cfg.Auth)
-	authHandler := handler.NewAuthHandler(authUseCase)
-	userHandler := handler.NewUserHandler(authUseCase)
-
-	r := router.New(router.Config{
-		Cfg:         cfg,
-		Log:         log,
-		AuthHandler: authHandler,
-		UserHandler: userHandler,
-	})
-
-	srv := server.New(cfg, r)
 
 	go func() {
 		log.Info("🚀 Server starting on " + cfg.Server.Host + ":" + cfg.Server.Port)
@@ -69,6 +41,7 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
+		app.Cleanup()
 		log.Fatal("server forced to shutdown: " + err.Error())
 	}
 
