@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"collabotask/internal/adapter/http/errors"
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
 	"collabotask/internal/usecase/auth"
@@ -20,7 +21,7 @@ func NewAuthHandler(authUseCase auth.AuthUseCase) *AuthHandler {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req request.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		response.HandleValidationError(c, err)
 		return
 	}
 
@@ -31,24 +32,24 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 	if err != nil {
 		if err.Error() == "email already exists" {
-			c.JSON(http.StatusConflict, response.ErrorResponse{Message: err.Error()})
+			response.GenerateErrorResponse(c, errors.NewAppError(http.StatusConflict, errors.ErrCodeConflict, err.Error()))
 			return
 		}
 
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusConflict, errors.ErrCodeValidation, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, response.AuthResponse{
+	response.GenerateSuccessResponse(c, "User registered successfully", response.AuthResponse{
 		User:  userDTOToResponse(out.User),
 		Token: out.Token,
-	})
+	}, http.StatusCreated)
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req request.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, response.ErrorResponse{Message: err.Error()})
+		response.HandleValidationError(c, err)
 		return
 	}
 
@@ -57,11 +58,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: err.Error()})
+		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusUnauthorized, errors.ErrCodeUnauthorized, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, response.AuthResponse{
+	response.GenerateSuccessResponse(c, "Successfully logged in", response.AuthResponse{
 		User:  userDTOToResponse(out.User),
 		Token: out.Token,
 	})

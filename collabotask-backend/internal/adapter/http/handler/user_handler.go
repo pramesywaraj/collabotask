@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"collabotask/internal/adapter/http/errors"
 	"collabotask/internal/adapter/http/middleware"
 	"collabotask/internal/adapter/http/response"
 	"collabotask/internal/usecase/auth"
@@ -20,17 +21,17 @@ func NewUserHandler(authUseCase auth.AuthUseCase) *UserHandler {
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, response.ErrorResponse{Message: "unauthorized"})
+		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusUnauthorized, errors.ErrCodeUnauthorized, "Unauthorized"))
 		return
 	}
 
 	user, err := h.authUseCase.GetProfile(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response.ErrorResponse{Message: err.Error()})
+		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusInternalServerError, errors.ErrCodeInternal, err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, response.UserResponse{
+	response.GenerateSuccessResponse(c, "Profile retrieved successfully", response.UserResponse{
 		ID:         user.ID,
 		Email:      user.Email,
 		Name:       user.Name,
