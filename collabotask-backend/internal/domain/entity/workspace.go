@@ -15,6 +15,14 @@ type Workspace struct {
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
+type WorkspaceListItem struct {
+	Workspace
+
+	Role        WorkspaceRole `json:"role"`
+	MemberCount uint          `json:"member_count"`
+	BoardCount  uint          `json:"board_count"`
+}
+
 func (Workspace) TableName() string {
 	return "workspaces"
 }

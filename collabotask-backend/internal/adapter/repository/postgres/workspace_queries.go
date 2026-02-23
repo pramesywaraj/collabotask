@@ -3,7 +3,7 @@ package postgres
 const (
 	createWorkspaceQuery = `
 		INSERT INTO workspaces (name, description, owner_id, created_at, updated_at)
-		VALUES ($1, $2, $3)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		RETURNING id, name, description, owner_id, created_at, updated_at
 	`
 	updateWorkspaceQuery = `
@@ -23,8 +23,16 @@ const (
 		WHERE id = $1
 	`
 	getUserWorkspacesQuery = `
-		SELECT w.id, w.name, w.description, w.owner_id, w.created_at, w.updated_at FROM workspaces w
-		INNER JOIN workspace_members wm ON w.id = wm.workspace_id
-		WHERE wm.user_id = $1 ORDER BY w.created_at DESC
+		SELECT
+			w.id, w.name, w.description, w.owner_id, w.created_at, w.updated_at,
+			wm.role AS role,
+			COUNT(DISTINCT wm2.user_id) AS member_count,
+			0::bigint AS board_count
+		FROM workspaces w
+		INNER JOIN workspace_members wm ON w.id = wm.workspace_id AND wm.user_id = $1
+		LEFT JOIN workspace_members wm2 ON w.id = wm2.workspace_id
+		WHERE wm.user_id = $1
+		GROUP BY w.id, w.name, w.description, w.owner_id, w.created_at, w.updated_at, wm.role
+		ORDER BY w.created_at DESC
 	`
 )

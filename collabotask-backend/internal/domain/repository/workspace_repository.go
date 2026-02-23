@@ -13,5 +13,5 @@ type WorkspaceRepository interface {
 	Delete(ctx context.Context, workspaceID uuid.UUID) error
 
 	GetByID(ctx context.Context, workspaceID uuid.UUID) (*entity.Workspace, error)
-	GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.Workspace, error)
+	GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.WorkspaceListItem, error)
 }

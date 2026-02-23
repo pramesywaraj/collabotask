@@ -136,17 +136,19 @@ func (w *WorkspaceRepositoryImpl) GetByID(ctx context.Context, workspaceID uuid.
 	return tempWorkspace, nil
 }
 
-func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.Workspace, error) {
+func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.WorkspaceListItem, error) {
 	rows, err := w.db.Query(ctx, getUserWorkspacesQuery, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user workspaces: %w", err)
 	}
 	defer rows.Close()
 
-	tempWorkspaces := []*entity.Workspace{}
+	tempWorkspaces := []*entity.WorkspaceListItem{}
 	for rows.Next() {
 		var description *string
-		tempWorkspace := &entity.Workspace{}
+		var role string
+		var memberCount, boardCount int64
+		tempWorkspace := &entity.WorkspaceListItem{}
 
 		err := rows.Scan(
 			&tempWorkspace.ID,
@@ -155,12 +157,19 @@ func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID 
 			&tempWorkspace.OwnerID,
 			&tempWorkspace.CreatedAt,
 			&tempWorkspace.UpdatedAt,
+			&role,
+			&memberCount,
+			&boardCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user's workspace: %w", err)
 		}
 
 		tempWorkspace.Description = description
+		tempWorkspace.Role = entity.WorkspaceRole(role)
+		tempWorkspace.MemberCount = uint(memberCount)
+		tempWorkspace.BoardCount = uint(boardCount)
+
 		tempWorkspaces = append(tempWorkspaces, tempWorkspace)
 	}
 
