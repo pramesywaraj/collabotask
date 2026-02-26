@@ -3,6 +3,14 @@ package workspace
 import (
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/domain/repository"
+	"errors"
+)
+
+var (
+	ErrUserNotFound       = errors.New("user not found")
+	ErrUserNotInWorkspace = errors.New("user not in workspace")
+	ErrAlreadyMember      = errors.New("user already in workspace")
+	ErrNotWorkspaceAdmin  = errors.New("requester is not workspace admin")
 )
 
 type WorkspaceUseCaseImpl struct {
