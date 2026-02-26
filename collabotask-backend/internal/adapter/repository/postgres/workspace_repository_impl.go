@@ -58,6 +58,59 @@ func (w *WorkspaceRepositoryImpl) Create(ctx context.Context, workspace *entity.
 	return nil
 }
 
+func (w *WorkspaceRepositoryImpl) CreateWithOwner(ctx context.Context, workspace *entity.Workspace, ownerID uuid.UUID) error {
+	tx, err := w.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin create workspace with owner transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var description *string
+	if workspace.Description != nil && *workspace.Description != "" {
+		description = workspace.Description
+	}
+
+	err = tx.QueryRow(
+		ctx,
+		createWorkspaceQuery,
+		workspace.Name,
+		description,
+		workspace.OwnerID,
+	).Scan(
+		&workspace.ID,
+		&workspace.Name,
+		&workspace.Description,
+		&workspace.OwnerID,
+		&workspace.CreatedAt,
+		&workspace.UpdatedAt,
+	)
+
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return fmt.Errorf("workspace constraint violation")
+			}
+		}
+		return fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, createWorkspaceMemberQuery, workspace.ID, ownerID, entity.WorkspaceRoleAdmin)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("user already in workspace")
+		}
+		return fmt.Errorf("failed to add owner to workspace: %w", err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (w *WorkspaceRepositoryImpl) Update(ctx context.Context, workspace *entity.Workspace) error {
 	var name *string
 	if workspace.Name != "" {
