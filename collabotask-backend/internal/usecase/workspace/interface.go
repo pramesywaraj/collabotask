@@ -9,29 +9,29 @@ import (
 )
 
 type WorkspaceDTO struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description *string   `json:"description,omitempty"`
-	OwnerID     uuid.UUID `json:"owner_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID
+	Name        string
+	Description *string
+	OwnerID     uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type WorkspaceWithMetaDTO struct {
 	WorkspaceDTO
 
-	MemberCount uint                 `json:"member_count"`
-	BoardCount  uint                 `json:"board_count"`
-	Role        entity.WorkspaceRole `json:"role"`
+	MemberCount uint
+	BoardCount  uint
+	Role        entity.WorkspaceRole
 }
 
 type WorkspaceMemberDTO struct {
-	UserID    uuid.UUID            `json:"id"`
-	Email     string               `json:"email"`
-	Name      string               `json:"name"`
-	AvatarURL *string              `json:"avatar_url,omitempty"`
-	Role      entity.WorkspaceRole `json:"role"`
-	JoinedAt  time.Time            `json:"joined_at"`
+	UserID    uuid.UUID
+	Email     string
+	Name      string
+	AvatarURL *string
+	Role      entity.WorkspaceRole
+	JoinedAt  time.Time
 }
 
 type CreateWorkspaceInput struct {
@@ -51,7 +51,7 @@ type InviteMemberInput struct {
 }
 
 type InviteMemberOutput struct {
-	Message string `json:"message"`
+	Message string
 }
 
 type ListWorkspacesInput struct {
