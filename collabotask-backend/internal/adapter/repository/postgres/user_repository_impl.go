@@ -22,9 +22,9 @@ func NewUserRepository(db *pgxpool.Pool) repository.UserRepository {
 }
 
 func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
-	var avatarUrl *string
+	var avatarURL *string
 	if user.AvatarURL != nil && *user.AvatarURL != "" {
-		avatarUrl = user.AvatarURL
+		avatarURL = user.AvatarURL
 	}
 
 	err := r.db.QueryRow(
@@ -34,7 +34,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) erro
 		user.PasswordHash,
 		user.Name,
 		user.SystemRole,
-		avatarUrl,
+		avatarURL,
 	).Scan(
 		&user.ID,
 		&user.Email,
@@ -61,14 +61,14 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) erro
 
 func (r *UserRepositoryImpl) GetById(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	user := &entity.User{}
-	var avatarUrl *string
+	var avatarURL *string
 
 	err := r.db.QueryRow(ctx, getUserByIdQuery, id).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
 		&user.PasswordHash,
-		&avatarUrl,
+		&avatarURL,
 		&user.SystemRole,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -81,7 +81,7 @@ func (r *UserRepositoryImpl) GetById(ctx context.Context, id uuid.UUID) (*entity
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
 	}
 
-	user.AvatarURL = avatarUrl
+	user.AvatarURL = avatarURL
 	return user, nil
 }
 
@@ -99,13 +99,13 @@ func (r *UserRepositoryImpl) GetByIds(ctx context.Context, ids []uuid.UUID) (map
 	users := make(map[uuid.UUID]*entity.User, len(ids))
 	for rows.Next() {
 		user := &entity.User{}
-		var avatarUrl *string
+		var avatarURL *string
 
 		err := rows.Scan(
 			&user.ID,
 			&user.Email,
 			&user.Name,
-			&avatarUrl,
+			&avatarURL,
 			&user.SystemRole,
 			&user.CreatedAt,
 			&user.UpdatedAt,
@@ -114,7 +114,7 @@ func (r *UserRepositoryImpl) GetByIds(ctx context.Context, ids []uuid.UUID) (map
 			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
 
-		user.AvatarURL = avatarUrl
+		user.AvatarURL = avatarURL
 		users[user.ID] = user
 	}
 
@@ -127,14 +127,14 @@ func (r *UserRepositoryImpl) GetByIds(ctx context.Context, ids []uuid.UUID) (map
 
 func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	user := &entity.User{}
-	var avatarUrl *string
+	var avatarURL *string
 
 	err := r.db.QueryRow(ctx, getUserByEmailQuery, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
 		&user.PasswordHash,
-		&avatarUrl,
+		&avatarURL,
 		&user.SystemRole,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -147,19 +147,19 @@ func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*ent
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
-	user.AvatarURL = avatarUrl
+	user.AvatarURL = avatarURL
 	return user, nil
 }
 
 func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) error {
-	var avatarUrl *string
+	var avatarURL *string
 	if user.AvatarURL != nil && *user.AvatarURL != "" {
-		avatarUrl = user.AvatarURL
+		avatarURL = user.AvatarURL
 	}
 
 	var email *string
 	if user.Email != "" {
-		email = &user.Name
+		email = &user.Email
 	}
 
 	var name *string
@@ -177,7 +177,7 @@ func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) erro
 		updateUserQuery,
 		email,
 		name,
-		avatarUrl,
+		avatarURL,
 		passwordHash,
 		user.UpdatedAt,
 		user.ID,
@@ -232,13 +232,13 @@ func (r *UserRepositoryImpl) List(ctx context.Context, limit, offset int) ([]*en
 	users := []*entity.User{}
 	for rows.Next() {
 		user := &entity.User{}
-		var avatarUrl *string
+		var avatarURL *string
 
 		err := rows.Scan(
 			&user.ID,
 			&user.Email,
 			&user.Name,
-			&avatarUrl,
+			&avatarURL,
 			&user.SystemRole,
 			&user.CreatedAt,
 			&user.UpdatedAt,
@@ -247,7 +247,7 @@ func (r *UserRepositoryImpl) List(ctx context.Context, limit, offset int) ([]*en
 			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
 
-		user.AvatarURL = avatarUrl
+		user.AvatarURL = avatarURL
 		users = append(users, user)
 	}
 

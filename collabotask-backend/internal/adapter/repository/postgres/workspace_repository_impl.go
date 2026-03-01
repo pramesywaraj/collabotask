@@ -166,15 +166,15 @@ func (w *WorkspaceRepositoryImpl) Delete(ctx context.Context, workspaceID uuid.U
 
 func (w *WorkspaceRepositoryImpl) GetByID(ctx context.Context, workspaceID uuid.UUID) (*entity.Workspace, error) {
 	var description *string
-	tempWorkspace := &entity.Workspace{}
+	workspace := &entity.Workspace{}
 
 	err := w.db.QueryRow(ctx, getWorkspaceByIdQuery, workspaceID).Scan(
-		&tempWorkspace.ID,
-		&tempWorkspace.Name,
+		&workspace.ID,
+		&workspace.Name,
 		&description,
-		&tempWorkspace.OwnerID,
-		&tempWorkspace.CreatedAt,
-		&tempWorkspace.UpdatedAt,
+		&workspace.OwnerID,
+		&workspace.CreatedAt,
+		&workspace.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -184,9 +184,9 @@ func (w *WorkspaceRepositoryImpl) GetByID(ctx context.Context, workspaceID uuid.
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	tempWorkspace.Description = description
+	workspace.Description = description
 
-	return tempWorkspace, nil
+	return workspace, nil
 }
 
 func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.WorkspaceListItem, error) {
@@ -196,20 +196,20 @@ func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID 
 	}
 	defer rows.Close()
 
-	tempWorkspaces := []*entity.WorkspaceListItem{}
+	workspaces := []*entity.WorkspaceListItem{}
 	for rows.Next() {
 		var description *string
 		var role string
 		var memberCount, boardCount int64
-		tempWorkspace := &entity.WorkspaceListItem{}
+		workspace := &entity.WorkspaceListItem{}
 
 		err := rows.Scan(
-			&tempWorkspace.ID,
-			&tempWorkspace.Name,
+			&workspace.ID,
+			&workspace.Name,
 			&description,
-			&tempWorkspace.OwnerID,
-			&tempWorkspace.CreatedAt,
-			&tempWorkspace.UpdatedAt,
+			&workspace.OwnerID,
+			&workspace.CreatedAt,
+			&workspace.UpdatedAt,
 			&role,
 			&memberCount,
 			&boardCount,
@@ -218,17 +218,17 @@ func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID 
 			return nil, fmt.Errorf("failed to scan user's workspace: %w", err)
 		}
 
-		tempWorkspace.Description = description
-		tempWorkspace.Role = entity.WorkspaceRole(role)
-		tempWorkspace.MemberCount = uint(memberCount)
-		tempWorkspace.BoardCount = uint(boardCount)
+		workspace.Description = description
+		workspace.Role = entity.WorkspaceRole(role)
+		workspace.MemberCount = uint(memberCount)
+		workspace.BoardCount = uint(boardCount)
 
-		tempWorkspaces = append(tempWorkspaces, tempWorkspace)
+		workspaces = append(workspaces, workspace)
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating user's workspaces: %w", err)
 	}
 
-	return tempWorkspaces, nil
+	return workspaces, nil
 }
