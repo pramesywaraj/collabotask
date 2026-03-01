@@ -11,6 +11,11 @@ const (
 		FROM users
 		WHERE id = $1
 	`
+	getUsersByIdsQuery = `
+		SELECT id, email, name, avatar_url, system_role, created_at, updated_at
+		FROM users
+		WHERE id = ANY($1::uuid[])
+	`
 	getUserByEmailQuery = `
 		SELECT id, email, name, password_hash, avatar_url, system_role, created_at, updated_at
 		FROM users

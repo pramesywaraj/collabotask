@@ -85,6 +85,46 @@ func (r *UserRepositoryImpl) GetById(ctx context.Context, id uuid.UUID) (*entity
 	return user, nil
 }
 
+func (r *UserRepositoryImpl) GetByIds(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*entity.User, error) {
+	if len(ids) == 0 {
+		return map[uuid.UUID]*entity.User{}, nil
+	}
+
+	rows, err := r.db.Query(ctx, getUsersByIdsQuery, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get users by ids: %w", err)
+	}
+	defer rows.Close()
+
+	users := make(map[uuid.UUID]*entity.User, len(ids))
+	for rows.Next() {
+		user := &entity.User{}
+		var avatarUrl *string
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Email,
+			&user.Name,
+			&avatarUrl,
+			&user.SystemRole,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+
+		user.AvatarURL = avatarUrl
+		users[user.ID] = user
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
 func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	user := &entity.User{}
 	var avatarUrl *string
