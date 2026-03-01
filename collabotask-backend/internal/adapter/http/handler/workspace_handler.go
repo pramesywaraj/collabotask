@@ -45,17 +45,29 @@ func workspaceWithMetaDTOToResponse(d workspace.WorkspaceWithMetaDTO) response.W
 	}
 }
 
-//TODO: Need to review later, whether will be used or not
-// func workspaceMemberDTOToResponse(d workspace.WorkspaceMemberDTO) response.WorkspaceMemberResponse {
-// 	return response.WorkspaceMemberResponse{
-// 		UserID:    d.UserID,
-// 		Email:     d.Email,
-// 		Name:      d.Name,
-// 		AvatarURL: d.AvatarURL,
-// 		Role:      d.Role,
-// 		JoinedAt:  d.JoinedAt,
-// 	}
-// }
+func workspaceMemberDTOToResponse(d workspace.WorkspaceMemberDTO) response.WorkspaceMemberResponse {
+	return response.WorkspaceMemberResponse{
+		UserID:    d.UserID,
+		Email:     d.Email,
+		Name:      d.Name,
+		AvatarURL: d.AvatarURL,
+		Role:      d.Role,
+		JoinedAt:  d.JoinedAt,
+	}
+}
+
+func workspaceDetailDTOToResponse(d workspace.WorkspaceDetailDTO) response.WorkspaceDetailResponse {
+	members := make([]response.WorkspaceMemberResponse, 0, len(d.Members))
+	for _, member := range d.Members {
+		members = append(members, workspaceMemberDTOToResponse(member))
+	}
+
+	return response.WorkspaceDetailResponse{
+		WorkspaceResponse: workspaceDTOToResponse(d.WorkspaceDTO),
+		UserRole:          d.UserRole,
+		Members:           members,
+	}
+}
 
 func parseUUIDParams(ctx *gin.Context, param string) (uuid.UUID, bool) {
 	s := ctx.Param(param)
@@ -231,4 +243,51 @@ func (wh *WorkspaceHandler) RemoveMember(ctx *gin.Context) {
 	}
 
 	response.GenerateSuccessResponse(ctx, "Member removed successfully", nil)
+}
+
+func (wh *WorkspaceHandler) GetWorkspaceDetail(ctx *gin.Context) {
+	userID, ok := checkUserID(ctx)
+	if !ok {
+		return
+	}
+
+	workspaceID, ok := parseUUIDParams(ctx, "workspace_id")
+	if !ok {
+		response.GenerateErrorResponse(
+			ctx,
+			apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, "Invalid workspace id"),
+		)
+		return
+	}
+
+	input := workspace.WorkspaceDetailInput{
+		RequesterID: userID,
+		WorkspaceID: workspaceID,
+	}
+
+	out, err := wh.workspaceUseCase.WorkspaceDetail(
+		ctx.Request.Context(),
+		input,
+	)
+	if err != nil {
+		var validationErrs validator.ValidationErrors
+		if errors.As(err, &validationErrs) {
+			response.HandleValidationError(ctx, err)
+			return
+		}
+
+		switch {
+		case errors.Is(err, workspace.ErrUserNotInWorkspace):
+			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
+		case errors.Is(err, workspace.ErrWorkspaceNotFound):
+			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
+		case errors.Is(err, workspace.ErrUserNotFound):
+			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
+		default:
+			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
+		}
+		return
+	}
+
+	response.GenerateSuccessResponse(ctx, "Workspace detail successfully fetched", workspaceDetailDTOToResponse(out.Workspace))
 }

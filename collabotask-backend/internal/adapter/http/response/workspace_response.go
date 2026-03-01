@@ -32,3 +32,9 @@ type WorkspaceMemberResponse struct {
 	Role      entity.WorkspaceRole `json:"role"`
 	JoinedAt  time.Time            `json:"joined_at"`
 }
+
+type WorkspaceDetailResponse struct {
+	WorkspaceResponse
+	UserRole entity.WorkspaceRole      `json:"user_role"`
+	Members  []WorkspaceMemberResponse `json:"members"`
+}

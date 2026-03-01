@@ -43,6 +43,7 @@ func New(cfg Config) *gin.Engine {
 	{
 		workspaces.POST("", cfg.WorkspaceHandler.CreateWorkspace)
 		workspaces.GET("", cfg.WorkspaceHandler.ListWorkspaces)
+		workspaces.GET("/:workspace_id", cfg.WorkspaceHandler.GetWorkspaceDetail)
 		workspaces.POST("/:workspace_id/member/invite", cfg.WorkspaceHandler.InviteMember)
 		workspaces.DELETE("/:workspace_id/member/remove/:user_id", cfg.WorkspaceHandler.RemoveMember)
 	}

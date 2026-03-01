@@ -34,6 +34,13 @@ type WorkspaceMemberDTO struct {
 	JoinedAt  time.Time
 }
 
+type WorkspaceDetailDTO struct {
+	WorkspaceDTO
+
+	UserRole entity.WorkspaceRole
+	Members  []WorkspaceMemberDTO
+}
+
 type CreateWorkspaceInput struct {
 	OwnerID     uuid.UUID `validate:"required"`
 	Name        string    `validate:"required,min=2,max=255"`
@@ -42,6 +49,15 @@ type CreateWorkspaceInput struct {
 
 type CreateWorkspaceOutput struct {
 	Workspace WorkspaceDTO
+}
+
+type WorkspaceDetailInput struct {
+	RequesterID uuid.UUID `validate:"required"`
+	WorkspaceID uuid.UUID `validate:"required"`
+}
+
+type WorkspaceDetailOutput struct {
+	Workspace WorkspaceDetailDTO
 }
 
 type InviteMemberInput struct {
@@ -70,6 +86,7 @@ type RemoveMemberInput struct {
 
 type WorkspaceUseCase interface {
 	CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error)
+	WorkspaceDetail(ctx context.Context, input WorkspaceDetailInput) (*WorkspaceDetailOutput, error)
 	InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error)
 	ListWorkspaces(ctx context.Context, input ListWorkspacesInput) (*ListWorkspacesOutput, error)
 	RemoveMember(ctx context.Context, input RemoveMemberInput) error
