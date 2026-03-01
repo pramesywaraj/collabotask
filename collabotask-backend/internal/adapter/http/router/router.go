@@ -10,10 +10,11 @@ import (
 )
 
 type Config struct {
-	Cfg         *config.Config
-	Log         *logger.Logger
-	AuthHandler *handler.AuthHandler
-	UserHandler *handler.UserHandler
+	Cfg              *config.Config
+	Log              *logger.Logger
+	AuthHandler      *handler.AuthHandler
+	UserHandler      *handler.UserHandler
+	WorkspaceHandler *handler.WorkspaceHandler
 }
 
 func New(cfg Config) *gin.Engine {
@@ -35,6 +36,15 @@ func New(cfg Config) *gin.Engine {
 	user.Use(middleware.Auth(&cfg.Cfg.Auth))
 	{
 		user.GET("/profile", cfg.UserHandler.GetProfile)
+	}
+
+	workspaces := routes.Group("/workspace")
+	workspaces.Use(middleware.Auth(&cfg.Cfg.Auth))
+	{
+		workspaces.POST("", cfg.WorkspaceHandler.CreateWorkspace)
+		workspaces.GET("", cfg.WorkspaceHandler.ListWorkspaces)
+		workspaces.POST("/:workspace_id/member/invite", cfg.WorkspaceHandler.InviteMember)
+		workspaces.DELETE("/:workspace_id/member/remove/:user_id", cfg.WorkspaceHandler.RemoveMember)
 	}
 
 	return routes
