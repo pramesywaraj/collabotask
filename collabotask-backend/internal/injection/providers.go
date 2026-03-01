@@ -11,6 +11,7 @@ import (
 	"collabotask/internal/infrastructure/database"
 	"collabotask/internal/server"
 	"collabotask/internal/usecase/auth"
+	"collabotask/internal/usecase/workspace"
 	"collabotask/pkg/logger"
 )
 
@@ -34,9 +35,26 @@ func ProvideUserRepository(db *database.DB) repository.UserRepository {
 	return postgres.NewUserRepository(db.Pool)
 }
 
+func ProvideWorkspaceRepository(db *database.DB) repository.WorkspaceRepository {
+	return postgres.NewWorkspaceRepository(db.Pool)
+}
+
+func ProvideWorkspaceMemberRepository(db *database.DB) repository.WorkspaceMemberRepository {
+	return postgres.NewWorkspaceMemberRepository(db.Pool)
+}
+
 // UseCase
 func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) auth.AuthUseCase {
 	return auth.NewAuthUseCase(userRepo, &cfg.Auth)
+}
+
+func ProvideWorkspaceUseCase(
+	workspaceRepo repository.WorkspaceRepository,
+	workspaceMemberRepo repository.WorkspaceMemberRepository,
+	userRepo repository.UserRepository,
+
+) workspace.WorkspaceUseCase {
+	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo)
 }
 
 // Handler
@@ -48,18 +66,24 @@ func ProvideUserHandler(authUseCase auth.AuthUseCase) *handler.UserHandler {
 	return handler.NewUserHandler(authUseCase)
 }
 
+func ProvideWorkspaceHandler(workspaceUseCase workspace.WorkspaceUseCase) *handler.WorkspaceHandler {
+	return handler.NewWorkspaceHandler(workspaceUseCase)
+}
+
 // Router
 func ProvideRouter(
 	cfg *config.Config,
 	log *logger.Logger,
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
+	workspaceHandler *handler.WorkspaceHandler,
 ) *gin.Engine {
 	return router.New(router.Config{
-		Cfg:         cfg,
-		Log:         log,
-		AuthHandler: authHandler,
-		UserHandler: userHandler,
+		Cfg:              cfg,
+		Log:              log,
+		AuthHandler:      authHandler,
+		UserHandler:      userHandler,
+		WorkspaceHandler: workspaceHandler,
 	})
 }
 

@@ -24,11 +24,22 @@ var (
 	ConfigSet     = wire.NewSet(ProvideConfig)
 	LoggerSet     = wire.NewSet(ProvideLogger)
 	DBSet         = wire.NewSet(ProvideDB, ProvideCleanup)
-	RepositorySet = wire.NewSet(ProvideUserRepository)
-	UseCaseSet    = wire.NewSet(ProvideAuthUseCase)
-	HandlerSet    = wire.NewSet(ProvideAuthHandler, ProvideUserHandler)
-	RouterSet     = wire.NewSet(ProvideRouter)
-	ServerSet     = wire.NewSet(ProvideServer)
+	RepositorySet = wire.NewSet(
+		ProvideUserRepository,
+		ProvideWorkspaceRepository,
+		ProvideWorkspaceMemberRepository,
+	)
+	UseCaseSet = wire.NewSet(
+		ProvideAuthUseCase,
+		ProvideWorkspaceUseCase,
+	)
+	HandlerSet = wire.NewSet(
+		ProvideAuthHandler,
+		ProvideUserHandler,
+		ProvideWorkspaceHandler,
+	)
+	RouterSet = wire.NewSet(ProvideRouter)
+	ServerSet = wire.NewSet(ProvideServer)
 )
 
 func InitializeApp() (*App, error) {

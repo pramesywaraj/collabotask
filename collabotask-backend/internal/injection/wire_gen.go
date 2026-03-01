@@ -30,7 +30,11 @@ func InitializeApp() (*App, error) {
 	authUseCase := ProvideAuthUseCase(userRepository, config)
 	authHandler := ProvideAuthHandler(authUseCase)
 	userHandler := ProvideUserHandler(authUseCase)
-	engine := ProvideRouter(config, logger, authHandler, userHandler)
+	workspaceRepository := ProvideWorkspaceRepository(db)
+	workspaceMemberRepository := ProvideWorkspaceMemberRepository(db)
+	workspaceUseCase := ProvideWorkspaceUseCase(workspaceRepository, workspaceMemberRepository, userRepository)
+	workspaceHandler := ProvideWorkspaceHandler(workspaceUseCase)
+	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler)
 	server := ProvideServer(config, engine)
 	v := ProvideCleanup(db)
 	app := &App{
@@ -57,9 +61,20 @@ var (
 	ConfigSet     = wire.NewSet(ProvideConfig)
 	LoggerSet     = wire.NewSet(ProvideLogger)
 	DBSet         = wire.NewSet(ProvideDB, ProvideCleanup)
-	RepositorySet = wire.NewSet(ProvideUserRepository)
-	UseCaseSet    = wire.NewSet(ProvideAuthUseCase)
-	HandlerSet    = wire.NewSet(ProvideAuthHandler, ProvideUserHandler)
-	RouterSet     = wire.NewSet(ProvideRouter)
-	ServerSet     = wire.NewSet(ProvideServer)
+	RepositorySet = wire.NewSet(
+		ProvideUserRepository,
+		ProvideWorkspaceRepository,
+		ProvideWorkspaceMemberRepository,
+	)
+	UseCaseSet = wire.NewSet(
+		ProvideAuthUseCase,
+		ProvideWorkspaceUseCase,
+	)
+	HandlerSet = wire.NewSet(
+		ProvideAuthHandler,
+		ProvideUserHandler,
+		ProvideWorkspaceHandler,
+	)
+	RouterSet = wire.NewSet(ProvideRouter)
+	ServerSet = wire.NewSet(ProvideServer)
 )
