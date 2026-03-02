@@ -2,7 +2,7 @@ package handler
 
 import (
 	apperrors "collabotask/internal/adapter/http/errors"
-	"collabotask/internal/adapter/http/middleware"
+	"collabotask/internal/adapter/http/helper"
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
 	"collabotask/internal/usecase/workspace"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 )
 
 type WorkspaceHandler struct {
@@ -69,28 +68,8 @@ func workspaceDetailDTOToResponse(d workspace.WorkspaceDetailDTO) response.Works
 	}
 }
 
-func parseUUIDParams(ctx *gin.Context, param string) (uuid.UUID, bool) {
-	s := ctx.Param(param)
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return uuid.Nil, false
-	}
-
-	return id, true
-}
-
-func checkUserID(ctx *gin.Context) (uuid.UUID, bool) {
-	userID, ok := middleware.GetUserID(ctx)
-	if !ok {
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, "Unauthorized"))
-		return uuid.Nil, false
-	}
-
-	return userID, ok
-}
-
 func (wh *WorkspaceHandler) CreateWorkspace(ctx *gin.Context) {
-	userID, ok := checkUserID(ctx)
+	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
 	}
@@ -128,7 +107,7 @@ func (wh *WorkspaceHandler) CreateWorkspace(ctx *gin.Context) {
 }
 
 func (wh *WorkspaceHandler) ListWorkspaces(ctx *gin.Context) {
-	userID, ok := checkUserID(ctx)
+	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
 	}
@@ -152,12 +131,12 @@ func (wh *WorkspaceHandler) ListWorkspaces(ctx *gin.Context) {
 }
 
 func (wh *WorkspaceHandler) InviteMember(ctx *gin.Context) {
-	userID, ok := checkUserID(ctx)
+	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
 	}
 
-	workspaceID, ok := parseUUIDParams(ctx, "workspace_id")
+	workspaceID, ok := helper.ParseUUIDParams(ctx, "workspace_id")
 	if !ok {
 		response.GenerateErrorResponse(
 			ctx,
@@ -203,18 +182,18 @@ func (wh *WorkspaceHandler) InviteMember(ctx *gin.Context) {
 }
 
 func (wh *WorkspaceHandler) RemoveMember(ctx *gin.Context) {
-	userID, ok := checkUserID(ctx)
+	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
 	}
 
-	workspaceID, ok := parseUUIDParams(ctx, "workspace_id")
+	workspaceID, ok := helper.ParseUUIDParams(ctx, "workspace_id")
 	if !ok {
 		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, "Invalid workspace id"))
 		return
 	}
 
-	memberUserID, ok := parseUUIDParams(ctx, "user_id")
+	memberUserID, ok := helper.ParseUUIDParams(ctx, "user_id")
 	if !ok {
 		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, "Invalid user id"))
 		return
@@ -246,12 +225,12 @@ func (wh *WorkspaceHandler) RemoveMember(ctx *gin.Context) {
 }
 
 func (wh *WorkspaceHandler) GetWorkspaceDetail(ctx *gin.Context) {
-	userID, ok := checkUserID(ctx)
+	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
 	}
 
-	workspaceID, ok := parseUUIDParams(ctx, "workspace_id")
+	workspaceID, ok := helper.ParseUUIDParams(ctx, "workspace_id")
 	if !ok {
 		response.GenerateErrorResponse(
 			ctx,

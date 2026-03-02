@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"collabotask/internal/config"
@@ -15,9 +16,9 @@ func CORS(cfg *config.CORSConfig) gin.HandlerFunc {
 		origin := c.GetHeader("Origin")
 
 		if len(cfg.AllowedOrigins) > 0 {
-			if contains(cfg.AllowedOrigins, "*") {
+			if slices.Contains(cfg.AllowedOrigins, "*") {
 				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			} else if origin != "" && contains(cfg.AllowedOrigins, origin) {
+			} else if origin != "" && slices.Contains(cfg.AllowedOrigins, origin) {
 				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			} else if len(cfg.AllowedOrigins) > 0 {
 				c.Writer.Header().Set("Access-Control-Allow-Origin", cfg.AllowedOrigins[0])
@@ -44,14 +45,4 @@ func CORS(cfg *config.CORSConfig) gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-func contains(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-
-	return false
 }
