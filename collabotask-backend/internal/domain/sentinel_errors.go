@@ -15,4 +15,7 @@ var (
 	ErrNotWorkspaceAdmin    = errors.New("requester is not workspace admin")
 	ErrWorkspaceNotFound    = errors.New("workspace not found")
 	ErrCannotRemoveYourself = errors.New("cannot remove yourself")
+
+	// Validation
+	ErrConstraintViolation = errors.New("constraint violation")
 )

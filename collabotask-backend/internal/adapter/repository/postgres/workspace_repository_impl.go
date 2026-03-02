@@ -92,7 +92,7 @@ func (w *WorkspaceRepositoryImpl) CreateWithOwner(ctx context.Context, workspace
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return fmt.Errorf("workspace constraint violation")
+				return domain.ErrConstraintViolation
 			}
 		}
 		return fmt.Errorf("failed to create workspace: %w", err)
@@ -102,7 +102,7 @@ func (w *WorkspaceRepositoryImpl) CreateWithOwner(ctx context.Context, workspace
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return fmt.Errorf("user already in workspace")
+			return domain.ErrAlreadyMember
 		}
 		return fmt.Errorf("failed to add owner to workspace: %w", err)
 	}
