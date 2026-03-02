@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/domain/repository"
 	"context"
@@ -144,7 +145,7 @@ func (w *WorkspaceRepositoryImpl) Update(ctx context.Context, workspace *entity.
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("workspace not found")
+			return domain.ErrWorkspaceNotFound
 		}
 
 		return fmt.Errorf("failed to update workspace: %w", err)
@@ -160,7 +161,7 @@ func (w *WorkspaceRepositoryImpl) Delete(ctx context.Context, workspaceID uuid.U
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("workspace not found")
+		return domain.ErrWorkspaceNotFound
 	}
 
 	return nil
@@ -180,7 +181,7 @@ func (w *WorkspaceRepositoryImpl) GetByID(ctx context.Context, workspaceID uuid.
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("workspace not found")
+			return nil, domain.ErrWorkspaceNotFound
 		}
 
 		return nil, fmt.Errorf("failed to get workspace: %w", err)

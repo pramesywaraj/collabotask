@@ -2,11 +2,13 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"collabotask/internal/config"
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/domain/repository"
 	infraauth "collabotask/internal/infrastructure/auth"
@@ -42,7 +44,7 @@ func (u *AuthUseCaseImpl) Register(ctx context.Context, input RegisterInput) (*R
 		return nil, fmt.Errorf("failed to check email: %w", err)
 	}
 	if exists {
-		return nil, fmt.Errorf("email already exists")
+		return nil, domain.ErrEmailAlreadyExists
 	}
 
 	hash, err := infraauth.HashPassword(u.authCfg, input.Password)
@@ -58,6 +60,9 @@ func (u *AuthUseCaseImpl) Register(ctx context.Context, input RegisterInput) (*R
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
+		if errors.Is(err, domain.ErrEmailAlreadyExists) {
+			return nil, domain.ErrEmailAlreadyExists
+		}
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -79,11 +84,11 @@ func (u *AuthUseCaseImpl) Login(ctx context.Context, input LoginInput) (*LoginOu
 
 	user, err := u.userRepo.GetByEmail(ctx, strings.TrimSpace(strings.ToLower(input.Email)))
 	if err != nil {
-		return nil, fmt.Errorf("invalid email or password")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	if !infraauth.CheckPassword(input.Password, user.PasswordHash) {
-		return nil, fmt.Errorf("invalid email or password")
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	token, err := infraauth.GenerateToken(u.authCfg, user.ID, string(user.SystemRole))
@@ -104,7 +109,7 @@ func (u *AuthUseCaseImpl) GetProfile(ctx context.Context, userID uuid.UUID) (*Us
 	}
 
 	if user == nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, domain.ErrUserNotFound
 	}
 
 	result := userToDTO(user)

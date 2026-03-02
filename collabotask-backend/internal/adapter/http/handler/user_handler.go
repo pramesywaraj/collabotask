@@ -1,10 +1,12 @@
 package handler
 
 import (
-	"collabotask/internal/adapter/http/errors"
+	apperrors "collabotask/internal/adapter/http/errors"
 	"collabotask/internal/adapter/http/middleware"
 	"collabotask/internal/adapter/http/response"
+	"collabotask/internal/domain"
 	"collabotask/internal/usecase/auth"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,13 +23,17 @@ func NewUserHandler(authUseCase auth.AuthUseCase) *UserHandler {
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
-		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusUnauthorized, errors.ErrCodeUnauthorized, "Unauthorized"))
+		response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, "Unauthorized"))
 		return
 	}
 
 	user, err := h.authUseCase.GetProfile(c.Request.Context(), userID)
 	if err != nil {
-		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusInternalServerError, errors.ErrCodeInternal, err.Error()))
+		if errors.Is(err, domain.ErrUserNotFound) {
+			response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
+			return
+		}
+		response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
 		return
 	}
 

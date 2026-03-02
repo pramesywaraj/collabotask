@@ -5,10 +5,10 @@ import (
 	"collabotask/internal/adapter/http/helper"
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
+	"collabotask/internal/domain"
 	"collabotask/internal/usecase/workspace"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -166,11 +166,11 @@ func (wh *WorkspaceHandler) InviteMember(ctx *gin.Context) {
 		}
 
 		switch {
-		case errors.Is(err, workspace.ErrNotWorkspaceAdmin):
+		case errors.Is(err, domain.ErrNotWorkspaceAdmin):
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-		case errors.Is(err, workspace.ErrUserNotFound):
+		case errors.Is(err, domain.ErrUserNotFound):
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-		case errors.Is(err, workspace.ErrAlreadyMember):
+		case errors.Is(err, domain.ErrAlreadyMember):
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeConflict, err.Error()))
 		default:
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
@@ -207,14 +207,12 @@ func (wh *WorkspaceHandler) RemoveMember(ctx *gin.Context) {
 
 	if err != nil {
 		switch {
-		case errors.Is(err, workspace.ErrNotWorkspaceAdmin):
+		case errors.Is(err, domain.ErrNotWorkspaceAdmin), errors.Is(err, domain.ErrUserNotInWorkspace):
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-		case errors.Is(err, workspace.ErrUserNotInWorkspace):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-		case strings.Contains(err.Error(), "cannot remove yourself"):
+		case errors.Is(err, domain.ErrCannotRemoveYourself):
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, err.Error()))
-		case strings.Contains(err.Error(), "member not found"):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, "Member not found"))
+		case errors.Is(err, domain.ErrMemberNotFound):
+			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
 		default:
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
 		}
@@ -256,11 +254,9 @@ func (wh *WorkspaceHandler) GetWorkspaceDetail(ctx *gin.Context) {
 		}
 
 		switch {
-		case errors.Is(err, workspace.ErrUserNotInWorkspace):
+		case errors.Is(err, domain.ErrUserNotInWorkspace):
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-		case errors.Is(err, workspace.ErrWorkspaceNotFound):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-		case errors.Is(err, workspace.ErrUserNotFound):
+		case errors.Is(err, domain.ErrWorkspaceNotFound), errors.Is(err, domain.ErrUserNotFound):
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
 		default:
 			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))

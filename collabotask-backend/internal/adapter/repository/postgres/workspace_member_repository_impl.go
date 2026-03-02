@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/domain/repository"
 	"context"
@@ -40,7 +41,7 @@ func (wm *WorkspaceMemberRepositoryImpl) Create(ctx context.Context, workspaceMe
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return fmt.Errorf("user already in workspace")
+				return domain.ErrAlreadyMember
 			}
 		}
 
@@ -57,7 +58,7 @@ func (wm *WorkspaceMemberRepositoryImpl) Delete(ctx context.Context, workspaceID
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("member not found")
+		return domain.ErrMemberNotFound
 	}
 
 	return nil
@@ -78,7 +79,7 @@ func (wm *WorkspaceMemberRepositoryImpl) GetByWorkspaceAndUser(ctx context.Conte
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("member not found")
+			return nil, domain.ErrMemberNotFound
 		}
 
 		return nil, fmt.Errorf("failed to get member in workspace: %w", err)

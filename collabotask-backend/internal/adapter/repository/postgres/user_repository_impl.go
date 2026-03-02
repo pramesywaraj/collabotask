@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/domain/repository"
 	"context"
@@ -50,7 +51,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) erro
 
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return fmt.Errorf("email already exists")
+				return domain.ErrEmailAlreadyExists
 			}
 		}
 
@@ -76,7 +77,7 @@ func (r *UserRepositoryImpl) GetById(ctx context.Context, id uuid.UUID) (*entity
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("user not found")
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user by id: %w", err)
 	}
@@ -142,7 +143,7 @@ func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*ent
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("user not found")
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
@@ -193,13 +194,13 @@ func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) erro
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("user not found")
+			return domain.ErrUserNotFound
 		}
 
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return fmt.Errorf("email already exists")
+				return domain.ErrEmailAlreadyExists
 			}
 		}
 
@@ -216,7 +217,7 @@ func (r *UserRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("user not found")
+		return domain.ErrUserNotFound
 	}
 
 	return nil

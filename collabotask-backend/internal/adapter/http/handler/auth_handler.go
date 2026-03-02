@@ -1,10 +1,12 @@
 package handler
 
 import (
-	"collabotask/internal/adapter/http/errors"
+	apperrors "collabotask/internal/adapter/http/errors"
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
+	"collabotask/internal/domain"
 	"collabotask/internal/usecase/auth"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,12 +33,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		if err.Error() == "email already exists" {
-			response.GenerateErrorResponse(c, errors.NewAppError(http.StatusConflict, errors.ErrCodeConflict, err.Error()))
+		if errors.Is(err, domain.ErrEmailAlreadyExists) {
+			response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeConflict, err.Error()))
 			return
 		}
 
-		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusConflict, errors.ErrCodeValidation, err.Error()))
+		response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeValidation, err.Error()))
 		return
 	}
 
@@ -58,7 +60,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		response.GenerateErrorResponse(c, errors.NewAppError(http.StatusUnauthorized, errors.ErrCodeUnauthorized, err.Error()))
+		response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, err.Error()))
 		return
 	}
 

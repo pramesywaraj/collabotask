@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/infrastructure/validator"
 	"context"
@@ -15,7 +16,7 @@ func (wu *WorkspaceUseCaseImpl) InviteMember(ctx context.Context, input InviteMe
 
 	requesterMember, err := wu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, input.WorkspaceID, input.RequesterID)
 	if err != nil || requesterMember == nil || !requesterMember.IsAdmin() {
-		return nil, ErrNotWorkspaceAdmin
+		return nil, domain.ErrNotWorkspaceAdmin
 	}
 
 	for _, email := range input.Emails {
@@ -26,7 +27,7 @@ func (wu *WorkspaceUseCaseImpl) InviteMember(ctx context.Context, input InviteMe
 
 		user, err := wu.userRepo.GetByEmail(ctx, trimmedEmail)
 		if err != nil || user == nil {
-			return nil, ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 
 		existsInWorkspace, err := wu.workspaceMemberRepo.IsUserExists(ctx, input.WorkspaceID, user.ID)
@@ -34,7 +35,7 @@ func (wu *WorkspaceUseCaseImpl) InviteMember(ctx context.Context, input InviteMe
 			return nil, fmt.Errorf("failed to check member existence: %w", err)
 		}
 		if existsInWorkspace {
-			return nil, ErrAlreadyMember
+			return nil, domain.ErrAlreadyMember
 		}
 
 		member := &entity.WorkspaceMember{

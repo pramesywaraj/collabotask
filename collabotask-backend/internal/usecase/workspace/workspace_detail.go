@@ -1,8 +1,10 @@
 package workspace
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/infrastructure/validator"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -15,15 +17,15 @@ func (wu *WorkspaceUseCaseImpl) WorkspaceDetail(ctx context.Context, input Works
 
 	requesterMember, err := wu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, input.WorkspaceID, input.RequesterID)
 	if err != nil || requesterMember == nil || requesterMember.IsEmpty() {
-		return nil, ErrUserNotInWorkspace
+		return nil, domain.ErrUserNotInWorkspace
 	}
 
 	workspace, err := wu.workspaceRepo.GetByID(ctx, input.WorkspaceID)
 	if err != nil {
+		if errors.Is(err, domain.ErrWorkspaceNotFound) || workspace == nil {
+			return nil, domain.ErrWorkspaceNotFound
+		}
 		return nil, fmt.Errorf("failed to fetch workspace: %w", err)
-	}
-	if workspace == nil {
-		return nil, ErrWorkspaceNotFound
 	}
 
 	members, err := wu.workspaceMemberRepo.ListMemberByWorkspace(ctx, input.WorkspaceID)
@@ -44,8 +46,11 @@ func (wu *WorkspaceUseCaseImpl) WorkspaceDetail(ctx context.Context, input Works
 	workspaceMembers := make([]WorkspaceMemberDTO, 0, len(members))
 	for _, member := range members {
 		user, ok := usersMap[member.UserID]
+
+		//TODO: Need to check whether it can be optimized
+		// Context: if one fail how's the others?
 		if !ok || user == nil {
-			return nil, ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 		workspaceMembers = append(workspaceMembers, workspaceMemberToDTO(member, user))
 	}
