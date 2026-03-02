@@ -22,6 +22,8 @@ func NewWorkspaceRepository(db *pgxpool.Pool) repository.WorkspaceRepository {
 	return &WorkspaceRepositoryImpl{db: db}
 }
 
+const workspacesCap = 16
+
 func (w *WorkspaceRepositoryImpl) Create(ctx context.Context, workspace *entity.Workspace) error {
 	var description *string
 	if workspace.Description != nil && *workspace.Description != "" {
@@ -196,7 +198,7 @@ func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID 
 	}
 	defer rows.Close()
 
-	workspaces := []*entity.WorkspaceListItem{}
+	workspaces := make([]*entity.WorkspaceListItem, 0, workspacesCap)
 	for rows.Next() {
 		var description *string
 		var role string

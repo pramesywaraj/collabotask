@@ -79,9 +79,9 @@ type ListWorkspacesOutput struct {
 }
 
 type RemoveMemberInput struct {
-	RequesterID uuid.UUID
-	WorkspaceID uuid.UUID
-	UserID      uuid.UUID
+	RequesterID uuid.UUID `validate:"required"`
+	WorkspaceID uuid.UUID `validate:"required"`
+	UserID      uuid.UUID `validate:"required"`
 }
 
 type WorkspaceUseCase interface {

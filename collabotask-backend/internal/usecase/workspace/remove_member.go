@@ -1,11 +1,16 @@
 package workspace
 
 import (
+	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
 )
 
 func (wu *WorkspaceUseCaseImpl) RemoveMember(ctx context.Context, input RemoveMemberInput) error {
+	if err := validator.Struct(input); err != nil {
+		return fmt.Errorf("failed to validate input when removing member: %w", err)
+	}
+
 	requesterMember, err := wu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, input.WorkspaceID, input.RequesterID)
 	if err != nil || requesterMember == nil || !requesterMember.IsAdmin() {
 		return ErrNotWorkspaceAdmin

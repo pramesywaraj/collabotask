@@ -24,10 +24,10 @@ const (
 	updateUserQuery = `
 		UPDATE users
 		SET
-			email = COALESCE($1, email)
-			name = COALESCE($2, name)
-			avatar_url = COALESCE($3, avatar_url)
-			password_hash = COALESCE($4, password_hash)
+			email = COALESCE($1, email),
+			name = COALESCE($2, name),
+			avatar_url = COALESCE($3, avatar_url),
+			password_hash = COALESCE($4, password_hash),
 			updated_at = $5
 		WHERE id = $6
 		RETURNING id, email, name, avatar_url, system_role, created_at, updated_at
