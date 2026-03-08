@@ -6,6 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type BoardAccessStatus string
+
+const (
+	BoardJoined  BoardAccessStatus = "JOINED"
+	BoardCanJoin BoardAccessStatus = "CAN_JOIN"
+)
+
 type Board struct {
 	ID              uuid.UUID `json:"id" db:"id"`
 	WorkspaceID     uuid.UUID `json:"workspace_id" db:"workspace_id"`
@@ -16,6 +23,14 @@ type Board struct {
 	BackgroundColor string    `json:"background_color" db:"background_color"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type BoardListItem struct {
+	Board
+
+	UserRole     BoardRole         `json:"user_role"`
+	AccessStatus BoardAccessStatus `json:"access_status"`
+	MemberCount  uint              `json:"member_count"`
 }
 
 func (Board) TableName() string {

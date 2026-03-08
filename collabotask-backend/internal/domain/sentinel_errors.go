@@ -16,6 +16,9 @@ var (
 	ErrWorkspaceNotFound    = errors.New("workspace not found")
 	ErrCannotRemoveYourself = errors.New("cannot remove yourself")
 
+	// Board
+	ErrBoardNotFound = errors.New("board not found")
+
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
 )
