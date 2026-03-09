@@ -17,7 +17,9 @@ var (
 	ErrCannotRemoveYourself = errors.New("cannot remove yourself")
 
 	// Board
-	ErrBoardNotFound = errors.New("board not found")
+	ErrBoardNotFound       = errors.New("board not found")
+	ErrBoardAlreadyMember  = errors.New("user already in board")
+	ErrBoardMemberNotFound = errors.New("board member not found")
 
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
