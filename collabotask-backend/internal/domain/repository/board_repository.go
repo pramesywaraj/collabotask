@@ -9,6 +9,7 @@ import (
 
 type BoardRepository interface {
 	Create(ctx context.Context, board *entity.Board) error
+	CreateWithOwner(ctx context.Context, board *entity.Board, requesterID uuid.UUID) error
 	Update(ctx context.Context, board *entity.Board) error
 	Delete(ctx context.Context, boardID uuid.UUID) error
 	GetByID(ctx context.Context, boardID uuid.UUID) (*entity.Board, error)

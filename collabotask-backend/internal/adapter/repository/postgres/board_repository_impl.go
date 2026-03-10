@@ -27,7 +27,6 @@ const boardsCap = 16
 
 func (br *BoardRepositoryImpl) Create(ctx context.Context, board *entity.Board) error {
 	var description *string
-
 	if board.Description != nil && *board.Description != "" {
 		description = board.Description
 	}
@@ -60,6 +59,70 @@ func (br *BoardRepositoryImpl) Create(ctx context.Context, board *entity.Board) 
 			}
 		}
 		return fmt.Errorf("failed to create board: %w", err)
+	}
+
+	return nil
+}
+
+func (br *BoardRepositoryImpl) CreateWithOwner(ctx context.Context, board *entity.Board, requesterID uuid.UUID) error {
+	tx, err := br.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin create board with owner transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var description *string
+	if board.Description != nil && *board.Description != "" {
+		description = board.Description
+	}
+
+	err = tx.QueryRow(
+		ctx,
+		createBoardQuery,
+		board.WorkspaceID,
+		board.Title,
+		description,
+		board.CreatedBy,
+		board.BackgroundColor,
+	).Scan(
+		&board.ID,
+		&board.WorkspaceID,
+		&board.Title,
+		&board.Description,
+		&board.CreatedBy,
+		&board.IsArchived,
+		&board.BackgroundColor,
+		&board.CreatedAt,
+		&board.UpdatedAt,
+	)
+	if err != nil {
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return domain.ErrConstraintViolation
+			}
+		}
+		return fmt.Errorf("failed to create board: %w", err)
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		createBoardMemberQuery,
+		board.ID,
+		requesterID,
+		entity.BoardRoleOwner,
+	)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.ErrBoardAlreadyMember
+		}
+		return fmt.Errorf("failed to add owner to board: %w", err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit create board transaction: %w", err)
 	}
 
 	return nil
