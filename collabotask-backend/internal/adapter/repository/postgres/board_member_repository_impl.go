@@ -47,6 +47,31 @@ func (bmr *BoardMemberRepositoryImpl) Create(ctx context.Context, boardMember *e
 	return nil
 }
 
+func (bmr *BoardMemberRepositoryImpl) CreateMany(ctx context.Context, boardMembers []*entity.BoardMember) error {
+	if len(boardMembers) == 0 {
+		return nil
+	}
+
+	tx, err := bmr.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for _, member := range boardMembers {
+		_, err := tx.Exec(ctx, createBoardMemberQuery, member.BoardID, member.UserID, member.Role)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return domain.ErrBoardAlreadyMember
+			}
+			return fmt.Errorf("failed to add member to board: %w", err)
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (bmr *BoardMemberRepositoryImpl) Delete(ctx context.Context, boardID, userID uuid.UUID) error {
 	result, err := bmr.db.Exec(
 		ctx,
