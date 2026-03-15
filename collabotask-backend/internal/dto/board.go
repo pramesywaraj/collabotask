@@ -22,7 +22,7 @@ type BoardDTO struct {
 type BoardWithMetaDTO struct {
 	BoardDTO
 
-	UserRole     entity.BoardRole
+	UserRole     *entity.BoardRole
 	AccessStatus entity.BoardAccessStatus
 	MemberCount  uint
 }
@@ -39,7 +39,32 @@ type BoardMemberDTO struct {
 type BoardDetailDTO struct {
 	BoardDTO
 
-	UserRole     entity.BoardRole
+	UserRole     *entity.BoardRole
 	AccessStatus entity.BoardAccessStatus
 	Members      []BoardMemberDTO
+}
+
+func BoardToDTO(board *entity.Board) BoardDTO {
+	return BoardDTO{
+		ID:              board.ID,
+		WorkspaceID:     board.WorkspaceID,
+		Title:           board.Title,
+		Description:     board.Description,
+		CreatedBy:       board.CreatedBy,
+		IsArchived:      board.IsArchived,
+		BackgroundColor: board.BackgroundColor,
+		CreatedAt:       board.CreatedAt,
+		UpdatedAt:       board.UpdatedAt,
+	}
+}
+
+func BoardMemberToDTO(member *entity.BoardMember, user *entity.User) BoardMemberDTO {
+	return BoardMemberDTO{
+		UserID:    member.UserID,
+		Email:     user.Email,
+		Name:      user.Name,
+		AvatarURL: user.AvatarURL,
+		Role:      member.Role,
+		JoinedAt:  member.JoinedAt,
+	}
 }
