@@ -13,6 +13,7 @@ type BoardUseCase interface {
 	ListBoardsInWorkspace(ctx context.Context, input ListBoardsInput) (*ListBoardsOutput, error)
 	InviteMember(ctx context.Context, input InviteMemberInput) error
 	RemoveMember(ctx context.Context, input RemoveMemberInput) error
+	ListWorkspaceInviteesForBoard(ctx context.Context, input ListWorkspaceInviteesForBoardInput) (*ListWorkspaceInviteesForBoardOutput, error)
 }
 
 type CreateBoardInput struct {
@@ -57,4 +58,14 @@ type RemoveMemberInput struct {
 	WorkspaceID uuid.UUID `validate:"required"`
 	BoardID     uuid.UUID `validate:"required"`
 	UserID      uuid.UUID `validate:"required"`
+}
+
+type ListWorkspaceInviteesForBoardInput struct {
+	RequesterID uuid.UUID `validate:"required"`
+	WorkspaceID uuid.UUID `validate:"required"`
+	BoardID     uuid.UUID `validate:"required"`
+}
+
+type ListWorkspaceInviteesForBoardOutput struct {
+	Members []dto.BoardInviteeDTO
 }

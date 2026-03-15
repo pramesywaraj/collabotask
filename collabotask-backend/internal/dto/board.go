@@ -44,6 +44,16 @@ type BoardDetailDTO struct {
 	Members      []BoardMemberDTO
 }
 
+type BoardInviteeDTO struct {
+	UserID        uuid.UUID
+	Email         string
+	Name          string
+	AvatarURL     *string
+	WorkspaceRole entity.WorkspaceRole
+	IsBoardMember bool
+	JoinedAt      time.Time
+}
+
 func BoardToDTO(board *entity.Board) BoardDTO {
 	return BoardDTO{
 		ID:              board.ID,
