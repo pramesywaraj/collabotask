@@ -17,9 +17,11 @@ var (
 	ErrCannotRemoveYourself = errors.New("cannot remove yourself")
 
 	// Board
-	ErrBoardNotFound       = errors.New("board not found")
-	ErrBoardAlreadyMember  = errors.New("user already in board")
-	ErrBoardMemberNotFound = errors.New("board member not found")
+	ErrBoardNotFound         = errors.New("board not found")
+	ErrBoardAlreadyMember    = errors.New("user already in board")
+	ErrBoardMemberNotFound   = errors.New("board member not found")
+	ErrBoardAccessDenied     = errors.New("board access denied")
+	ErrBoardPermissionDenied = errors.New("board permission denied")
 
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
