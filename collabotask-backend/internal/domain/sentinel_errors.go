@@ -9,12 +9,13 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 
 	// Workspace
-	ErrMemberNotFound       = errors.New("member not found")
-	ErrUserNotInWorkspace   = errors.New("user not in workspace")
-	ErrAlreadyMember        = errors.New("user already in workspace")
-	ErrNotWorkspaceAdmin    = errors.New("requester is not workspace admin")
-	ErrWorkspaceNotFound    = errors.New("workspace not found")
-	ErrCannotRemoveYourself = errors.New("cannot remove yourself")
+	ErrMemberNotFound        = errors.New("member not found")
+	ErrUserNotInWorkspace    = errors.New("user not in workspace")
+	ErrAlreadyMember         = errors.New("user already in workspace")
+	ErrNotWorkspaceAdmin     = errors.New("requester is not workspace admin")
+	ErrWorkspaceNotFound     = errors.New("workspace not found")
+	ErrCannotRemoveYourself  = errors.New("cannot remove yourself")
+	ErrBoardOwnerCannotLeave = errors.New("board owner cannot leave without transferring ownership")
 
 	// Board
 	ErrBoardNotFound         = errors.New("board not found")
@@ -22,6 +23,7 @@ var (
 	ErrBoardMemberNotFound   = errors.New("board member not found")
 	ErrBoardAccessDenied     = errors.New("board access denied")
 	ErrBoardPermissionDenied = errors.New("board permission denied")
+	ErrBoardCannotJoin       = errors.New("cannot join board, permission denied")
 
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
