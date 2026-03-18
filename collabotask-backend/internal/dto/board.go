@@ -51,7 +51,6 @@ type BoardInviteeDTO struct {
 	AvatarURL     *string
 	WorkspaceRole entity.WorkspaceRole
 	IsBoardMember bool
-	JoinedAt      time.Time
 }
 
 func BoardToDTO(board *entity.Board) BoardDTO {

@@ -83,7 +83,6 @@ func (bu *BoardUseCaseImpl) ListWorkspaceInviteesForBoard(ctx context.Context, i
 			AvatarURL:     user.AvatarURL,
 			WorkspaceRole: wm.Role,
 			IsBoardMember: boardMemberIDs[wm.UserID],
-			JoinedAt:      wm.JoinedAt,
 		})
 	}
 
