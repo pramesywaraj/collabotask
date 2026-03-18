@@ -25,7 +25,7 @@ type CreateBoardInput struct {
 	Title           string    `validate:"required,min=3,max=255"`
 	Description     *string   `validate:"omitempty,max=1000"`
 	RequesterID     uuid.UUID `validate:"required"`
-	BackgroundColor string    `validate:"min=4,max=8"`
+	BackgroundColor *string   `validate:"omitempty,min=4,max=8"`
 }
 
 type CreateBoardOutput struct {

@@ -31,9 +31,9 @@ func (bu *BoardUseCaseImpl) CreateBoard(ctx context.Context, input CreateBoardIn
 	if input.Description != nil && *input.Description != "" {
 		description = input.Description
 	}
-	backgroundColor := input.BackgroundColor
-	if backgroundColor == "" {
-		backgroundColor = defaultBackgroundColor
+	backgroundColor := defaultBackgroundColor
+	if input.BackgroundColor != nil && *input.BackgroundColor != "" {
+		backgroundColor = *input.BackgroundColor
 	}
 
 	board := &entity.Board{
