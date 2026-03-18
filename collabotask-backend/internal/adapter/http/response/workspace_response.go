@@ -10,7 +10,7 @@ import (
 type WorkspaceResponse struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
-	Description *string   `json:"description,omitempty"`
+	Description *string   `json:"description"`
 	OwnerID     uuid.UUID `json:"owner_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -28,7 +28,7 @@ type WorkspaceMemberResponse struct {
 	UserID    uuid.UUID            `json:"id"`
 	Email     string               `json:"email"`
 	Name      string               `json:"name"`
-	AvatarURL *string              `json:"avatar_url,omitempty"`
+	AvatarURL *string              `json:"avatar_url"`
 	Role      entity.WorkspaceRole `json:"role"`
 	JoinedAt  time.Time            `json:"joined_at"`
 }

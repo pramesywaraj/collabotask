@@ -11,7 +11,7 @@ import (
 
 func (bu *BoardUseCaseImpl) SetArchived(ctx context.Context, input SetArchivedInput) (*SetArchivedOutput, error) {
 	if err := validator.Struct(input); err != nil {
-		return nil, fmt.Errorf("failed to validate set archived on board input: %w", err)
+		return nil, fmt.Errorf("failed to validate set archived status in board input: %w", err)
 	}
 
 	board, err := bu.boardRepo.GetByID(ctx, input.BoardID)
@@ -38,7 +38,7 @@ func (bu *BoardUseCaseImpl) SetArchived(ctx context.Context, input SetArchivedIn
 
 	err = bu.boardRepo.SetArchived(ctx, input.BoardID, *input.IsArchived)
 	if err != nil {
-		return nil, fmt.Errorf("failed to set archived the board: %w", err)
+		return nil, fmt.Errorf("failed to set archived status for board: %w", err)
 	}
 
 	board.IsArchived = *input.IsArchived

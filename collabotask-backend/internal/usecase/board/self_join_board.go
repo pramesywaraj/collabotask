@@ -55,7 +55,7 @@ func (bu *BoardUseCaseImpl) SelfJoinBoard(ctx context.Context, input SelfJoinBoa
 	}
 
 	if err := bu.boardMemberRepo.Create(ctx, newBoardMember); err != nil {
-		return fmt.Errorf("failed to add member to board: %w", err)
+		return fmt.Errorf("failed join to the board: %w", err)
 	}
 
 	return nil

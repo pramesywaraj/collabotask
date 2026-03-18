@@ -75,7 +75,7 @@ func (bu *BoardUseCaseImpl) InviteMember(ctx context.Context, input InviteMember
 	}
 
 	if len(membersToAdd) == 0 {
-		return nil
+		return domain.ErrBoardNoMembersToInvite
 	}
 
 	if err := bu.boardMemberRepo.CreateMany(ctx, membersToAdd); err != nil {
