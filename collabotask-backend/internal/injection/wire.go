@@ -28,15 +28,19 @@ var (
 		ProvideUserRepository,
 		ProvideWorkspaceRepository,
 		ProvideWorkspaceMemberRepository,
+		ProvideBoardRepository,
+		ProvideBoardMemberRepository,
 	)
 	UseCaseSet = wire.NewSet(
 		ProvideAuthUseCase,
 		ProvideWorkspaceUseCase,
+		ProvideBoardUseCase,
 	)
 	HandlerSet = wire.NewSet(
 		ProvideAuthHandler,
 		ProvideUserHandler,
 		ProvideWorkspaceHandler,
+		ProvideBoardHandler,
 	)
 	RouterSet = wire.NewSet(ProvideRouter)
 	ServerSet = wire.NewSet(ProvideServer)

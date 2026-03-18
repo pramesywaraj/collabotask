@@ -11,6 +11,7 @@ import (
 	"collabotask/internal/infrastructure/database"
 	"collabotask/internal/server"
 	"collabotask/internal/usecase/auth"
+	"collabotask/internal/usecase/board"
 	"collabotask/internal/usecase/workspace"
 	"collabotask/pkg/logger"
 )
@@ -43,6 +44,14 @@ func ProvideWorkspaceMemberRepository(db *database.DB) repository.WorkspaceMembe
 	return postgres.NewWorkspaceMemberRepository(db.Pool)
 }
 
+func ProvideBoardRepository(db *database.DB) repository.BoardRepository {
+	return postgres.NewBoardRepository(db.Pool)
+}
+
+func ProvideBoardMemberRepository(db *database.DB) repository.BoardMemberRepository {
+	return postgres.NewBoardMemberRepository(db.Pool)
+}
+
 // UseCase
 func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) auth.AuthUseCase {
 	return auth.NewAuthUseCase(userRepo, &cfg.Auth)
@@ -55,6 +64,16 @@ func ProvideWorkspaceUseCase(
 
 ) workspace.WorkspaceUseCase {
 	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo)
+}
+
+func ProvideBoardUseCase(
+	boardRepo repository.BoardRepository,
+	boardMemberRepo repository.BoardMemberRepository,
+	workspaceRepo repository.WorkspaceRepository,
+	workspaceMemberRepo repository.WorkspaceMemberRepository,
+	userRepo repository.UserRepository,
+) board.BoardUseCase {
+	return board.NewBoardUseCase(boardRepo, boardMemberRepo, workspaceRepo, workspaceMemberRepo, userRepo)
 }
 
 // Handler
@@ -70,6 +89,10 @@ func ProvideWorkspaceHandler(workspaceUseCase workspace.WorkspaceUseCase) *handl
 	return handler.NewWorkspaceHandler(workspaceUseCase)
 }
 
+func ProvideBoardHandler(boardUseCase board.BoardUseCase) *handler.BoardHandler {
+	return handler.NewBoardHandler(boardUseCase)
+}
+
 // Router
 func ProvideRouter(
 	cfg *config.Config,
@@ -77,6 +100,7 @@ func ProvideRouter(
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
 	workspaceHandler *handler.WorkspaceHandler,
+	boardHandler *handler.BoardHandler,
 ) *gin.Engine {
 	return router.New(router.Config{
 		Cfg:              cfg,
@@ -84,6 +108,7 @@ func ProvideRouter(
 		AuthHandler:      authHandler,
 		UserHandler:      userHandler,
 		WorkspaceHandler: workspaceHandler,
+		BoardHandler:     boardHandler,
 	})
 }
 

@@ -34,7 +34,11 @@ func InitializeApp() (*App, error) {
 	workspaceMemberRepository := ProvideWorkspaceMemberRepository(db)
 	workspaceUseCase := ProvideWorkspaceUseCase(workspaceRepository, workspaceMemberRepository, userRepository)
 	workspaceHandler := ProvideWorkspaceHandler(workspaceUseCase)
-	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler)
+	boardRepository := ProvideBoardRepository(db)
+	boardMemberRepository := ProvideBoardMemberRepository(db)
+	boardUseCase := ProvideBoardUseCase(boardRepository, boardMemberRepository, workspaceRepository, workspaceMemberRepository, userRepository)
+	boardHandler := ProvideBoardHandler(boardUseCase)
+	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler, boardHandler)
 	server := ProvideServer(config, engine)
 	v := ProvideCleanup(db)
 	app := &App{
@@ -65,15 +69,19 @@ var (
 		ProvideUserRepository,
 		ProvideWorkspaceRepository,
 		ProvideWorkspaceMemberRepository,
+		ProvideBoardRepository,
+		ProvideBoardMemberRepository,
 	)
 	UseCaseSet = wire.NewSet(
 		ProvideAuthUseCase,
 		ProvideWorkspaceUseCase,
+		ProvideBoardUseCase,
 	)
 	HandlerSet = wire.NewSet(
 		ProvideAuthHandler,
 		ProvideUserHandler,
 		ProvideWorkspaceHandler,
+		ProvideBoardHandler,
 	)
 	RouterSet = wire.NewSet(ProvideRouter)
 	ServerSet = wire.NewSet(ProvideServer)

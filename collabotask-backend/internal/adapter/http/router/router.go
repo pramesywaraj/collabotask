@@ -15,6 +15,7 @@ type Config struct {
 	AuthHandler      *handler.AuthHandler
 	UserHandler      *handler.UserHandler
 	WorkspaceHandler *handler.WorkspaceHandler
+	BoardHandler     *handler.BoardHandler
 }
 
 func New(cfg Config) *gin.Engine {
@@ -46,6 +47,20 @@ func New(cfg Config) *gin.Engine {
 		workspaces.GET("/:workspace_id", cfg.WorkspaceHandler.GetWorkspaceDetail)
 		workspaces.POST("/:workspace_id/member/invite", cfg.WorkspaceHandler.InviteMember)
 		workspaces.DELETE("/:workspace_id/member/remove/:user_id", cfg.WorkspaceHandler.RemoveMember)
+
+		boards := workspaces.Group("/:workspace_id/board")
+		{
+			boards.POST("", cfg.BoardHandler.CreateBoard)
+			boards.GET("", cfg.BoardHandler.FetchListBoardsInWorkspace)
+			boards.GET("/:board_id", cfg.BoardHandler.FetchBoardDetail)
+			boards.PATCH("/:board_id", cfg.BoardHandler.UpdateBoard)
+			boards.POST("/:board_id/archive", cfg.BoardHandler.SetBoardArchivedStatus)
+			boards.POST("/:board_id/invite", cfg.BoardHandler.InviteMembersToBoard)
+			boards.DELETE("/:board_id/member", cfg.BoardHandler.RemoveMemberFromBoard)
+			boards.GET("/:board_id/invitees", cfg.BoardHandler.FetchWorkspaceInviteesForBoard)
+			boards.POST("/:board_id/join", cfg.BoardHandler.SelfJoinToBoard)
+			boards.POST("/:board_id/leave", cfg.BoardHandler.LeaveBoard)
+		}
 	}
 
 	return routes
