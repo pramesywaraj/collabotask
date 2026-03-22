@@ -9,9 +9,9 @@ const (
 	updateBoardQuery = `
 		UPDATE boards
 		SET
-			title = COALESCE($1, title)
-			description = COALESCE($2, description)
-			background_color = COALESCE($3, background_color)
+			title = COALESCE($1, title),
+			description = COALESCE($2, description),
+			background_color = COALESCE($3, background_color),
 			updated_at = $4
 		WHERE id = $5
 		RETURNING id, workspace_id, title, description, created_by, is_archived, background_color, created_at, updated_at
