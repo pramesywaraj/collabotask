@@ -104,7 +104,7 @@ func (cr *ColumnRepositoryImpl) GetByID(ctx context.Context, columnID uuid.UUID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrColumnNotFound
 		}
-		return nil, fmt.Errorf("failed to get column: %w", err)
+		return nil, fmt.Errorf("failed to get column by id: %w", err)
 	}
 
 	return column, nil
