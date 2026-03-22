@@ -26,6 +26,9 @@ var (
 	ErrBoardCannotJoin        = errors.New("cannot join board, permission denied")
 	ErrBoardNoMembersToInvite = errors.New("no members were added to the board")
 
+	// Column
+	ErrColumnNotFound = errors.New("column not found")
+
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
 	ErrAtLeastOneProvided  = errors.New("at least provide one of the fields")
