@@ -29,6 +29,9 @@ var (
 	// Column
 	ErrColumnNotFound = errors.New("column not found")
 
+	// Card
+	ErrCardNotFound = errors.New("card not found")
+
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
 	ErrAtLeastOneProvided  = errors.New("at least provide one of the fields")
