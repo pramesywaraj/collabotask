@@ -123,6 +123,52 @@ func (cdr *CardRepositoryImpl) Delete(ctx context.Context, cardID uuid.UUID) err
 	return nil
 }
 
+func (cdr *CardRepositoryImpl) DeleteWithReorder(ctx context.Context, cardID uuid.UUID) error {
+	tx, err := cdr.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin delete card with reorder transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var columnID uuid.UUID
+	var position int
+
+	err = tx.QueryRow(
+		ctx,
+		lockCardQuery,
+		cardID,
+	).Scan(&columnID, &position)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrCardNotFound
+		}
+		return fmt.Errorf("failed to lock card when delete with reorder: %w", err)
+	}
+
+	result, err := tx.Exec(
+		ctx,
+		deleteCardQuery,
+		cardID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete card: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return domain.ErrCardNotFound
+	}
+
+	// Reorder remaining column's cards
+	if _, err := tx.Exec(ctx, decrementPositionCardAfterQuery, columnID, position); err != nil {
+		return fmt.Errorf("failed to reorder cards after delete: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit delete card transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (cdr *CardRepositoryImpl) GetByID(ctx context.Context, cardID uuid.UUID) (*entity.Card, error) {
 	card := &entity.Card{}
 
@@ -238,25 +284,28 @@ func (cdr *CardRepositoryImpl) DecrementPositionsAfter(ctx context.Context, colu
 	return nil
 }
 
-func (cdr *CardRepositoryImpl) Move(ctx context.Context, cardID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error) {
+func (cdr *CardRepositoryImpl) Move(ctx context.Context, cardID, fromColumnID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error) {
 	tx, err := cdr.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin move card transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
-	var fromColumnID uuid.UUID
+	var actualColumnID uuid.UUID
 	var oldPosition int
 
-	err = tx.QueryRow(ctx, lockCardQuery, cardID).Scan(&fromColumnID, &oldPosition)
+	err = tx.QueryRow(ctx, lockCardQuery, cardID).Scan(&actualColumnID, &oldPosition)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrCardNotFound
 		}
 		return nil, fmt.Errorf("failed to lock card: %w", err)
 	}
+	if fromColumnID != actualColumnID {
+		return nil, domain.ErrInconsistentState
+	}
 
-	if _, err := tx.Exec(ctx, decrementPositionCardAfterQuery, fromColumnID, oldPosition); err != nil {
+	if _, err := tx.Exec(ctx, decrementPositionCardAfterQuery, actualColumnID, oldPosition); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx, incrementPositionCardFromQuery, toColumnID, toPosition); err != nil {
