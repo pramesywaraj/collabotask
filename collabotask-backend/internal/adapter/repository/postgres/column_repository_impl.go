@@ -176,7 +176,6 @@ func (cr *ColumnRepositoryImpl) Update(ctx context.Context, column *entity.Colum
 		ctx,
 		updateColumnQuery,
 		title,
-		column.Position,
 		updatedAt,
 		column.ID,
 	).Scan(
@@ -208,6 +207,49 @@ func (cr *ColumnRepositoryImpl) Delete(ctx context.Context, columnID uuid.UUID) 
 	}
 	if result.RowsAffected() == 0 {
 		return domain.ErrColumnNotFound
+	}
+
+	return nil
+}
+
+func (cr *ColumnRepositoryImpl) ReorderPositions(ctx context.Context, columns []*entity.Column) error {
+	if len(columns) == 0 {
+		return nil
+	}
+
+	boardID := columns[0].BoardID
+	for _, c := range columns {
+		if c.BoardID != boardID {
+			return fmt.Errorf("reorder columns: mixed board_id")
+		}
+	}
+
+	tx, err := cr.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction to reorder columns: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for _, column := range columns {
+		updatedAt := time.Now()
+		result, err := tx.Exec(
+			ctx,
+			updateColumnPositionQuery,
+			column.Position,
+			updatedAt,
+			column.ID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to update column position in reorder: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return domain.ErrColumnNotFound
+		}
+		column.UpdatedAt = updatedAt
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit reorder columns: %w", err)
 	}
 
 	return nil

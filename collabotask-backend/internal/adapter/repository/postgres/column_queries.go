@@ -10,10 +10,16 @@ const (
 		UPDATE columns
 		SET
 			title = COALESCE($1, title),
-			position = COALESCE($2, position),
-			updated_at = $3
-		WHERE id = $4
+			updated_at = $2
+		WHERE id = $3
 		RETURNING id, board_id, title, position, created_at, updated_at
+	`
+	updateColumnPositionQuery = `
+		UPDATE columns
+		SET
+			position = $1,
+			updated_at = $2
+		WHERE id = $3
 	`
 	deleteColumnQuery = `
 		DELETE FROM columns WHERE id = $1
