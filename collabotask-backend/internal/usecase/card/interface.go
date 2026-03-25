@@ -47,10 +47,11 @@ type DeleteCardInput struct {
 }
 
 type MoveCardInput struct {
-	CardID      uuid.UUID `validate:"required"`
-	ToColumnID  uuid.UUID `validate:"required"`
-	ToPosition  int       `validate:"required,min=0"`
-	RequesterID uuid.UUID `validate:"required"`
+	CardID       uuid.UUID `validate:"required"`
+	FromColumnID uuid.UUID `validate:"required"`
+	ToColumnID   uuid.UUID `validate:"required"`
+	ToPosition   int       `validate:"required,min=0"`
+	RequesterID  uuid.UUID `validate:"required"`
 }
 
 type MoveCardOutput struct {
