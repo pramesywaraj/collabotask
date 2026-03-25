@@ -237,3 +237,61 @@ func (cdr *CardRepositoryImpl) DecrementPositionsAfter(ctx context.Context, colu
 
 	return nil
 }
+
+func (cdr *CardRepositoryImpl) Move(ctx context.Context, cardID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error) {
+	tx, err := cdr.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin move card transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var fromColumnID uuid.UUID
+	var oldPosition int
+
+	err = tx.QueryRow(ctx, lockCardQuery, cardID).Scan(&fromColumnID, &oldPosition)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrCardNotFound
+		}
+		return nil, fmt.Errorf("failed to lock card: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, decrementPositionCardAfterQuery, fromColumnID, oldPosition); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, incrementPositionCardFromQuery, toColumnID, toPosition); err != nil {
+		return nil, err
+	}
+
+	moved := &entity.Card{}
+	err = tx.QueryRow(
+		ctx,
+		moveCardQuery,
+		toColumnID,
+		toPosition,
+		cardID,
+	).Scan(
+		&moved.ID,
+		&moved.ColumnID,
+		&moved.Title,
+		&moved.Description,
+		&moved.Position,
+		&moved.AssignedTo,
+		&moved.DueDate,
+		&moved.CreatedBy,
+		&moved.CreatedAt,
+		&moved.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrCardNotFound
+		}
+		return nil, fmt.Errorf("failed to move card: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit move card transaction: %w", err)
+	}
+
+	return moved, nil
+}

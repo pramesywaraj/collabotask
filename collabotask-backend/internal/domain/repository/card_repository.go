@@ -16,4 +16,5 @@ type CardRepository interface {
 	GetMaxPosition(ctx context.Context, columnID uuid.UUID) (int, error)
 	IncrementPositionsFrom(ctx context.Context, columnID uuid.UUID, position int) error
 	DecrementPositionsAfter(ctx context.Context, columnID uuid.UUID, position int) error
+	Move(ctx context.Context, cardID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error)
 }

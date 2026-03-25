@@ -49,4 +49,19 @@ const (
 			position = position - 1
 		WHERE column_id = $1 AND position > $2
 	`
+	lockCardQuery = `
+		SELECT column_id, position
+		FROM cards
+		WHERE id = $1
+		FOR UPDATE
+	`
+	moveCardQuery = `
+		UPDATE cards
+		SET
+			column_id = $1,
+			position = $2,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $3
+		RETURNING id, column_id, title, description, position, assigned_to, due_date, created_by, created_at, updated_at
+	`
 )
