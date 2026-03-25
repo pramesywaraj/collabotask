@@ -35,4 +35,7 @@ var (
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
 	ErrAtLeastOneProvided  = errors.New("at least provide one of the fields")
+
+	// System
+	ErrInconsistentState = errors.New("inconsistent state")
 )
