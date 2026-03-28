@@ -1,8 +1,10 @@
 package column
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/infrastructure/validator"
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -13,7 +15,13 @@ func (cu *ColumnUseCaseImpl) DeleteColumn(ctx context.Context, input DeleteColum
 
 	column, err := cu.columnRepo.GetByID(ctx, input.ColumnID)
 	if err != nil {
-		return err
+		if errors.Is(err, domain.ErrColumnNotFound) {
+			return domain.ErrColumnNotFound
+		}
+		return fmt.Errorf("failed to fetch column: %w", err)
+	}
+	if !column.BelongsToBoard(input.BoardID) {
+		return domain.ErrColumnNotInBoard
 	}
 
 	_, err = cu.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)

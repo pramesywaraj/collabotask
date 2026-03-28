@@ -7,6 +7,7 @@ import (
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 )
@@ -18,7 +19,13 @@ func (cu *ColumnUseCaseImpl) UpdateColumnPosition(ctx context.Context, input Upd
 
 	column, err := cu.columnRepo.GetByID(ctx, input.ColumnID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrColumnNotFound) {
+			return nil, domain.ErrColumnNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch column: %w", err)
+	}
+	if !column.BelongsToBoard(input.BoardID) {
+		return nil, domain.ErrColumnNotInBoard
 	}
 
 	_, err = cu.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
@@ -67,8 +74,8 @@ func (cu *ColumnUseCaseImpl) UpdateColumnPosition(ctx context.Context, input Upd
 	without := slices.Delete(slices.Clone(columns), oldIdx, oldIdx+1)
 	reordered := slices.Insert(without, newIdx, moved)
 
-	for i, column := range reordered {
-		column.Position = i
+	for i, col := range reordered {
+		col.Position = i
 	}
 
 	if err := cu.columnRepo.ReorderPositions(ctx, reordered); err != nil {

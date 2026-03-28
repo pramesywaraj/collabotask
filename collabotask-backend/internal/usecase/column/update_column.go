@@ -21,6 +21,9 @@ func (cu *ColumnUseCaseImpl) UpdateColumn(ctx context.Context, input UpdateColum
 		}
 		return nil, fmt.Errorf("failed to fetch column: %w", err)
 	}
+	if !column.BelongsToBoard(input.BoardID) {
+		return nil, domain.ErrColumnNotInBoard
+	}
 
 	_, err = cu.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
 	if err != nil {

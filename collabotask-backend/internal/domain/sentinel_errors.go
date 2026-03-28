@@ -27,7 +27,8 @@ var (
 	ErrBoardNoMembersToInvite = errors.New("no members were added to the board")
 
 	// Column
-	ErrColumnNotFound = errors.New("column not found")
+	ErrColumnNotFound   = errors.New("column not found")
+	ErrColumnNotInBoard = errors.New("column not in the board")
 
 	// Card
 	ErrCardNotFound = errors.New("card not found")

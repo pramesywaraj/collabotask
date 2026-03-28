@@ -22,3 +22,7 @@ func (Column) TableName() string {
 func (c *Column) IsEmpty() bool {
 	return c.ID == uuid.Nil
 }
+
+func (c *Column) BelongsToBoard(boardID uuid.UUID) bool {
+	return boardID == c.BoardID
+}

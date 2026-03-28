@@ -25,6 +25,7 @@ type CreateColumnOutput struct {
 }
 
 type UpdateColumnInput struct {
+	BoardID     uuid.UUID `validate:"required"`
 	ColumnID    uuid.UUID `validate:"required"`
 	Title       string    `validate:"required,min=1,max=255"`
 	RequesterID uuid.UUID `validate:"required"`
@@ -35,11 +36,13 @@ type UpdateColumnOutput struct {
 }
 
 type DeleteColumnInput struct {
+	BoardID     uuid.UUID `validate:"required"`
 	ColumnID    uuid.UUID `validate:"required"`
 	RequesterID uuid.UUID `validate:"required"`
 }
 
 type UpdateColumnPositionInput struct {
+	BoardID     uuid.UUID `validate:"required"`
 	ColumnID    uuid.UUID `validate:"required"`
 	Position    int       `validate:"required,min=0"`
 	RequesterID uuid.UUID `validate:"required"`
