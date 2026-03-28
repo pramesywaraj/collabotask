@@ -2,6 +2,7 @@ package card
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
@@ -47,7 +48,20 @@ func (cru *CardUseCaseImpl) MoveCard(ctx context.Context, input MoveCardInput) (
 		return nil, err
 	}
 
+	var assignee *entity.User
+	if movedCard.AssignedTo != nil {
+		user, err := cru.userRepo.GetById(ctx, *movedCard.AssignedTo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch assignee: %w", err)
+		}
+		if user == nil || user.IsEmpty() {
+			return nil, fmt.Errorf("failed to fetch assignee: %w", domain.ErrUserNotFound)
+		}
+
+		assignee = user
+	}
+
 	return &MoveCardOutput{
-		Card: dto.CardToDTO(movedCard),
+		Card: dto.CardWithAssigneeToDTO(movedCard, assignee),
 	}, nil
 }

@@ -8,17 +8,20 @@ import (
 type CardUseCaseImpl struct {
 	cardRepo           repository.CardRepository
 	columnRepo         repository.ColumnRepository
+	userRepo           repository.UserRepository
 	boardAccessChecker common.BoardAccessChecker
 }
 
 func NewCardUseCase(
 	cardRepo repository.CardRepository,
 	columnRepo repository.ColumnRepository,
+	userRepo repository.UserRepository,
 	boardAccessChecker common.BoardAccessChecker,
 ) CardUseCase {
 	return &CardUseCaseImpl{
 		cardRepo:           cardRepo,
 		columnRepo:         columnRepo,
+		userRepo:           userRepo,
 		boardAccessChecker: boardAccessChecker,
 	}
 }

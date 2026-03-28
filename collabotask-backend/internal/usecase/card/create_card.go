@@ -1,6 +1,7 @@
 package card
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
@@ -21,6 +22,19 @@ func (cru *CardUseCaseImpl) CreateCard(ctx context.Context, input CreateCardInpu
 	_, err = cru.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
 	if err != nil {
 		return nil, err
+	}
+
+	var assignee *entity.User
+	if input.AssignedTo != nil {
+		user, err := cru.userRepo.GetById(ctx, *input.AssignedTo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch assignee: %w", err)
+		}
+		if user == nil || user.IsEmpty() {
+			return nil, fmt.Errorf("failed to fetch assignee: %w", domain.ErrUserNotFound)
+		}
+
+		assignee = user
 	}
 
 	maxPos, err := cru.cardRepo.GetMaxPosition(ctx, input.ColumnID)
@@ -44,6 +58,6 @@ func (cru *CardUseCaseImpl) CreateCard(ctx context.Context, input CreateCardInpu
 	}
 
 	return &CreateCardOutput{
-		Card: dto.CardToDTO(card),
+		Card: dto.CardWithAssigneeToDTO(card, assignee),
 	}, nil
 }

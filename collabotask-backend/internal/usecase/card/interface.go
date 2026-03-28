@@ -25,7 +25,7 @@ type CreateCardInput struct {
 }
 
 type CreateCardOutput struct {
-	Card dto.CardDTO
+	Card dto.CardWithAssigneeDTO
 }
 
 type UpdateCardInput struct {
@@ -38,7 +38,7 @@ type UpdateCardInput struct {
 }
 
 type UpdateCardOutput struct {
-	Card dto.CardDTO
+	Card dto.CardWithAssigneeDTO
 }
 
 type DeleteCardInput struct {
@@ -55,5 +55,5 @@ type MoveCardInput struct {
 }
 
 type MoveCardOutput struct {
-	Card dto.CardDTO
+	Card dto.CardWithAssigneeDTO
 }

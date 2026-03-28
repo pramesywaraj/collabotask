@@ -2,6 +2,7 @@ package card
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
@@ -13,6 +14,8 @@ func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInpu
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate update card input: %w", err)
 	}
+
+	var assignee *entity.User
 
 	atLeastOne := validator.AtLeastOneProvided(input.Title, input.Description, input.AssignedTo, input.DueDate)
 	if !atLeastOne {
@@ -55,7 +58,19 @@ func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInpu
 		return nil, err
 	}
 
+	if card.AssignedTo != nil {
+		user, err := cru.userRepo.GetById(ctx, *card.AssignedTo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch assignee: %w", err)
+		}
+		if user == nil || user.IsEmpty() {
+			return nil, fmt.Errorf("failed to fetch assignee: %w", domain.ErrUserNotFound)
+		}
+
+		assignee = user
+	}
+
 	return &UpdateCardOutput{
-		Card: dto.CardToDTO(card),
+		Card: dto.CardWithAssigneeToDTO(card, assignee),
 	}, nil
 }
