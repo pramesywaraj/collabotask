@@ -33,6 +33,9 @@ func (cru *CardUseCaseImpl) MoveCard(ctx context.Context, input MoveCardInput) (
 		}
 		return nil, fmt.Errorf("failed to fetch 'from' column: %w", err)
 	}
+	if !fromColumn.BelongsToBoard(input.BoardID) {
+		return nil, domain.ErrColumnNotInBoard
+	}
 
 	toColumn, err := cru.columnRepo.GetByID(ctx, input.ToColumnID)
 	if err != nil {

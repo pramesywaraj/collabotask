@@ -16,6 +16,7 @@ type CardUseCase interface {
 }
 
 type CreateCardInput struct {
+	BoardID     uuid.UUID  `validate:"required"`
 	ColumnID    uuid.UUID  `validate:"required"`
 	Title       string     `validate:"required,min=1,max=500"`
 	RequesterID uuid.UUID  `validate:"required"`
@@ -29,6 +30,7 @@ type CreateCardOutput struct {
 }
 
 type UpdateCardInput struct {
+	BoardID     uuid.UUID  `validate:"required"`
 	ColumnID    uuid.UUID  `validate:"required"`
 	CardID      uuid.UUID  `validate:"required"`
 	RequesterID uuid.UUID  `validate:"required"`
@@ -43,12 +45,14 @@ type UpdateCardOutput struct {
 }
 
 type DeleteCardInput struct {
+	BoardID     uuid.UUID `validate:"required"`
 	ColumnID    uuid.UUID `validate:"required"`
 	CardID      uuid.UUID `validate:"required"`
 	RequesterID uuid.UUID `validate:"required"`
 }
 
 type MoveCardInput struct {
+	BoardID      uuid.UUID `validate:"required"`
 	CardID       uuid.UUID `validate:"required"`
 	FromColumnID uuid.UUID `validate:"required"`
 	ToColumnID   uuid.UUID `validate:"required"`

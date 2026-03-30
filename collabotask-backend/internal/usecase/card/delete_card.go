@@ -31,6 +31,9 @@ func (cru *CardUseCaseImpl) DeleteCard(ctx context.Context, input DeleteCardInpu
 		}
 		return fmt.Errorf("failed to fetch column: %w", err)
 	}
+	if !column.BelongsToBoard(input.BoardID) {
+		return domain.ErrColumnNotInBoard
+	}
 
 	_, err = cru.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
 	if err != nil {
