@@ -23,5 +23,5 @@ type UpdateCardRequest struct {
 type MoveCardRequest struct {
 	FromColumnID uuid.UUID `json:"from_column_id" binding:"required"`
 	ToColumnID   uuid.UUID `json:"to_column_id" binding:"required"`
-	ToPosition   int       `json:"to_position" binding:"required"`
+	ToPosition   int       `json:"to_position" binding:"min=0"`
 }

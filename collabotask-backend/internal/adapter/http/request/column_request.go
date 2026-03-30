@@ -9,5 +9,5 @@ type UpdateColumnRequest struct {
 }
 
 type UpdateColumnPosition struct {
-	Position int `json:"position" binding:"required,min=0"`
+	Position int `json:"position" binding:"min=0"`
 }
