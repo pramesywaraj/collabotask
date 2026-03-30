@@ -6,6 +6,7 @@ import (
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -14,14 +15,31 @@ func (cru *CardUseCaseImpl) MoveCard(ctx context.Context, input MoveCardInput) (
 		return nil, fmt.Errorf("failed to validate move card input: %w", err)
 	}
 
+	card, err := cru.cardRepo.GetByID(ctx, input.CardID)
+	if err != nil {
+		if errors.Is(err, domain.ErrCardNotFound) {
+			return nil, domain.ErrCardNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch card: %w", err)
+	}
+	if !card.BelongsToColumn(input.FromColumnID) {
+		return nil, domain.ErrCardNotInColumn
+	}
+
 	fromColumn, err := cru.columnRepo.GetByID(ctx, input.FromColumnID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrColumnNotFound) {
+			return nil, domain.ErrColumnNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch 'from' column: %w", err)
 	}
 
 	toColumn, err := cru.columnRepo.GetByID(ctx, input.ToColumnID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrColumnNotFound) {
+			return nil, domain.ErrColumnNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch 'to' column: %w", err)
 	}
 
 	if fromColumn.BoardID != toColumn.BoardID {

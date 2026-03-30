@@ -1,8 +1,10 @@
 package card
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/infrastructure/validator"
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -13,12 +15,21 @@ func (cru *CardUseCaseImpl) DeleteCard(ctx context.Context, input DeleteCardInpu
 
 	card, err := cru.cardRepo.GetByID(ctx, input.CardID)
 	if err != nil {
-		return err
+		if errors.Is(err, domain.ErrCardNotFound) {
+			return domain.ErrCardNotFound
+		}
+		return fmt.Errorf("failed to fetch card: %w", err)
+	}
+	if !card.BelongsToColumn(input.ColumnID) {
+		return domain.ErrCardNotInColumn
 	}
 
 	column, err := cru.columnRepo.GetByID(ctx, card.ColumnID)
 	if err != nil {
-		return err
+		if errors.Is(err, domain.ErrColumnNotFound) {
+			return domain.ErrColumnNotFound
+		}
+		return fmt.Errorf("failed to fetch column: %w", err)
 	}
 
 	_, err = cru.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)

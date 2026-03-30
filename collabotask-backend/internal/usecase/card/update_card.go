@@ -29,10 +29,16 @@ func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInpu
 		}
 		return nil, fmt.Errorf("failed to fetch card: %w", err)
 	}
+	if !card.BelongsToColumn(input.ColumnID) {
+		return nil, domain.ErrCardNotInColumn
+	}
 
 	column, err := cru.columnRepo.GetByID(ctx, card.ColumnID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrColumnNotFound) {
+			return nil, domain.ErrColumnNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch column: %w", err)
 	}
 
 	_, err = cru.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)

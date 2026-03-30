@@ -29,6 +29,7 @@ type CreateCardOutput struct {
 }
 
 type UpdateCardInput struct {
+	ColumnID    uuid.UUID  `validate:"required"`
 	CardID      uuid.UUID  `validate:"required"`
 	RequesterID uuid.UUID  `validate:"required"`
 	Title       *string    `validate:"omitempty,min=1,max=500"`
@@ -42,6 +43,7 @@ type UpdateCardOutput struct {
 }
 
 type DeleteCardInput struct {
+	ColumnID    uuid.UUID `validate:"required"`
 	CardID      uuid.UUID `validate:"required"`
 	RequesterID uuid.UUID `validate:"required"`
 }

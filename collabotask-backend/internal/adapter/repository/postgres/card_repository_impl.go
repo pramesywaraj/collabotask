@@ -306,10 +306,10 @@ func (cdr *CardRepositoryImpl) Move(ctx context.Context, cardID, fromColumnID, t
 	}
 
 	if _, err := tx.Exec(ctx, decrementPositionCardAfterQuery, actualColumnID, oldPosition); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decrement card position: %w", err)
 	}
 	if _, err := tx.Exec(ctx, incrementPositionCardFromQuery, toColumnID, toPosition); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to increment card position: %w", err)
 	}
 
 	moved := &entity.Card{}

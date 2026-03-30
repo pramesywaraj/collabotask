@@ -26,3 +26,7 @@ func (Card) TableName() string {
 func (c *Card) IsEmpty() bool {
 	return c.ID == uuid.Nil
 }
+
+func (c *Card) BelongsToColumn(columnID uuid.UUID) bool {
+	return c.ColumnID == columnID
+}

@@ -6,6 +6,7 @@ import (
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -16,7 +17,10 @@ func (cru *CardUseCaseImpl) CreateCard(ctx context.Context, input CreateCardInpu
 
 	column, err := cru.columnRepo.GetByID(ctx, input.ColumnID)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, domain.ErrColumnNotFound) {
+			return nil, domain.ErrColumnNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch column: %w", err)
 	}
 
 	_, err = cru.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
@@ -39,7 +43,7 @@ func (cru *CardUseCaseImpl) CreateCard(ctx context.Context, input CreateCardInpu
 
 	maxPos, err := cru.cardRepo.GetMaxPosition(ctx, input.ColumnID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get cards max position in the column: %w", err)
 	}
 
 	nextPos := maxPos + 1
