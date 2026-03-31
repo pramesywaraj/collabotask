@@ -30,12 +30,12 @@ func CardDTOToResponse(card dto.CardWithAssigneeDTO) CardResponse {
 	var assignedTo *AssignedToResponse
 
 	if card.AssignedTo != nil {
-		tempAssignedTo := AssignedToResponse{
+		assignedTo = &AssignedToResponse{
 			ID:        *card.AssignedTo,
 			AvatarURL: card.AssigneeAvatarURL,
 		}
 		if card.AssigneeName != nil {
-			tempAssignedTo.Name = *card.AssigneeName
+			assignedTo.Name = *card.AssigneeName
 		}
 	}
 
