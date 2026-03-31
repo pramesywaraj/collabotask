@@ -38,7 +38,14 @@ func InitializeApp() (*App, error) {
 	boardMemberRepository := ProvideBoardMemberRepository(db)
 	boardUseCase := ProvideBoardUseCase(boardRepository, boardMemberRepository, workspaceRepository, workspaceMemberRepository, userRepository)
 	boardHandler := ProvideBoardHandler(boardUseCase)
-	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler, boardHandler)
+	columnRepository := ProvideColumnRepository(db)
+	boardAccessChecker := ProvideBoardAccessChecker(boardRepository, boardMemberRepository, workspaceMemberRepository)
+	columnUseCase := ProvideColumnUseCase(columnRepository, boardAccessChecker)
+	columnHandler := ProvideColumnHandler(columnUseCase)
+	cardRepository := ProvideCardRepository(db)
+	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker)
+	cardHandler := ProvideCardHandler(cardUseCase)
+	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler, boardHandler, columnHandler, cardHandler)
 	server := ProvideServer(config, engine)
 	v := ProvideCleanup(db)
 	app := &App{
@@ -71,17 +78,24 @@ var (
 		ProvideWorkspaceMemberRepository,
 		ProvideBoardRepository,
 		ProvideBoardMemberRepository,
+		ProvideColumnRepository,
+		ProvideCardRepository,
 	)
 	UseCaseSet = wire.NewSet(
 		ProvideAuthUseCase,
 		ProvideWorkspaceUseCase,
 		ProvideBoardUseCase,
+		ProvideBoardAccessChecker,
+		ProvideColumnUseCase,
+		ProvideCardUseCase,
 	)
 	HandlerSet = wire.NewSet(
 		ProvideAuthHandler,
 		ProvideUserHandler,
 		ProvideWorkspaceHandler,
 		ProvideBoardHandler,
+		ProvideColumnHandler,
+		ProvideCardHandler,
 	)
 	RouterSet = wire.NewSet(ProvideRouter)
 	ServerSet = wire.NewSet(ProvideServer)

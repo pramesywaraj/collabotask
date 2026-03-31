@@ -16,6 +16,8 @@ type Config struct {
 	UserHandler      *handler.UserHandler
 	WorkspaceHandler *handler.WorkspaceHandler
 	BoardHandler     *handler.BoardHandler
+	ColumnHandler    *handler.ColumnHandler
+	CardHandler      *handler.CardHandler
 }
 
 func New(cfg Config) *gin.Engine {
@@ -60,6 +62,22 @@ func New(cfg Config) *gin.Engine {
 			boards.GET("/:board_id/invitees", cfg.BoardHandler.FetchWorkspaceInviteesForBoard)
 			boards.POST("/:board_id/join", cfg.BoardHandler.SelfJoinToBoard)
 			boards.POST("/:board_id/leave", cfg.BoardHandler.LeaveBoard)
+		}
+
+		columns := boards.Group("/:board_id/columns")
+		{
+			columns.POST("", cfg.ColumnHandler.CreateColumn)
+			columns.PATCH("/:column_id", cfg.ColumnHandler.UpdateColumn)
+			columns.DELETE("/:column_id", cfg.ColumnHandler.DeleteColumn)
+			columns.PATCH("/:column_id/position", cfg.ColumnHandler.UpdateColumnPosition)
+		}
+
+		cards := columns.Group("/:column_id/cards")
+		{
+			cards.POST("", cfg.CardHandler.CreateCard)
+			cards.PATCH("/:card_id", cfg.CardHandler.UpdateCard)
+			cards.DELETE("/:card_id", cfg.CardHandler.DeleteCard)
+			cards.POST("/:card_id/move", cfg.CardHandler.MoveCardPosition)
 		}
 	}
 
