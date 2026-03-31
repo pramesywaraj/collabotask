@@ -8,6 +8,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/google/uuid"
 )
 
 func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInput) (*UpdateCardOutput, error) {
@@ -17,9 +20,12 @@ func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInpu
 
 	var assignee *entity.User
 
-	atLeastOne := validator.AtLeastOneProvided(input.Title, input.Description, input.AssignedTo, input.DueDate)
+	atLeastOne := validator.AtLeastOneProvided(input.Title) || input.DescriptionPresent || input.AssignedToPresent || input.DueDatePresent
 	if !atLeastOne {
 		return nil, domain.ErrAtLeastOneProvided
+	}
+	if input.AssignedToPresent && input.AssignedTo != nil && *input.AssignedTo == uuid.Nil {
+		return nil, domain.ErrInvalidAssigneeID
 	}
 
 	card, err := cru.cardRepo.GetByID(ctx, input.CardID)
@@ -52,13 +58,20 @@ func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInpu
 	if input.Title != nil {
 		card.Title = *input.Title
 	}
-	if input.Description != nil && *input.Description != "" {
-		card.Description = input.Description
+	if input.DescriptionPresent {
+		if input.Description == nil {
+			card.Description = nil
+		} else if strings.TrimSpace(*input.Description) == "" {
+			card.Description = nil
+		} else {
+			s := strings.TrimSpace(*input.Description)
+			card.Description = &s
+		}
 	}
-	if input.AssignedTo != nil {
+	if input.AssignedToPresent {
 		card.AssignedTo = input.AssignedTo
 	}
-	if input.DueDate != nil {
+	if input.DueDatePresent {
 		card.DueDate = input.DueDate
 	}
 

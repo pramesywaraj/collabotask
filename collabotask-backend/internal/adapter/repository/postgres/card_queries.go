@@ -26,7 +26,7 @@ const (
 		UPDATE cards
 		SET
 			title = COALESCE($1, title),
-			description = COALESCE($2, description),
+			description = $2,
 			assigned_to = $3,
 			due_date = $4,
 			updated_at = $5

@@ -14,10 +14,10 @@ type CreateCardRequest struct {
 }
 
 type UpdateCardRequest struct {
-	Title       *string    `json:"title" binding:"omitempty,min=1,max=500"`
-	Description *string    `json:"description" binding:"omitempty"`
-	AssignedTo  *uuid.UUID `json:"assigned_to" binding:"omitempty"`
-	DueDate     *time.Time `json:"due_date" binding:"omitempty"`
+	Title       *string                  `json:"title" binding:"omitempty,min=1,max=500"`
+	Description OptionalPatch[string]    `json:"description"`
+	AssignedTo  OptionalPatch[uuid.UUID] `json:"assigned_to"`
+	DueDate     OptionalPatch[time.Time] `json:"due_date"`
 }
 
 type MoveCardRequest struct {

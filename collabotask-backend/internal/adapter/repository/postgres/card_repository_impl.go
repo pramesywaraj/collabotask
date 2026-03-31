@@ -68,18 +68,13 @@ func (cdr *CardRepositoryImpl) Update(ctx context.Context, card *entity.Card) er
 		title = &card.Title
 	}
 
-	var description *string
-	if card.Description != nil && *card.Description != "" {
-		description = card.Description
-	}
-
 	updatedAt := time.Now()
 
 	err := cdr.db.QueryRow(
 		ctx,
 		updateCardQuery,
 		title,
-		description,
+		card.Description,
 		card.AssignedTo,
 		card.DueDate,
 		updatedAt,

@@ -43,7 +43,8 @@ func handleCardError(ctx *gin.Context, err error) {
 		errors.Is(err, domain.ErrCardNotInColumn):
 		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
 	case errors.Is(err, domain.ErrConstraintViolation),
-		errors.Is(err, domain.ErrAtLeastOneProvided):
+		errors.Is(err, domain.ErrAtLeastOneProvided),
+		errors.Is(err, domain.ErrInvalidAssigneeID):
 		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, err.Error()))
 	case errors.Is(err, domain.ErrAlreadyMember),
 		errors.Is(err, domain.ErrBoardAlreadyMember),
@@ -176,10 +177,19 @@ func (crh *CardHandler) UpdateCard(ctx *gin.Context) {
 		ColumnID:    columnID,
 		CardID:      cardID,
 		Title:       req.Title,
-		Description: req.Description,
-		AssignedTo:  req.AssignedTo,
-		DueDate:     req.DueDate,
 		RequesterID: userID,
+	}
+	if req.Description.Present {
+		input.DescriptionPresent = true
+		input.Description = req.Description.Value
+	}
+	if req.AssignedTo.Present {
+		input.AssignedToPresent = true
+		input.AssignedTo = req.AssignedTo.Value
+	}
+	if req.DueDate.Present {
+		input.DueDatePresent = true
+		input.DueDate = req.DueDate.Value
 	}
 
 	out, err := crh.cardUseCase.UpdateCard(ctx.Request.Context(), input)

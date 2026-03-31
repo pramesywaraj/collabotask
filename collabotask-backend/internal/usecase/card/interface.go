@@ -20,8 +20,8 @@ type CreateCardInput struct {
 	ColumnID    uuid.UUID  `validate:"required"`
 	Title       string     `validate:"required,min=1,max=500"`
 	RequesterID uuid.UUID  `validate:"required"`
-	Description *string    `validate:"omitempty"`
-	AssignedTo  *uuid.UUID `validate:"omitempty"`
+	Description *string    `validate:"omitempty,max=2000"`
+	AssignedTo  *uuid.UUID `validate:"omitempty,uuid"`
 	DueDate     *time.Time `validate:"omitempty"`
 }
 
@@ -30,14 +30,17 @@ type CreateCardOutput struct {
 }
 
 type UpdateCardInput struct {
-	BoardID     uuid.UUID  `validate:"required"`
-	ColumnID    uuid.UUID  `validate:"required"`
-	CardID      uuid.UUID  `validate:"required"`
-	RequesterID uuid.UUID  `validate:"required"`
-	Title       *string    `validate:"omitempty,min=1,max=500"`
-	Description *string    `validate:"omitempty"`
-	AssignedTo  *uuid.UUID `validate:"omitempty"`
-	DueDate     *time.Time `validate:"omitempty"`
+	BoardID            uuid.UUID `validate:"required"`
+	ColumnID           uuid.UUID `validate:"required"`
+	CardID             uuid.UUID `validate:"required"`
+	RequesterID        uuid.UUID `validate:"required"`
+	Title              *string   `validate:"omitempty,min=1,max=500"`
+	Description        *string   `validate:"omitempty,max=2000"`
+	DescriptionPresent bool
+	AssignedTo         *uuid.UUID `validate:"omitempty,uuid"`
+	AssignedToPresent  bool
+	DueDate            *time.Time `validate:"omitempty"`
+	DueDatePresent     bool
 }
 
 type UpdateCardOutput struct {

@@ -31,8 +31,9 @@ var (
 	ErrColumnNotInBoard = errors.New("column not in the board")
 
 	// Card
-	ErrCardNotFound    = errors.New("card not found")
-	ErrCardNotInColumn = errors.New("card not in the column")
+	ErrCardNotFound      = errors.New("card not found")
+	ErrCardNotInColumn   = errors.New("card not in the column")
+	ErrInvalidAssigneeID = errors.New("invalid assignee id")
 
 	// Validation
 	ErrConstraintViolation = errors.New("constraint violation")
