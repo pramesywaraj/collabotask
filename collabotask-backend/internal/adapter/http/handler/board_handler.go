@@ -152,7 +152,7 @@ func (bh *BoardHandler) FetchBoardDetail(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"Board detail successfully fetched",
+		"Board detail fetched successfully",
 		response.BoardDetailDTOToResponse(out.Board),
 	)
 }
@@ -200,7 +200,7 @@ func (bh *BoardHandler) FetchListBoardsInWorkspace(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"List boards in workspace successfully fetched",
+		"List boards in workspace fetched successfully",
 		boards,
 	)
 }
@@ -241,7 +241,7 @@ func (bh *BoardHandler) FetchWorkspaceInviteesForBoard(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"Workspace invitees for board successfully fetched",
+		"Workspace invitees for board fetched successfully",
 		members,
 	)
 }
@@ -489,5 +489,40 @@ func (bh *BoardHandler) LeaveBoard(ctx *gin.Context) {
 		ctx,
 		"Successfully left the board",
 		nil,
+	)
+}
+
+func (bh *BoardHandler) FetchBoardKanban(ctx *gin.Context) {
+	userID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	_, boardID, ok := parseBoardPathParams(ctx)
+	if !ok {
+		return
+	}
+
+	input := board.BoardKanbanInput{
+		RequesterID: userID,
+		BoardID:     boardID,
+	}
+
+	out, err := bh.boardUseCase.BoardKanban(ctx.Request.Context(), input)
+	if err != nil {
+		var validationErrs validator.ValidationErrors
+		if errors.As(err, &validationErrs) {
+			response.HandleValidationError(ctx, err)
+			return
+		}
+
+		handleBoardError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(
+		ctx,
+		"Board kanban fetched successfully",
+		response.BoardKanbanToResponse(out.Columns),
 	)
 }

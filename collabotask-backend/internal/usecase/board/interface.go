@@ -18,6 +18,7 @@ type BoardUseCase interface {
 	SelfJoinBoard(ctx context.Context, input SelfJoinBoardInput) error
 	UpdateBoard(ctx context.Context, input UpdateBoardInput) (*UpdateBoardOutput, error)
 	SetArchived(ctx context.Context, input SetArchivedInput) (*SetArchivedOutput, error)
+	BoardKanban(ctx context.Context, input BoardKanbanInput) (*BoardKanbanOutput, error)
 }
 
 type CreateBoardInput struct {
@@ -106,4 +107,13 @@ type SetArchivedInput struct {
 
 type SetArchivedOutput struct {
 	Board dto.BoardDTO
+}
+
+type BoardKanbanInput struct {
+	RequesterID uuid.UUID `validate:"required"`
+	BoardID     uuid.UUID `validate:"required"`
+}
+
+type BoardKanbanOutput struct {
+	Columns []dto.ColumnWithCardsDTO
 }

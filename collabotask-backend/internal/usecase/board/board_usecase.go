@@ -8,6 +8,8 @@ type BoardUseCaseImpl struct {
 	workspaceRepo       repository.WorkspaceRepository
 	workspaceMemberRepo repository.WorkspaceMemberRepository
 	userRepo            repository.UserRepository
+	columnRepo          repository.ColumnRepository
+	cardRepo            repository.CardRepository
 }
 
 func NewBoardUseCase(
@@ -16,6 +18,8 @@ func NewBoardUseCase(
 	workspaceRepo repository.WorkspaceRepository,
 	workspaceMemberRepo repository.WorkspaceMemberRepository,
 	userRepo repository.UserRepository,
+	columnRepo repository.ColumnRepository,
+	cardRepo repository.CardRepository,
 ) BoardUseCase {
 	return &BoardUseCaseImpl{
 		boardRepo:           boardRepo,
@@ -23,5 +27,7 @@ func NewBoardUseCase(
 		workspaceRepo:       workspaceRepo,
 		workspaceMemberRepo: workspaceMemberRepo,
 		userRepo:            userRepo,
+		columnRepo:          columnRepo,
+		cardRepo:            cardRepo,
 	}
 }

@@ -55,6 +55,7 @@ func New(cfg Config) *gin.Engine {
 			boards.POST("", cfg.BoardHandler.CreateBoard)
 			boards.GET("", cfg.BoardHandler.FetchListBoardsInWorkspace)
 			boards.GET("/:board_id", cfg.BoardHandler.FetchBoardDetail)
+			boards.GET("/:board_id/kanban", cfg.BoardHandler.FetchBoardKanban)
 			boards.PATCH("/:board_id", cfg.BoardHandler.UpdateBoard)
 			boards.POST("/:board_id/archive", cfg.BoardHandler.SetBoardArchivedStatus)
 			boards.POST("/:board_id/invite", cfg.BoardHandler.InviteMembersToBoard)

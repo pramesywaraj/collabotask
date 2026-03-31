@@ -58,6 +58,10 @@ type BoardInviteeListResponse struct {
 	Members []BoardInviteeResponse `json:"members"`
 }
 
+type BoardKanbanResponse struct {
+	Columns []ColumnWithCardsResponse `json:"columns"`
+}
+
 func BoardDTOToResponse(board dto.BoardDTO) BoardResponse {
 	return BoardResponse{
 		ID:              board.ID,
@@ -115,4 +119,13 @@ func BoardInviteeDTOToResponse(invitee dto.BoardInviteeDTO) BoardInviteeResponse
 		WorkspaceRole: invitee.WorkspaceRole,
 		IsBoardMember: invitee.IsBoardMember,
 	}
+}
+
+func BoardKanbanToResponse(columns []dto.ColumnWithCardsDTO) BoardKanbanResponse {
+	out := make([]ColumnWithCardsResponse, 0, len(columns))
+	for _, col := range columns {
+		out = append(out, ColumnWithCardsDTOToResponse(col))
+	}
+
+	return BoardKanbanResponse{Columns: out}
 }
