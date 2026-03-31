@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 func (bu *BoardUseCaseImpl) UpdateBoard(ctx context.Context, input UpdateBoardInput) (*UpdateBoardOutput, error) {
@@ -14,7 +15,7 @@ func (bu *BoardUseCaseImpl) UpdateBoard(ctx context.Context, input UpdateBoardIn
 		return nil, fmt.Errorf("failed to validate update board input: %w", err)
 	}
 
-	atLeastOne := validator.AtLeastOneProvided(input.Title, input.Description, input.BackgroundColor)
+	atLeastOne := validator.AtLeastOneProvided(input.Title, input.BackgroundColor) || input.DescriptionPresent
 	if !atLeastOne {
 		return nil, domain.ErrAtLeastOneProvided
 	}
@@ -44,8 +45,15 @@ func (bu *BoardUseCaseImpl) UpdateBoard(ctx context.Context, input UpdateBoardIn
 	if input.Title != nil {
 		board.Title = *input.Title
 	}
-	if input.Description != nil {
-		board.Description = input.Description
+	if input.DescriptionPresent {
+		if input.Description == nil {
+			board.Description = nil
+		} else if strings.TrimSpace(*input.Description) == "" {
+			board.Description = nil
+		} else {
+			s := strings.TrimSpace(*input.Description)
+			board.Description = &s
+		}
 	}
 	if input.BackgroundColor != nil {
 		board.BackgroundColor = *input.BackgroundColor

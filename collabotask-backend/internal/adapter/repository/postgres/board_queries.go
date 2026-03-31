@@ -10,7 +10,7 @@ const (
 		UPDATE boards
 		SET
 			title = COALESCE($1, title),
-			description = COALESCE($2, description),
+			description = $2,
 			background_color = COALESCE($3, background_color),
 			updated_at = $4
 		WHERE id = $5

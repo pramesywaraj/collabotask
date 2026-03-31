@@ -86,11 +86,12 @@ type SelfJoinBoardInput struct {
 }
 
 type UpdateBoardInput struct {
-	RequesterID     uuid.UUID `validate:"required"`
-	BoardID         uuid.UUID `validate:"required"`
-	BackgroundColor *string   `validate:"omitempty,min=4,max=8"`
-	Description     *string   `validate:"omitempty,max=1000"`
-	Title           *string   `validate:"omitempty,min=3,max=255"`
+	RequesterID        uuid.UUID `validate:"required"`
+	BoardID            uuid.UUID `validate:"required"`
+	BackgroundColor    *string   `validate:"omitempty,min=4,max=8"`
+	Description        *string   `validate:"omitempty,max=1000"`
+	DescriptionPresent bool
+	Title              *string `validate:"omitempty,min=3,max=255"`
 }
 
 type UpdateBoardOutput struct {

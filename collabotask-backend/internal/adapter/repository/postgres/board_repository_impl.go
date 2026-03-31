@@ -134,11 +134,6 @@ func (br *BoardRepositoryImpl) Update(ctx context.Context, board *entity.Board) 
 		title = &board.Title
 	}
 
-	var description *string
-	if board.Description != nil && *board.Description != "" {
-		description = board.Description
-	}
-
 	var backgroundColor *string
 	if board.BackgroundColor != "" {
 		backgroundColor = &board.BackgroundColor
@@ -150,7 +145,7 @@ func (br *BoardRepositoryImpl) Update(ctx context.Context, board *entity.Board) 
 		ctx,
 		updateBoardQuery,
 		title,
-		description,
+		board.Description,
 		backgroundColor,
 		updatedAt,
 		board.ID,

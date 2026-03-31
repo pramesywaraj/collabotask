@@ -267,8 +267,11 @@ func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 		RequesterID:     userID,
 		BoardID:         boardID,
 		Title:           req.Title,
-		Description:     req.Description,
 		BackgroundColor: req.BackgroundColor,
+	}
+	if req.Description.Present {
+		input.DescriptionPresent = true
+		input.Description = req.Description.Value
 	}
 
 	out, err := bh.boardUseCase.UpdateBoard(ctx.Request.Context(), input)
