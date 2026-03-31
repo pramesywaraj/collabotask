@@ -1,5 +1,8 @@
 package handler
 
+//TODO:
+// - Add update workspace handler
+
 import (
 	apperrors "collabotask/internal/adapter/http/errors"
 	"collabotask/internal/adapter/http/helper"
