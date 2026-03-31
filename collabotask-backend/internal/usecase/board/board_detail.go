@@ -33,7 +33,15 @@ func (bu *BoardUseCaseImpl) BoardDetail(ctx context.Context, input BoardDetailIn
 		return nil, domain.ErrUserNotInWorkspace
 	}
 
-	boardMembership, _ := bu.boardMemberRepo.GetMemberByBoardAndUser(ctx, input.BoardID, input.RequesterID)
+	boardMembership, err := bu.boardMemberRepo.GetMemberByBoardAndUser(ctx, input.BoardID, input.RequesterID)
+	if err != nil {
+		if !errors.Is(err, domain.ErrBoardMemberNotFound) {
+			return nil, fmt.Errorf("failed to fetch board membership: %w", err)
+		}
+
+		boardMembership = nil
+	}
+
 	hasAccess := workspaceMembership.IsAdmin() || board.CreatedBy == input.RequesterID || (boardMembership != nil && !boardMembership.IsEmpty())
 	if !hasAccess {
 		return nil, domain.ErrBoardAccessDenied
