@@ -20,6 +20,16 @@ func NewAuthHandler(authUseCase auth.AuthUseCase) *AuthHandler {
 	return &AuthHandler{authUseCase: authUseCase}
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body request.RegisterRequest true "Registration payload"
+// @Success 201 {object} response.AuthSuccessDoc "Created"
+// @Failure 400 {object} response.APIResponse "Validation error"
+// @Failure 409 {object} response.APIResponse "Conflict"
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req request.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -48,6 +58,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}, http.StatusCreated)
 }
 
+// Login godoc
+// @Summary Log in a user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body request.LoginRequest true "Login credentials"
+// @Success 200 {object} response.AuthSuccessDoc "OK"
+// @Failure 400 {object} response.APIResponse "Validation error"
+// @Failure 401 {object} response.APIResponse "Unauthorized"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req request.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
