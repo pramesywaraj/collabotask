@@ -1,3 +1,15 @@
+// @title Collabotask API
+// @version 0.1.0
+// @description HTTP API for Collabotask
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Add "Bearer " and your JWT token
 package main
 
 import (
@@ -7,6 +19,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "collabotask/docs"
 	"collabotask/internal/infrastructure/database"
 	"collabotask/internal/injection"
 )

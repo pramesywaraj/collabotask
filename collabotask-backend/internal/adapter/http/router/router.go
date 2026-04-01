@@ -7,6 +7,8 @@ import (
 	"collabotask/pkg/logger"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Config struct {
@@ -26,6 +28,8 @@ func New(cfg Config) *gin.Engine {
 	routes.Use(middleware.Recover(cfg.Log))
 	routes.Use(middleware.Logger(cfg.Log))
 	routes.Use(middleware.CORS(&cfg.Cfg.CORS))
+
+	routes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Public routess
 	auth := routes.Group("/auth")
