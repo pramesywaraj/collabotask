@@ -75,8 +75,10 @@ func ProvideBoardUseCase(
 	workspaceRepo repository.WorkspaceRepository,
 	workspaceMemberRepo repository.WorkspaceMemberRepository,
 	userRepo repository.UserRepository,
+	columnRepo repository.ColumnRepository,
+	cardRepo repository.CardRepository,
 ) board.BoardUseCase {
-	return board.NewBoardUseCase(boardRepo, boardMemberRepo, workspaceRepo, workspaceMemberRepo, userRepo)
+	return board.NewBoardUseCase(boardRepo, boardMemberRepo, workspaceRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo)
 }
 func ProvideColumnUseCase(
 	columnRepo repository.ColumnRepository,
