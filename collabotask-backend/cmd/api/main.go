@@ -36,6 +36,7 @@ func main() {
 	srv := app.Server
 
 	docs.SwaggerInfo.Version = cfg.App.Version
+	docs.SwaggerInfo.Host = cfg.Server.Host + ":" + cfg.Server.Port
 
 	if err := database.RunMigrations(cfg); err != nil {
 		log.Fatal("failed to run migrations: " + err.Error())
