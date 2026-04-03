@@ -2,8 +2,8 @@
 // @version 0.1.0
 // @description HTTP API for Collabotask
 
-// @host localhost:8080
-// @BasePath /
+// @host app-domain.com
+// @BasePath /api/v1
 // @schemes http
 
 // @securityDefinitions.apikey BearerAuth
@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"collabotask/docs"
 	_ "collabotask/docs"
 	"collabotask/internal/infrastructure/database"
 	"collabotask/internal/injection"
@@ -33,6 +34,8 @@ func main() {
 	cfg := app.Config
 	log := app.Logger
 	srv := app.Server
+
+	docs.SwaggerInfo.Version = cfg.App.Version
 
 	if err := database.RunMigrations(cfg); err != nil {
 		log.Fatal("failed to run migrations: " + err.Error())

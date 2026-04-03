@@ -31,21 +31,23 @@ func New(cfg Config) *gin.Engine {
 
 	routes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	v1Routes := routes.Group("/api/v1")
+
 	// Public routess
-	auth := routes.Group("/auth")
+	auth := v1Routes.Group("/auth")
 	{
 		auth.POST("/register", cfg.AuthHandler.Register)
 		auth.POST("/login", cfg.AuthHandler.Login)
 	}
 
 	// Protected routess
-	user := routes.Group("/user")
+	user := v1Routes.Group("/user")
 	user.Use(middleware.Auth(&cfg.Cfg.Auth))
 	{
 		user.GET("/profile", cfg.UserHandler.GetProfile)
 	}
 
-	workspaces := routes.Group("/workspace")
+	workspaces := v1Routes.Group("/workspace")
 	workspaces.Use(middleware.Auth(&cfg.Cfg.Auth))
 	{
 		workspaces.POST("", cfg.WorkspaceHandler.CreateWorkspace)
