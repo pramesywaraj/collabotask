@@ -23,7 +23,7 @@ func NewBoardRepository(db *pgxpool.Pool) repository.BoardRepository {
 	return &BoardRepositoryImpl{db: db}
 }
 
-const boardsCap = 16
+const defaultBoardCaps = 16
 
 func (br *BoardRepositoryImpl) Create(ctx context.Context, board *entity.Board) error {
 	var description *string
@@ -119,6 +119,23 @@ func (br *BoardRepositoryImpl) CreateWithOwner(ctx context.Context, board *entit
 			return domain.ErrBoardAlreadyMember
 		}
 		return fmt.Errorf("failed to add owner to board: %w", err)
+	}
+
+	for position, colTitle := range domain.DefaultNewBoardColumnTitles {
+		_, err = tx.Exec(
+			ctx,
+			createColumnQuery,
+			board.ID,
+			colTitle,
+			position,
+		)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return domain.ErrConstraintViolation
+			}
+			return fmt.Errorf("failed to create default column: %w", err)
+		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
@@ -230,7 +247,7 @@ func (br *BoardRepositoryImpl) GetUserBoardsInWorkspace(ctx context.Context, wor
 	}
 	defer rows.Close()
 
-	boards := make([]*entity.BoardListItem, 0, boardsCap)
+	boards := make([]*entity.BoardListItem, 0, defaultBoardCaps)
 	for rows.Next() {
 		board := &entity.BoardListItem{}
 		var description *string
