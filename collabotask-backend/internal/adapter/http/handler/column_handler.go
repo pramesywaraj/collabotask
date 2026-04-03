@@ -75,6 +75,23 @@ func parseColumnPathParams(ctx *gin.Context) (boardID, columnID uuid.UUID, ok bo
 	return boardID, columnID, true
 }
 
+// CreateColumn godoc
+// @Summary Create a column on a board
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param body body request.CreateColumnRequest true "Column payload"
+// @Success 201 {object} response.ColumnCreateSuccessDoc "Created"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid board id or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns [post]
 func (ch *ColumnHandler) CreateColumn(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -126,6 +143,24 @@ func (ch *ColumnHandler) CreateColumn(ctx *gin.Context) {
 	)
 }
 
+// UpdateColumn godoc
+// @Summary Update a column
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Param body body request.UpdateColumnRequest true "Column payload"
+// @Success 200 {object} response.ColumnUpdateSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid ids or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id} [patch]
 func (ch *ColumnHandler) UpdateColumn(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -169,6 +204,23 @@ func (ch *ColumnHandler) UpdateColumn(ctx *gin.Context) {
 	)
 }
 
+// DeleteColumn godoc
+// @Summary Delete a column
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Success 200 {object} response.ColumnDeleteSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid board/column id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id} [delete]
 func (ch *ColumnHandler) DeleteColumn(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -205,6 +257,24 @@ func (ch *ColumnHandler) DeleteColumn(ctx *gin.Context) {
 	)
 }
 
+// UpdateColumnPosition godoc
+// @Summary Update column order/position
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Param body body request.UpdateColumnPosition true "New position"
+// @Success 200 {object} response.ColumnPositionSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid ids or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id}/position [patch]
 func (ch *ColumnHandler) UpdateColumnPosition(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {

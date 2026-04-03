@@ -69,6 +69,22 @@ func parseBoardPathParams(ctx *gin.Context) (workspaceID, boardID uuid.UUID, ok 
 	return workspaceID, boardID, true
 }
 
+// CreateBoard godoc
+// @Summary Create a board in a workspace
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param body body request.CreateBoardRequest true "Board payload"
+// @Success 201 {object} response.BoardCreateSuccessDoc "Created"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid workspace id or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board [post]
 func (bh *BoardHandler) CreateBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -122,6 +138,21 @@ func (bh *BoardHandler) CreateBoard(ctx *gin.Context) {
 	)
 }
 
+// FetchBoardDetail godoc
+// @Summary Get board detail
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Success 200 {object} response.BoardDetailSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid or missing workspace/board id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id} [get]
 func (bh *BoardHandler) FetchBoardDetail(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -157,6 +188,20 @@ func (bh *BoardHandler) FetchBoardDetail(ctx *gin.Context) {
 	)
 }
 
+// FetchListBoardsInWorkspace godoc
+// @Summary List boards in a workspace
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Success 200 {object} response.BoardListInWorkspaceSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board [get]
 func (bh *BoardHandler) FetchListBoardsInWorkspace(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -205,6 +250,21 @@ func (bh *BoardHandler) FetchListBoardsInWorkspace(ctx *gin.Context) {
 	)
 }
 
+// FetchWorkspaceInviteesForBoard godoc
+// @Summary List workspace members eligible as board invitees
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Success 200 {object} response.BoardInviteesListSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid or missing workspace/board id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/invitees [get]
 func (bh *BoardHandler) FetchWorkspaceInviteesForBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -246,6 +306,22 @@ func (bh *BoardHandler) FetchWorkspaceInviteesForBoard(ctx *gin.Context) {
 	)
 }
 
+// UpdateBoard godoc
+// @Summary Update board fields
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param body body request.UpdateBoardRequest true "Partial update"
+// @Success 200 {object} response.BoardUpdateSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id} [patch]
 func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -293,6 +369,22 @@ func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 	)
 }
 
+// SetBoardArchivedStatus godoc
+// @Summary Set board archived flag
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param body body request.SetArchivedBoardRequest true "Archived flag"
+// @Success 200 {object} response.BoardArchiveSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/archive [post]
 func (bh *BoardHandler) SetBoardArchivedStatus(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -335,6 +427,23 @@ func (bh *BoardHandler) SetBoardArchivedStatus(ctx *gin.Context) {
 	)
 }
 
+// InviteMembersToBoard godoc
+// @Summary Invite workspace members to the board by user id
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param body body request.InviteMemberBoardRequest true "User IDs to invite"
+// @Success 200 {object} response.BoardInviteMembersSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/invite [post]
 func (bh *BoardHandler) InviteMembersToBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -378,6 +487,22 @@ func (bh *BoardHandler) InviteMembersToBoard(ctx *gin.Context) {
 	)
 }
 
+// RemoveMemberFromBoard godoc
+// @Summary Remove a member from the board
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param body body request.RemoveMemberBoardRequest true "Member user id"
+// @Success 200 {object} response.BoardRemoveMemberSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/member [delete]
 func (bh *BoardHandler) RemoveMemberFromBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -421,6 +546,22 @@ func (bh *BoardHandler) RemoveMemberFromBoard(ctx *gin.Context) {
 	)
 }
 
+// SelfJoinToBoard godoc
+// @Summary Join the board (self-service)
+// @Description For now, its only eligible for Workspace Admin
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Success 200 {object} response.BoardSelfJoinSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid ids"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 409 {object} response.Failure409ConflictDoc "Already a member or cannot join"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/join [post]
 func (bh *BoardHandler) SelfJoinToBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -457,6 +598,21 @@ func (bh *BoardHandler) SelfJoinToBoard(ctx *gin.Context) {
 	)
 }
 
+// LeaveBoard godoc
+// @Summary Leave the board
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Success 200 {object} response.BoardLeaveSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid ids"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden (e.g. owner cannot leave)"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/leave [post]
 func (bh *BoardHandler) LeaveBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -492,6 +648,21 @@ func (bh *BoardHandler) LeaveBoard(ctx *gin.Context) {
 	)
 }
 
+// FetchBoardKanban godoc
+// @Summary Get board kanban (columns and cards)
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Success 200 {object} response.BoardKanbanSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid or missing workspace/board id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/kanban [get]
 func (bh *BoardHandler) FetchBoardKanban(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {

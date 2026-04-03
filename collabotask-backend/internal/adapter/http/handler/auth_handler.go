@@ -26,9 +26,9 @@ func NewAuthHandler(authUseCase auth.AuthUseCase) *AuthHandler {
 // @Accept json
 // @Produce json
 // @Param body body request.RegisterRequest true "Registration payload"
-// @Success 201 {object} response.AuthSuccessDoc "Created"
-// @Failure 400 {object} response.APIResponse "Validation error"
-// @Failure 409 {object} response.APIResponse "Conflict"
+// @Success 201 {object} response.AuthRegisterSuccessDoc "Created"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Validation error"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req request.RegisterRequest
@@ -64,9 +64,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param body body request.LoginRequest true "Login credentials"
-// @Success 200 {object} response.AuthSuccessDoc "OK"
-// @Failure 400 {object} response.APIResponse "Validation error"
-// @Failure 401 {object} response.APIResponse "Unauthorized"
+// @Success 200 {object} response.AuthLoginSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
+// @Failure 401 {object} response.Failure401LoginDoc "Unauthorized"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req request.LoginRequest

@@ -108,6 +108,24 @@ func parseBoardAndColumnPathParams(ctx *gin.Context) (boardID, columnID uuid.UUI
 	return boardID, columnID, true
 }
 
+// CreateCard godoc
+// @Summary Create a card in a column
+// @Tags card
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Param body body request.CreateCardRequest true "Card payload"
+// @Success 201 {object} response.CardCreateSuccessDoc "Created"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid board/column id or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id}/cards [post]
 func (crh *CardHandler) CreateCard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -155,6 +173,25 @@ func (crh *CardHandler) CreateCard(ctx *gin.Context) {
 	)
 }
 
+// UpdateCard godoc
+// @Summary Update a card
+// @Tags card
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Param card_id path string true "Card UUID"
+// @Param body body request.UpdateCardRequest true "Partial update"
+// @Success 200 {object} response.CardUpdateSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid ids or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id}/cards/{card_id} [patch]
 func (crh *CardHandler) UpdateCard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -211,6 +248,24 @@ func (crh *CardHandler) UpdateCard(ctx *gin.Context) {
 	)
 }
 
+// DeleteCard godoc
+// @Summary Delete a card
+// @Tags card
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Param card_id path string true "Card UUID"
+// @Success 200 {object} response.CardDeleteSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid board/column/card id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id}/cards/{card_id} [delete]
 func (crh *CardHandler) DeleteCard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
@@ -248,6 +303,25 @@ func (crh *CardHandler) DeleteCard(ctx *gin.Context) {
 	)
 }
 
+// MoveCardPosition godoc
+// @Summary Move a card (column and/or position)
+// @Tags card
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Source column UUID"
+// @Param card_id path string true "Card UUID"
+// @Param body body request.MoveCardRequest true "Target column and position"
+// @Success 200 {object} response.CardMoveSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid ids or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id}/cards/{card_id}/move [post]
 func (crh *CardHandler) MoveCardPosition(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
