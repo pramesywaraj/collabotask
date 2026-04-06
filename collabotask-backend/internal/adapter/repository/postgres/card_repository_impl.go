@@ -193,7 +193,7 @@ func (cdr *CardRepositoryImpl) GetByID(ctx context.Context, cardID uuid.UUID) (*
 	return card, nil
 }
 
-func (cdr *CardRepositoryImpl) ListByColumn(ctx context.Context, columnID uuid.UUID) ([]*entity.Card, error) {
+func (cdr *CardRepositoryImpl) GetCardsByColumn(ctx context.Context, columnID uuid.UUID) ([]*entity.Card, error) {
 	rows, err := cdr.db.Query(
 		ctx,
 		listCardByColumnQuery,

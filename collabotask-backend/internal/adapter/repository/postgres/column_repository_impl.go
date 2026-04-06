@@ -110,7 +110,7 @@ func (cr *ColumnRepositoryImpl) GetByID(ctx context.Context, columnID uuid.UUID)
 	return column, nil
 }
 
-func (cr *ColumnRepositoryImpl) ListByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.Column, error) {
+func (cr *ColumnRepositoryImpl) GetColumnsByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.Column, error) {
 	rows, err := cr.db.Query(
 		ctx,
 		listColumnByBoardIDQuery,

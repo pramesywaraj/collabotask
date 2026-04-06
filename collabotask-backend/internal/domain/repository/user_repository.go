@@ -9,17 +9,11 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, user *entity.User) error
-
 	GetById(ctx context.Context, id uuid.UUID) (*entity.User, error)
 	GetByEmail(ctx context.Context, email string) (*entity.User, error)
-
 	GetByIds(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*entity.User, error)
-
 	Update(ctx context.Context, user *entity.User) error
-
 	Delete(ctx context.Context, id uuid.UUID) error
-
 	List(ctx context.Context, limit, offset int) ([]*entity.User, error)
-
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
 }

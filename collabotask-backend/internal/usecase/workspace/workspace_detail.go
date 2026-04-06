@@ -28,7 +28,7 @@ func (wu *WorkspaceUseCaseImpl) WorkspaceDetail(ctx context.Context, input Works
 		return nil, fmt.Errorf("failed to fetch workspace: %w", err)
 	}
 
-	members, err := wu.workspaceMemberRepo.ListMemberByWorkspace(ctx, input.WorkspaceID)
+	members, err := wu.workspaceMemberRepo.GetMembersByWorkspace(ctx, input.WorkspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch workspace members: %w", err)
 	}

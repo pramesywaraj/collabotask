@@ -88,7 +88,7 @@ func (wm *WorkspaceMemberRepositoryImpl) GetByWorkspaceAndUser(ctx context.Conte
 	return workspaceMember, nil
 }
 
-func (wm *WorkspaceMemberRepositoryImpl) ListMemberByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]*entity.WorkspaceMember, error) {
+func (wm *WorkspaceMemberRepositoryImpl) GetMembersByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]*entity.WorkspaceMember, error) {
 	rows, err := wm.db.Query(
 		ctx,
 		listMemberByWorkspaceQuery,

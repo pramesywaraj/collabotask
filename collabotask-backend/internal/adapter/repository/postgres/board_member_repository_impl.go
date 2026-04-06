@@ -90,7 +90,7 @@ func (bmr *BoardMemberRepositoryImpl) Delete(ctx context.Context, boardID, userI
 	return nil
 }
 
-func (bmr *BoardMemberRepositoryImpl) ListMemberByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.BoardMember, error) {
+func (bmr *BoardMemberRepositoryImpl) GetMembersByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.BoardMember, error) {
 	rows, err := bmr.db.Query(
 		ctx,
 		listMemberByBoardQuery,

@@ -47,7 +47,7 @@ func (bu *BoardUseCaseImpl) BoardKanban(ctx context.Context, input BoardKanbanIn
 		return nil, domain.ErrBoardAccessDenied
 	}
 
-	columns, err := bu.columnRepo.ListByBoard(ctx, input.BoardID)
+	columns, err := bu.columnRepo.GetColumnsByBoard(ctx, input.BoardID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch list of columns in the board: %w", err)
 	}
@@ -62,7 +62,7 @@ func (bu *BoardUseCaseImpl) BoardKanban(ctx context.Context, input BoardKanbanIn
 	cardsByColumn := make([][]*entity.Card, len(columns))
 
 	for i, col := range columns {
-		cards, err := bu.cardRepo.ListByColumn(ctx, col.ID)
+		cards, err := bu.cardRepo.GetCardsByColumn(ctx, col.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list cards: %w", err)
 		}

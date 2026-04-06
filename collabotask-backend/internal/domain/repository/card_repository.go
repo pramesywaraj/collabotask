@@ -13,7 +13,7 @@ type CardRepository interface {
 	Delete(ctx context.Context, cardID uuid.UUID) error
 	DeleteWithReorder(ctx context.Context, cardID uuid.UUID) error
 	GetByID(ctx context.Context, cardID uuid.UUID) (*entity.Card, error)
-	ListByColumn(ctx context.Context, columnID uuid.UUID) ([]*entity.Card, error)
+	GetCardsByColumn(ctx context.Context, columnID uuid.UUID) ([]*entity.Card, error)
 	GetMaxPosition(ctx context.Context, columnID uuid.UUID) (int, error)
 	IncrementPositionsFrom(ctx context.Context, columnID uuid.UUID, position int) error
 	DecrementPositionsAfter(ctx context.Context, columnID uuid.UUID, position int) error

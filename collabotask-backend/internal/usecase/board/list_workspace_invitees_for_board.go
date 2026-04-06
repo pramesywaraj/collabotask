@@ -45,12 +45,12 @@ func (bu *BoardUseCaseImpl) ListWorkspaceInviteesForBoard(ctx context.Context, i
 		return nil, domain.ErrBoardPermissionDenied
 	}
 
-	workspaceMembers, err := bu.workspaceMemberRepo.ListMemberByWorkspace(ctx, input.WorkspaceID)
+	workspaceMembers, err := bu.workspaceMemberRepo.GetMembersByWorkspace(ctx, input.WorkspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workspace members: %w", err)
 	}
 
-	boardMembers, err := bu.boardMemberRepo.ListMemberByBoard(ctx, input.BoardID)
+	boardMembers, err := bu.boardMemberRepo.GetMembersByBoard(ctx, input.BoardID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list board members: %w", err)
 	}

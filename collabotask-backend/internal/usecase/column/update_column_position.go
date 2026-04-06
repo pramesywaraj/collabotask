@@ -33,7 +33,7 @@ func (cu *ColumnUseCaseImpl) UpdateColumnPosition(ctx context.Context, input Upd
 		return nil, err
 	}
 
-	columns, err := cu.columnRepo.ListByBoard(ctx, column.BoardID)
+	columns, err := cu.columnRepo.GetColumnsByBoard(ctx, column.BoardID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list columns for board: %w", err)
 	}

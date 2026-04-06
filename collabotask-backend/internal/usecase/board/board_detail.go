@@ -47,7 +47,7 @@ func (bu *BoardUseCaseImpl) BoardDetail(ctx context.Context, input BoardDetailIn
 		return nil, domain.ErrBoardAccessDenied
 	}
 
-	members, err := bu.boardMemberRepo.ListMemberByBoard(ctx, input.BoardID)
+	members, err := bu.boardMemberRepo.GetMembersByBoard(ctx, input.BoardID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch board members: %w", err)
 	}
