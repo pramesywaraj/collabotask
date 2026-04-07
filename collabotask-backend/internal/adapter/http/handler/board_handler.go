@@ -245,7 +245,7 @@ func (bh *BoardHandler) GetBoardsInWorkspace(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"List boards in workspace fetched successfully",
+		"Boards in Workspace retrieved successfully",
 		boards,
 	)
 }
@@ -301,7 +301,7 @@ func (bh *BoardHandler) GetWorkspaceInviteesForBoard(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"Workspace invitees for board fetched successfully",
+		"Workspace invitees for board retrieved successfully",
 		members,
 	)
 }
@@ -364,7 +364,7 @@ func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"Board successfully updated",
+		"Board updated successfully",
 		response.BoardDTOToResponse(out.Board),
 	)
 }
@@ -693,7 +693,7 @@ func (bh *BoardHandler) GetBoardKanban(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"Board kanban fetched successfully",
+		"Board kanban retrieved successfully",
 		response.BoardKanbanToResponse(out.Columns),
 	)
 }

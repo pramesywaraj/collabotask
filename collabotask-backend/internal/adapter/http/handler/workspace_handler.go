@@ -126,7 +126,7 @@ func (wh *WorkspaceHandler) GetWorkspaces(ctx *gin.Context) {
 
 	response.GenerateSuccessResponse(
 		ctx,
-		"Workspace retrieved successfully",
+		"Workspaces retrieved successfully",
 		workspaces,
 	)
 }
@@ -290,5 +290,5 @@ func (wh *WorkspaceHandler) GetWorkspaceDetail(ctx *gin.Context) {
 		return
 	}
 
-	response.GenerateSuccessResponse(ctx, "Workspace detail successfully fetched", response.WorkspaceDetailDTOToResponse(out.Workspace))
+	response.GenerateSuccessResponse(ctx, "Workspace detail retrieved successfully", response.WorkspaceDetailDTOToResponse(out.Workspace))
 }
