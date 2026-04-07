@@ -5,7 +5,6 @@ import (
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	"collabotask/internal/usecase/auth"
 	"errors"
 	"net/http"
@@ -54,7 +53,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	response.GenerateSuccessResponse(c, "User registered successfully", response.AuthResponse{
-		User:  userDTOToResponse(out.User),
+		User:  response.UserDTOToResponse(out.User),
 		Token: out.Token,
 	}, http.StatusCreated)
 }
@@ -86,17 +85,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	response.GenerateSuccessResponse(c, "Successfully logged in", response.AuthResponse{
-		User:  userDTOToResponse(out.User),
+		User:  response.UserDTOToResponse(out.User),
 		Token: out.Token,
 	})
-}
-
-func userDTOToResponse(u dto.UserDTO) response.UserResponse {
-	return response.UserResponse{
-		ID:         u.ID,
-		Email:      u.Email,
-		Name:       u.Name,
-		AvatarURL:  u.AvatarURL,
-		SystemRole: u.SystemRole,
-	}
 }

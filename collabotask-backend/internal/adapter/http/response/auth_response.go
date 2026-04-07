@@ -1,6 +1,10 @@
 package response
 
-import "github.com/google/uuid"
+import (
+	"collabotask/internal/dto"
+
+	"github.com/google/uuid"
+)
 
 type UserResponse struct {
 	ID         uuid.UUID `json:"id"`
@@ -13,4 +17,14 @@ type UserResponse struct {
 type AuthResponse struct {
 	User  UserResponse `json:"user"`
 	Token string       `json:"token"`
+}
+
+func UserDTOToResponse(u dto.UserDTO) UserResponse {
+	return UserResponse{
+		ID:         u.ID,
+		Email:      u.Email,
+		Name:       u.Name,
+		AvatarURL:  u.AvatarURL,
+		SystemRole: u.SystemRole,
+	}
 }
