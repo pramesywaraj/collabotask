@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
@@ -29,6 +30,6 @@ func (wu *WorkspaceUseCaseImpl) CreateWorkspace(ctx context.Context, input Creat
 	}
 
 	return &CreateWorkspaceOutput{
-		Workspace: workspaceToDTO(workspace),
+		Workspace: dto.WorkspaceToDTO(workspace),
 	}, nil
 }

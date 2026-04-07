@@ -1,44 +1,18 @@
 package workspace
 
 import (
-	"collabotask/internal/domain/entity"
+	"collabotask/internal/dto"
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 )
 
-type WorkspaceDTO struct {
-	ID          uuid.UUID
-	Name        string
-	Description *string
-	OwnerID     uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-}
-
-type WorkspaceWithMetaDTO struct {
-	WorkspaceDTO
-
-	MemberCount uint
-	BoardCount  uint
-	Role        entity.WorkspaceRole
-}
-
-type WorkspaceMemberDTO struct {
-	UserID    uuid.UUID
-	Email     string
-	Name      string
-	AvatarURL *string
-	Role      entity.WorkspaceRole
-	JoinedAt  time.Time
-}
-
-type WorkspaceDetailDTO struct {
-	WorkspaceDTO
-
-	UserRole entity.WorkspaceRole
-	Members  []WorkspaceMemberDTO
+type WorkspaceUseCase interface {
+	CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error)
+	WorkspaceDetail(ctx context.Context, input WorkspaceDetailInput) (*WorkspaceDetailOutput, error)
+	InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error)
+	GetWorkspaces(ctx context.Context, input GetWorkspacesInput) (*GetWorkspacesOutput, error)
+	RemoveMember(ctx context.Context, input RemoveMemberInput) error
 }
 
 type CreateWorkspaceInput struct {
@@ -48,7 +22,7 @@ type CreateWorkspaceInput struct {
 }
 
 type CreateWorkspaceOutput struct {
-	Workspace WorkspaceDTO
+	Workspace dto.WorkspaceDTO
 }
 
 type WorkspaceDetailInput struct {
@@ -57,7 +31,7 @@ type WorkspaceDetailInput struct {
 }
 
 type WorkspaceDetailOutput struct {
-	Workspace WorkspaceDetailDTO
+	Workspace dto.WorkspaceDetailDTO
 }
 
 type InviteMemberInput struct {
@@ -75,19 +49,11 @@ type GetWorkspacesInput struct {
 }
 
 type GetWorkspacesOutput struct {
-	Workspaces []WorkspaceWithMetaDTO
+	Workspaces []dto.WorkspaceWithMetaDTO
 }
 
 type RemoveMemberInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 	WorkspaceID uuid.UUID `validate:"required"`
 	UserID      uuid.UUID `validate:"required"`
-}
-
-type WorkspaceUseCase interface {
-	CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error)
-	WorkspaceDetail(ctx context.Context, input WorkspaceDetailInput) (*WorkspaceDetailOutput, error)
-	InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error)
-	GetWorkspaces(ctx context.Context, input GetWorkspacesInput) (*GetWorkspacesOutput, error)
-	RemoveMember(ctx context.Context, input RemoveMemberInput) error
 }

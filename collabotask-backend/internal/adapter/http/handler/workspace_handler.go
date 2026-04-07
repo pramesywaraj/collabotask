@@ -27,47 +27,21 @@ func NewWorkspaceHandler(workspaceUseCase workspace.WorkspaceUseCase) *Workspace
 	}
 }
 
-func workspaceDTOToResponse(d workspace.WorkspaceDTO) response.WorkspaceResponse {
-	return response.WorkspaceResponse{
-		ID:          d.ID,
-		Name:        d.Name,
-		Description: d.Description,
-		OwnerID:     d.OwnerID,
-		CreatedAt:   d.CreatedAt,
-		UpdatedAt:   d.UpdatedAt,
-	}
-}
-
-func workspaceWithMetaDTOToResponse(d workspace.WorkspaceWithMetaDTO) response.WorkspaceWithMetaResponse {
-	return response.WorkspaceWithMetaResponse{
-		WorkspaceResponse: workspaceDTOToResponse(d.WorkspaceDTO),
-		MemberCount:       d.MemberCount,
-		BoardCount:        d.BoardCount,
-		Role:              d.Role,
-	}
-}
-
-func workspaceMemberDTOToResponse(d workspace.WorkspaceMemberDTO) response.WorkspaceMemberResponse {
-	return response.WorkspaceMemberResponse{
-		UserID:    d.UserID,
-		Email:     d.Email,
-		Name:      d.Name,
-		AvatarURL: d.AvatarURL,
-		Role:      d.Role,
-		JoinedAt:  d.JoinedAt,
-	}
-}
-
-func workspaceDetailDTOToResponse(d workspace.WorkspaceDetailDTO) response.WorkspaceDetailResponse {
-	members := make([]response.WorkspaceMemberResponse, 0, len(d.Members))
-	for _, member := range d.Members {
-		members = append(members, workspaceMemberDTOToResponse(member))
-	}
-
-	return response.WorkspaceDetailResponse{
-		WorkspaceResponse: workspaceDTOToResponse(d.WorkspaceDTO),
-		UserRole:          d.UserRole,
-		Members:           members,
+func handleWorkspaceError(ctx *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrNotWorkspaceAdmin),
+		errors.Is(err, domain.ErrUserNotInWorkspace):
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
+	case errors.Is(err, domain.ErrUserNotFound),
+		errors.Is(err, domain.ErrWorkspaceNotFound),
+		errors.Is(err, domain.ErrMemberNotFound):
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
+	case errors.Is(err, domain.ErrAlreadyMember):
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeConflict, err.Error()))
+	case errors.Is(err, domain.ErrCannotRemoveYourself):
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, err.Error()))
+	default:
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
 	}
 }
 
@@ -110,14 +84,14 @@ func (wh *WorkspaceHandler) CreateWorkspace(ctx *gin.Context) {
 			return
 		}
 
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
+		handleWorkspaceError(ctx, err)
 		return
 	}
 
 	response.GenerateSuccessResponse(
 		ctx,
 		"Workspace created successfully",
-		workspaceDTOToResponse(out.Workspace),
+		response.WorkspaceDTOToResponse(out.Workspace),
 		http.StatusCreated,
 	)
 }
@@ -141,13 +115,13 @@ func (wh *WorkspaceHandler) GetWorkspaces(ctx *gin.Context) {
 
 	out, err := wh.workspaceUseCase.GetWorkspaces(ctx.Request.Context(), workspace.GetWorkspacesInput{UserID: userID})
 	if err != nil {
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
+		handleWorkspaceError(ctx, err)
 		return
 	}
 
 	workspaces := make([]response.WorkspaceWithMetaResponse, 0, len(out.Workspaces))
 	for _, w := range out.Workspaces {
-		workspaces = append(workspaces, workspaceWithMetaDTOToResponse(w))
+		workspaces = append(workspaces, response.WorkspaceWithMetaDTOToResponse(w))
 	}
 
 	response.GenerateSuccessResponse(
@@ -209,16 +183,7 @@ func (wh *WorkspaceHandler) InviteMember(ctx *gin.Context) {
 			return
 		}
 
-		switch {
-		case errors.Is(err, domain.ErrNotWorkspaceAdmin):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-		case errors.Is(err, domain.ErrUserNotFound):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-		case errors.Is(err, domain.ErrAlreadyMember):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeConflict, err.Error()))
-		default:
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
-		}
+		handleWorkspaceError(ctx, err)
 		return
 	}
 
@@ -267,16 +232,7 @@ func (wh *WorkspaceHandler) RemoveMember(ctx *gin.Context) {
 	})
 
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrNotWorkspaceAdmin), errors.Is(err, domain.ErrUserNotInWorkspace):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-		case errors.Is(err, domain.ErrCannotRemoveYourself):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, err.Error()))
-		case errors.Is(err, domain.ErrMemberNotFound):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-		default:
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
-		}
+		handleWorkspaceError(ctx, err)
 		return
 	}
 
@@ -330,16 +286,9 @@ func (wh *WorkspaceHandler) GetWorkspaceDetail(ctx *gin.Context) {
 			return
 		}
 
-		switch {
-		case errors.Is(err, domain.ErrUserNotInWorkspace):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-		case errors.Is(err, domain.ErrWorkspaceNotFound), errors.Is(err, domain.ErrUserNotFound):
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-		default:
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
-		}
+		handleWorkspaceError(ctx, err)
 		return
 	}
 
-	response.GenerateSuccessResponse(ctx, "Workspace detail successfully fetched", workspaceDetailDTOToResponse(out.Workspace))
+	response.GenerateSuccessResponse(ctx, "Workspace detail successfully fetched", response.WorkspaceDetailDTOToResponse(out.Workspace))
 }

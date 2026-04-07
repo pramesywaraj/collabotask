@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
@@ -43,7 +44,7 @@ func (wu *WorkspaceUseCaseImpl) WorkspaceDetail(ctx context.Context, input Works
 		return nil, fmt.Errorf("failed to fetch member details: %w", err)
 	}
 
-	workspaceMembers := make([]WorkspaceMemberDTO, 0, len(members))
+	workspaceMembers := make([]dto.WorkspaceMemberDTO, 0, len(members))
 	for _, member := range members {
 		user, ok := usersMap[member.UserID]
 
@@ -52,11 +53,11 @@ func (wu *WorkspaceUseCaseImpl) WorkspaceDetail(ctx context.Context, input Works
 		if !ok || user == nil {
 			return nil, domain.ErrUserNotFound
 		}
-		workspaceMembers = append(workspaceMembers, workspaceMemberToDTO(member, user))
+		workspaceMembers = append(workspaceMembers, dto.WorkspaceMemberToDTO(member, user))
 	}
 
-	output := &WorkspaceDetailDTO{
-		WorkspaceDTO: workspaceToDTO(workspace),
+	output := &dto.WorkspaceDetailDTO{
+		WorkspaceDTO: dto.WorkspaceToDTO(workspace),
 		UserRole:     requesterMember.Role,
 		Members:      workspaceMembers,
 	}

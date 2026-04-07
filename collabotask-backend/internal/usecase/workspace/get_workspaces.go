@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"collabotask/internal/dto"
 	"context"
 	"fmt"
 )
@@ -11,9 +12,9 @@ func (wu *WorkspaceUseCaseImpl) GetWorkspaces(ctx context.Context, input GetWork
 		return nil, fmt.Errorf("failed to fetch user workspaces: %w", err)
 	}
 
-	workspaces := make([]WorkspaceWithMetaDTO, 0, len(userWorkspaces))
+	workspaces := make([]dto.WorkspaceWithMetaDTO, 0, len(userWorkspaces))
 	for _, item := range userWorkspaces {
-		workspaces = append(workspaces, workspaceListItemToDTO(item))
+		workspaces = append(workspaces, dto.WorkspaceListItemToDTO(item))
 	}
 
 	return &GetWorkspacesOutput{
