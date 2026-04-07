@@ -70,11 +70,11 @@ type InviteMemberOutput struct {
 	Message string
 }
 
-type ListWorkspacesInput struct {
+type GetWorkspacesInput struct {
 	UserID uuid.UUID
 }
 
-type ListWorkspacesOutput struct {
+type GetWorkspacesOutput struct {
 	Workspaces []WorkspaceWithMetaDTO
 }
 
@@ -88,6 +88,6 @@ type WorkspaceUseCase interface {
 	CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error)
 	WorkspaceDetail(ctx context.Context, input WorkspaceDetailInput) (*WorkspaceDetailOutput, error)
 	InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error)
-	ListWorkspaces(ctx context.Context, input ListWorkspacesInput) (*ListWorkspacesOutput, error)
+	GetWorkspaces(ctx context.Context, input GetWorkspacesInput) (*GetWorkspacesOutput, error)
 	RemoveMember(ctx context.Context, input RemoveMemberInput) error
 }

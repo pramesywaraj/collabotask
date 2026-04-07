@@ -51,7 +51,7 @@ func New(cfg Config) *gin.Engine {
 	workspaces.Use(middleware.Auth(&cfg.Cfg.Auth))
 	{
 		workspaces.POST("", cfg.WorkspaceHandler.CreateWorkspace)
-		workspaces.GET("", cfg.WorkspaceHandler.ListWorkspaces)
+		workspaces.GET("", cfg.WorkspaceHandler.GetWorkspaces)
 		workspaces.GET("/:workspace_id", cfg.WorkspaceHandler.GetWorkspaceDetail)
 		workspaces.POST("/:workspace_id/member/invite", cfg.WorkspaceHandler.InviteMember)
 		workspaces.DELETE("/:workspace_id/member/remove/:user_id", cfg.WorkspaceHandler.RemoveMember)

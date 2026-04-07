@@ -133,13 +133,13 @@ func (wh *WorkspaceHandler) CreateWorkspace(ctx *gin.Context) {
 // @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace [get]
-func (wh *WorkspaceHandler) ListWorkspaces(ctx *gin.Context) {
+func (wh *WorkspaceHandler) GetWorkspaces(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
 	}
 
-	out, err := wh.workspaceUseCase.ListWorkspaces(ctx.Request.Context(), workspace.ListWorkspacesInput{UserID: userID})
+	out, err := wh.workspaceUseCase.GetWorkspaces(ctx.Request.Context(), workspace.GetWorkspacesInput{UserID: userID})
 	if err != nil {
 		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
 		return

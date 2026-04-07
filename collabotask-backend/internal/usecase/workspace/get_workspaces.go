@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func (wu *WorkspaceUseCaseImpl) ListWorkspaces(ctx context.Context, input ListWorkspacesInput) (*ListWorkspacesOutput, error) {
+func (wu *WorkspaceUseCaseImpl) GetWorkspaces(ctx context.Context, input GetWorkspacesInput) (*GetWorkspacesOutput, error) {
 	userWorkspaces, err := wu.workspaceRepo.GetUserWorkspaces(ctx, input.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user workspaces: %w", err)
@@ -16,7 +16,7 @@ func (wu *WorkspaceUseCaseImpl) ListWorkspaces(ctx context.Context, input ListWo
 		workspaces = append(workspaces, workspaceListItemToDTO(item))
 	}
 
-	return &ListWorkspacesOutput{
+	return &GetWorkspacesOutput{
 		Workspaces: workspaces,
 	}, nil
 }
