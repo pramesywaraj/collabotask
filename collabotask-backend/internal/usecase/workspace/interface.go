@@ -9,7 +9,7 @@ import (
 
 type WorkspaceUseCase interface {
 	CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error)
-	WorkspaceDetail(ctx context.Context, input WorkspaceDetailInput) (*WorkspaceDetailOutput, error)
+	GetWorkspaceDetail(ctx context.Context, input GetWorkspaceDetailInput) (*GetWorkspaceDetailOutput, error)
 	InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error)
 	GetWorkspaces(ctx context.Context, input GetWorkspacesInput) (*GetWorkspacesOutput, error)
 	RemoveMember(ctx context.Context, input RemoveMemberInput) error
@@ -25,12 +25,12 @@ type CreateWorkspaceOutput struct {
 	Workspace dto.WorkspaceDTO
 }
 
-type WorkspaceDetailInput struct {
+type GetWorkspaceDetailInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 	WorkspaceID uuid.UUID `validate:"required"`
 }
 
-type WorkspaceDetailOutput struct {
+type GetWorkspaceDetailOutput struct {
 	Workspace dto.WorkspaceDetailDTO
 }
 

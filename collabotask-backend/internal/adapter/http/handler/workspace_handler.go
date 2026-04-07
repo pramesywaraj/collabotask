@@ -270,12 +270,12 @@ func (wh *WorkspaceHandler) GetWorkspaceDetail(ctx *gin.Context) {
 		return
 	}
 
-	input := workspace.WorkspaceDetailInput{
+	input := workspace.GetWorkspaceDetailInput{
 		RequesterID: userID,
 		WorkspaceID: workspaceID,
 	}
 
-	out, err := wh.workspaceUseCase.WorkspaceDetail(
+	out, err := wh.workspaceUseCase.GetWorkspaceDetail(
 		ctx.Request.Context(),
 		input,
 	)

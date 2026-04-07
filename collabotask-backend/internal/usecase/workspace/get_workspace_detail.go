@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (wu *WorkspaceUseCaseImpl) WorkspaceDetail(ctx context.Context, input WorkspaceDetailInput) (*WorkspaceDetailOutput, error) {
+func (wu *WorkspaceUseCaseImpl) GetWorkspaceDetail(ctx context.Context, input GetWorkspaceDetailInput) (*GetWorkspaceDetailOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("workspace detail validation failed: %w", err)
 	}
@@ -62,7 +62,7 @@ func (wu *WorkspaceUseCaseImpl) WorkspaceDetail(ctx context.Context, input Works
 		Members:      workspaceMembers,
 	}
 
-	return &WorkspaceDetailOutput{
+	return &GetWorkspaceDetailOutput{
 		Workspace: *output,
 	}, nil
 }
