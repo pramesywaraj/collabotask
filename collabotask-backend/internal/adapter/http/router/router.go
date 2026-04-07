@@ -59,14 +59,14 @@ func New(cfg Config) *gin.Engine {
 		boards := workspaces.Group("/:workspace_id/board")
 		{
 			boards.POST("", cfg.BoardHandler.CreateBoard)
-			boards.GET("", cfg.BoardHandler.FetchListBoardsInWorkspace)
-			boards.GET("/:board_id", cfg.BoardHandler.FetchBoardDetail)
-			boards.GET("/:board_id/kanban", cfg.BoardHandler.FetchBoardKanban)
+			boards.GET("", cfg.BoardHandler.GetBoardsInWorkspace)
+			boards.GET("/:board_id", cfg.BoardHandler.GetBoardDetail)
+			boards.GET("/:board_id/kanban", cfg.BoardHandler.GetBoardKanban)
 			boards.PATCH("/:board_id", cfg.BoardHandler.UpdateBoard)
 			boards.POST("/:board_id/archive", cfg.BoardHandler.SetBoardArchivedStatus)
 			boards.POST("/:board_id/invite", cfg.BoardHandler.InviteMembersToBoard)
 			boards.DELETE("/:board_id/member", cfg.BoardHandler.RemoveMemberFromBoard)
-			boards.GET("/:board_id/invitees", cfg.BoardHandler.FetchWorkspaceInviteesForBoard)
+			boards.GET("/:board_id/invitees", cfg.BoardHandler.GetWorkspaceInviteesForBoard)
 			boards.POST("/:board_id/join", cfg.BoardHandler.SelfJoinToBoard)
 			boards.POST("/:board_id/leave", cfg.BoardHandler.LeaveBoard)
 		}

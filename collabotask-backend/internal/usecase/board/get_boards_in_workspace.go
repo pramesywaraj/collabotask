@@ -9,7 +9,7 @@ import (
 	"fmt"
 )
 
-func (bu *BoardUseCaseImpl) ListBoardsInWorkspace(ctx context.Context, input ListBoardsInput) (*ListBoardsOutput, error) {
+func (bu *BoardUseCaseImpl) GetBoardsInWorkspace(ctx context.Context, input GetBoardsInput) (*GetBoardsOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate list boards in workspace input: %w", err)
 	}
@@ -43,7 +43,7 @@ func (bu *BoardUseCaseImpl) ListBoardsInWorkspace(ctx context.Context, input Lis
 		})
 	}
 
-	return &ListBoardsOutput{
+	return &GetBoardsOutput{
 		Boards: resultBoards,
 	}, nil
 }

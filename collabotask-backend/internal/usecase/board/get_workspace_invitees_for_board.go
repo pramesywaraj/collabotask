@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (bu *BoardUseCaseImpl) ListWorkspaceInviteesForBoard(ctx context.Context, input ListWorkspaceInviteesForBoardInput) (*ListWorkspaceInviteesForBoardOutput, error) {
+func (bu *BoardUseCaseImpl) GetWorkspaceInviteesForBoard(ctx context.Context, input GetWorkspaceInviteesForBoardInput) (*GetWorkspaceInviteesForBoardOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate list workspace invitees for board input: %w", err)
 	}
@@ -86,7 +86,7 @@ func (bu *BoardUseCaseImpl) ListWorkspaceInviteesForBoard(ctx context.Context, i
 		})
 	}
 
-	return &ListWorkspaceInviteesForBoardOutput{
+	return &GetWorkspaceInviteesForBoardOutput{
 		Members: members,
 	}, nil
 }

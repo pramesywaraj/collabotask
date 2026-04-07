@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (bu *BoardUseCaseImpl) BoardDetail(ctx context.Context, input BoardDetailInput) (*BoardDetailOutput, error) {
+func (bu *BoardUseCaseImpl) GetBoardDetail(ctx context.Context, input GetBoardDetailInput) (*GetBoardDetailOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate board detail input: %w", err)
 	}
@@ -84,7 +84,7 @@ func (bu *BoardUseCaseImpl) BoardDetail(ctx context.Context, input BoardDetailIn
 		accessStatus = entity.BoardCanJoin
 	}
 
-	return &BoardDetailOutput{
+	return &GetBoardDetailOutput{
 		Board: dto.BoardDetailDTO{
 			BoardDTO:     dto.BoardToDTO(board),
 			UserRole:     userRole,

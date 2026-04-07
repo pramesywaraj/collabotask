@@ -153,7 +153,7 @@ func (bh *BoardHandler) CreateBoard(ctx *gin.Context) {
 // @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace/{workspace_id}/board/{board_id} [get]
-func (bh *BoardHandler) FetchBoardDetail(ctx *gin.Context) {
+func (bh *BoardHandler) GetBoardDetail(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
@@ -164,12 +164,12 @@ func (bh *BoardHandler) FetchBoardDetail(ctx *gin.Context) {
 		return
 	}
 
-	input := board.BoardDetailInput{
+	input := board.GetBoardDetailInput{
 		RequesterID: userID,
 		BoardID:     boardID,
 	}
 
-	out, err := bh.boardUseCase.BoardDetail(ctx.Request.Context(), input)
+	out, err := bh.boardUseCase.GetBoardDetail(ctx.Request.Context(), input)
 	if err != nil {
 		var validationErrs validator.ValidationErrors
 		if errors.As(err, &validationErrs) {
@@ -202,7 +202,7 @@ func (bh *BoardHandler) FetchBoardDetail(ctx *gin.Context) {
 // @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace/{workspace_id}/board [get]
-func (bh *BoardHandler) FetchListBoardsInWorkspace(ctx *gin.Context) {
+func (bh *BoardHandler) GetBoardsInWorkspace(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
@@ -221,12 +221,12 @@ func (bh *BoardHandler) FetchListBoardsInWorkspace(ctx *gin.Context) {
 		return
 	}
 
-	input := board.ListBoardsInput{
+	input := board.GetBoardsInput{
 		WorkspaceID: workspaceID,
 		RequesterID: userID,
 	}
 
-	out, err := bh.boardUseCase.ListBoardsInWorkspace(ctx.Request.Context(), input)
+	out, err := bh.boardUseCase.GetBoardsInWorkspace(ctx.Request.Context(), input)
 	if err != nil {
 		var validationErrs validator.ValidationErrors
 		if errors.As(err, &validationErrs) {
@@ -265,7 +265,7 @@ func (bh *BoardHandler) FetchListBoardsInWorkspace(ctx *gin.Context) {
 // @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace/{workspace_id}/board/{board_id}/invitees [get]
-func (bh *BoardHandler) FetchWorkspaceInviteesForBoard(ctx *gin.Context) {
+func (bh *BoardHandler) GetWorkspaceInviteesForBoard(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
@@ -276,13 +276,13 @@ func (bh *BoardHandler) FetchWorkspaceInviteesForBoard(ctx *gin.Context) {
 		return
 	}
 
-	input := board.ListWorkspaceInviteesForBoardInput{
+	input := board.GetWorkspaceInviteesForBoardInput{
 		RequesterID: userID,
 		WorkspaceID: workspaceID,
 		BoardID:     boardID,
 	}
 
-	out, err := bh.boardUseCase.ListWorkspaceInviteesForBoard(ctx.Request.Context(), input)
+	out, err := bh.boardUseCase.GetWorkspaceInviteesForBoard(ctx.Request.Context(), input)
 	if err != nil {
 		var validationErrs validator.ValidationErrors
 		if errors.As(err, &validationErrs) {
@@ -663,7 +663,7 @@ func (bh *BoardHandler) LeaveBoard(ctx *gin.Context) {
 // @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace/{workspace_id}/board/{board_id}/kanban [get]
-func (bh *BoardHandler) FetchBoardKanban(ctx *gin.Context) {
+func (bh *BoardHandler) GetBoardKanban(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
 	if !ok {
 		return
@@ -674,12 +674,12 @@ func (bh *BoardHandler) FetchBoardKanban(ctx *gin.Context) {
 		return
 	}
 
-	input := board.BoardKanbanInput{
+	input := board.GetBoardKanbanInput{
 		RequesterID: userID,
 		BoardID:     boardID,
 	}
 
-	out, err := bh.boardUseCase.BoardKanban(ctx.Request.Context(), input)
+	out, err := bh.boardUseCase.GetBoardKanban(ctx.Request.Context(), input)
 	if err != nil {
 		var validationErrs validator.ValidationErrors
 		if errors.As(err, &validationErrs) {

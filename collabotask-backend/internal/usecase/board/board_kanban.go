@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (bu *BoardUseCaseImpl) BoardKanban(ctx context.Context, input BoardKanbanInput) (*BoardKanbanOutput, error) {
+func (bu *BoardUseCaseImpl) GetBoardKanban(ctx context.Context, input GetBoardKanbanInput) (*GetBoardKanbanOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate board kanban input: %w", err)
 	}
@@ -105,5 +105,5 @@ func (bu *BoardUseCaseImpl) BoardKanban(ctx context.Context, input BoardKanbanIn
 		}
 	}
 
-	return &BoardKanbanOutput{Columns: out}, nil
+	return &GetBoardKanbanOutput{Columns: out}, nil
 }

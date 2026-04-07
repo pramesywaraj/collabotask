@@ -9,16 +9,16 @@ import (
 
 type BoardUseCase interface {
 	CreateBoard(ctx context.Context, input CreateBoardInput) (*CreateBoardOutput, error)
-	BoardDetail(ctx context.Context, input BoardDetailInput) (*BoardDetailOutput, error)
-	ListBoardsInWorkspace(ctx context.Context, input ListBoardsInput) (*ListBoardsOutput, error)
+	GetBoardDetail(ctx context.Context, input GetBoardDetailInput) (*GetBoardDetailOutput, error)
+	GetBoardsInWorkspace(ctx context.Context, input GetBoardsInput) (*GetBoardsOutput, error)
 	InviteMember(ctx context.Context, input InviteMemberInput) error
 	RemoveMember(ctx context.Context, input RemoveMemberInput) error
-	ListWorkspaceInviteesForBoard(ctx context.Context, input ListWorkspaceInviteesForBoardInput) (*ListWorkspaceInviteesForBoardOutput, error)
+	GetWorkspaceInviteesForBoard(ctx context.Context, input GetWorkspaceInviteesForBoardInput) (*GetWorkspaceInviteesForBoardOutput, error)
 	LeaveBoard(ctx context.Context, input LeaveBoardInput) error
 	SelfJoinBoard(ctx context.Context, input SelfJoinBoardInput) error
 	UpdateBoard(ctx context.Context, input UpdateBoardInput) (*UpdateBoardOutput, error)
 	SetArchived(ctx context.Context, input SetArchivedInput) (*SetArchivedOutput, error)
-	BoardKanban(ctx context.Context, input BoardKanbanInput) (*BoardKanbanOutput, error)
+	GetBoardKanban(ctx context.Context, input GetBoardKanbanInput) (*GetBoardKanbanOutput, error)
 }
 
 type CreateBoardInput struct {
@@ -33,21 +33,21 @@ type CreateBoardOutput struct {
 	Board dto.BoardDTO
 }
 
-type BoardDetailInput struct {
+type GetBoardDetailInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 	BoardID     uuid.UUID `validate:"required"`
 }
 
-type BoardDetailOutput struct {
+type GetBoardDetailOutput struct {
 	Board dto.BoardDetailDTO
 }
 
-type ListBoardsInput struct {
+type GetBoardsInput struct {
 	WorkspaceID uuid.UUID `validate:"required"`
 	RequesterID uuid.UUID `validate:"required"`
 }
 
-type ListBoardsOutput struct {
+type GetBoardsOutput struct {
 	Boards []dto.BoardWithMetaDTO
 }
 
@@ -65,13 +65,13 @@ type RemoveMemberInput struct {
 	UserID      uuid.UUID `validate:"required"`
 }
 
-type ListWorkspaceInviteesForBoardInput struct {
+type GetWorkspaceInviteesForBoardInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 	WorkspaceID uuid.UUID `validate:"required"`
 	BoardID     uuid.UUID `validate:"required"`
 }
 
-type ListWorkspaceInviteesForBoardOutput struct {
+type GetWorkspaceInviteesForBoardOutput struct {
 	Members []dto.BoardInviteeDTO
 }
 
@@ -109,11 +109,11 @@ type SetArchivedOutput struct {
 	Board dto.BoardDTO
 }
 
-type BoardKanbanInput struct {
+type GetBoardKanbanInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 	BoardID     uuid.UUID `validate:"required"`
 }
 
-type BoardKanbanOutput struct {
+type GetBoardKanbanOutput struct {
 	Columns []dto.ColumnWithCardsDTO
 }
