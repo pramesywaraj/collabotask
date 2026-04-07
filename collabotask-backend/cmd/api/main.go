@@ -2,7 +2,7 @@
 // @version 0.1.0
 // @description HTTP API for Collabotask
 
-// @host app-domain.com
+// @host localhost:8080
 // @BasePath /api/v1
 // @schemes http
 

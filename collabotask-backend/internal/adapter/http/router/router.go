@@ -33,14 +33,14 @@ func New(cfg Config) *gin.Engine {
 
 	v1Routes := routes.Group("/api/v1")
 
-	// Public routess
+	// Public routes
 	auth := v1Routes.Group("/auth")
 	{
 		auth.POST("/register", cfg.AuthHandler.Register)
 		auth.POST("/login", cfg.AuthHandler.Login)
 	}
 
-	// Protected routess
+	// Protected routes
 	user := v1Routes.Group("/user")
 	user.Use(middleware.Auth(&cfg.Cfg.Auth))
 	{
