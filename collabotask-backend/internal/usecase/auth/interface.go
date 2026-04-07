@@ -1,17 +1,16 @@
 package auth
 
 import (
+	"collabotask/internal/dto"
 	"context"
 
 	"github.com/google/uuid"
 )
 
-type UserDTO struct {
-	ID         uuid.UUID `json:"id"`
-	Email      string    `json:"email"`
-	Name       string    `json:"name"`
-	AvatarURL  *string   `json:"avatar_url"`
-	SystemRole string    `json:"system_role"`
+type AuthUseCase interface {
+	Register(ctx context.Context, input RegisterInput) (*RegisterOutput, error)
+	Login(ctx context.Context, input LoginInput) (*LoginOutput, error)
+	GetProfile(ctx context.Context, userID uuid.UUID) (*dto.UserDTO, error)
 }
 
 type RegisterInput struct {
@@ -21,7 +20,7 @@ type RegisterInput struct {
 }
 
 type RegisterOutput struct {
-	User  UserDTO
+	User  dto.UserDTO
 	Token string
 }
 
@@ -31,12 +30,6 @@ type LoginInput struct {
 }
 
 type LoginOutput struct {
-	User  UserDTO
+	User  dto.UserDTO
 	Token string
-}
-
-type AuthUseCase interface {
-	Register(ctx context.Context, input RegisterInput) (*RegisterOutput, error)
-	Login(ctx context.Context, input LoginInput) (*LoginOutput, error)
-	GetProfile(ctx context.Context, userID uuid.UUID) (*UserDTO, error)
 }

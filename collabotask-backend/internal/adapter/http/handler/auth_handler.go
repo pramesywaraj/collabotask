@@ -5,6 +5,7 @@ import (
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
 	"collabotask/internal/domain"
+	"collabotask/internal/dto"
 	"collabotask/internal/usecase/auth"
 	"errors"
 	"net/http"
@@ -90,7 +91,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-func userDTOToResponse(u auth.UserDTO) response.UserResponse {
+func userDTOToResponse(u dto.UserDTO) response.UserResponse {
 	return response.UserResponse{
 		ID:         u.ID,
 		Email:      u.Email,
