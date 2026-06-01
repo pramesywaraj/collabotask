@@ -1,12 +1,10 @@
 package board
 
 import (
-	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -17,34 +15,8 @@ func (bu *BoardUseCaseImpl) GetBoardKanban(ctx context.Context, input GetBoardKa
 		return nil, fmt.Errorf("failed to validate board kanban input: %w", err)
 	}
 
-	board, err := bu.boardRepo.GetByID(ctx, input.BoardID)
-	if err != nil || board == nil {
-		if errors.Is(err, domain.ErrBoardNotFound) {
-			return nil, domain.ErrBoardNotFound
-		}
-		return nil, fmt.Errorf("failed to fetch board: %w", err)
-	}
-	if board.IsArchived {
-		return nil, domain.ErrBoardNotFound
-	}
-
-	workspaceMembership, err := bu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, board.WorkspaceID, input.RequesterID)
-	if err != nil || workspaceMembership == nil || workspaceMembership.IsEmpty() {
-		return nil, domain.ErrUserNotInWorkspace
-	}
-
-	boardMembership, err := bu.boardMemberRepo.GetMemberByBoardAndUser(ctx, input.BoardID, input.RequesterID)
-	if err != nil {
-		if !errors.Is(err, domain.ErrBoardMemberNotFound) {
-			return nil, fmt.Errorf("failed to fetch board membership: %w", err)
-		}
-
-		boardMembership = nil
-	}
-
-	hasAccess := workspaceMembership.IsAdmin() || board.CreatedBy == input.RequesterID || (boardMembership != nil && !boardMembership.IsEmpty())
-	if !hasAccess {
-		return nil, domain.ErrBoardAccessDenied
+	if _, err := bu.boardAccessChecker.Check(ctx, input.BoardID, input.RequesterID); err != nil {
+		return nil, err
 	}
 
 	columns, err := bu.columnRepo.GetColumnsByBoard(ctx, input.BoardID)
@@ -53,11 +25,6 @@ func (bu *BoardUseCaseImpl) GetBoardKanban(ctx context.Context, input GetBoardKa
 	}
 
 	var assigneeIDs []uuid.UUID
-	// Used to gather which user ids that has been
-	// collected, remove any duplicate id that will
-	// fetch to the repository.
-	// The use of struct{} means that the seen for certain id
-	// has been fulfilled and carry no data in it (has 0 size in memory)
 	seen := make(map[uuid.UUID]struct{})
 	cardsByColumn := make([][]*entity.Card, len(columns))
 

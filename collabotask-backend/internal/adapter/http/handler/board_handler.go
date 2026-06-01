@@ -5,13 +5,10 @@ import (
 	"collabotask/internal/adapter/http/helper"
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
-	"collabotask/internal/domain"
 	"collabotask/internal/usecase/board"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -22,31 +19,6 @@ type BoardHandler struct {
 func NewBoardHandler(bu board.BoardUseCase) *BoardHandler {
 	return &BoardHandler{
 		boardUseCase: bu,
-	}
-}
-
-func handleBoardError(ctx *gin.Context, err error) {
-	switch {
-	case errors.Is(err, domain.ErrUserNotInWorkspace),
-		errors.Is(err, domain.ErrBoardAccessDenied),
-		errors.Is(err, domain.ErrBoardPermissionDenied),
-		errors.Is(err, domain.ErrBoardOwnerCannotLeave):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-	case errors.Is(err, domain.ErrBoardNotFound),
-		errors.Is(err, domain.ErrBoardMemberNotFound),
-		errors.Is(err, domain.ErrUserNotFound),
-		errors.Is(err, domain.ErrMemberNotFound):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-	case errors.Is(err, domain.ErrConstraintViolation),
-		errors.Is(err, domain.ErrAtLeastOneProvided),
-		errors.Is(err, domain.ErrCannotRemoveYourself),
-		errors.Is(err, domain.ErrBoardNoMembersToInvite):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, err.Error()))
-	case errors.Is(err, domain.ErrBoardAlreadyMember),
-		errors.Is(err, domain.ErrBoardCannotJoin):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeConflict, err.Error()))
-	default:
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
 	}
 }
 
@@ -120,13 +92,7 @@ func (bh *BoardHandler) CreateBoard(ctx *gin.Context) {
 
 	out, err := bh.boardUseCase.CreateBoard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -171,13 +137,7 @@ func (bh *BoardHandler) GetBoardDetail(ctx *gin.Context) {
 
 	out, err := bh.boardUseCase.GetBoardDetail(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -228,13 +188,7 @@ func (bh *BoardHandler) GetBoardsInWorkspace(ctx *gin.Context) {
 
 	out, err := bh.boardUseCase.GetBoardsInWorkspace(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -284,13 +238,7 @@ func (bh *BoardHandler) GetWorkspaceInviteesForBoard(ctx *gin.Context) {
 
 	out, err := bh.boardUseCase.GetWorkspaceInviteesForBoard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -352,13 +300,7 @@ func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 
 	out, err := bh.boardUseCase.UpdateBoard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -410,13 +352,7 @@ func (bh *BoardHandler) SetBoardArchivedStatus(ctx *gin.Context) {
 
 	out, err := bh.boardUseCase.SetArchived(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -470,13 +406,7 @@ func (bh *BoardHandler) InviteMembersToBoard(ctx *gin.Context) {
 
 	err := bh.boardUseCase.InviteMember(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -529,13 +459,7 @@ func (bh *BoardHandler) RemoveMemberFromBoard(ctx *gin.Context) {
 
 	err := bh.boardUseCase.RemoveMember(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -581,13 +505,7 @@ func (bh *BoardHandler) SelfJoinToBoard(ctx *gin.Context) {
 
 	err := bh.boardUseCase.SelfJoinBoard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -631,13 +549,7 @@ func (bh *BoardHandler) LeaveBoard(ctx *gin.Context) {
 
 	err := bh.boardUseCase.LeaveBoard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -681,13 +593,7 @@ func (bh *BoardHandler) GetBoardKanban(ctx *gin.Context) {
 
 	out, err := bh.boardUseCase.GetBoardKanban(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleBoardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 

@@ -1,13 +1,9 @@
 package handler
 
 import (
-	apperrors "collabotask/internal/adapter/http/errors"
 	"collabotask/internal/adapter/http/helper"
 	"collabotask/internal/adapter/http/response"
-	"collabotask/internal/domain"
 	"collabotask/internal/usecase/auth"
-	"errors"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,11 +36,7 @@ func (h *UserHandler) GetProfile(ctx *gin.Context) {
 
 	user, err := h.authUseCase.GetProfile(ctx.Request.Context(), userID)
 	if err != nil {
-		if errors.Is(err, domain.ErrUserNotFound) {
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-			return
-		}
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 

@@ -5,13 +5,10 @@ import (
 	"collabotask/internal/adapter/http/helper"
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
-	"collabotask/internal/domain"
 	"collabotask/internal/usecase/card"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
@@ -22,36 +19,6 @@ type CardHandler struct {
 func NewCardHandler(cu card.CardUseCase) *CardHandler {
 	return &CardHandler{
 		cardUseCase: cu,
-	}
-}
-
-func handleCardError(ctx *gin.Context, err error) {
-	switch {
-	case errors.Is(err, domain.ErrUserNotInWorkspace),
-		errors.Is(err, domain.ErrBoardAccessDenied),
-		errors.Is(err, domain.ErrBoardPermissionDenied),
-		errors.Is(err, domain.ErrNotWorkspaceAdmin):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusForbidden, apperrors.ErrCodeForbidden, err.Error()))
-	case errors.Is(err, domain.ErrBoardNotFound),
-		errors.Is(err, domain.ErrColumnNotFound),
-		errors.Is(err, domain.ErrCardNotFound),
-		errors.Is(err, domain.ErrWorkspaceNotFound),
-		errors.Is(err, domain.ErrUserNotFound),
-		errors.Is(err, domain.ErrMemberNotFound),
-		errors.Is(err, domain.ErrBoardMemberNotFound),
-		errors.Is(err, domain.ErrColumnNotInBoard),
-		errors.Is(err, domain.ErrCardNotInColumn):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusNotFound, apperrors.ErrCodeNotFound, err.Error()))
-	case errors.Is(err, domain.ErrConstraintViolation),
-		errors.Is(err, domain.ErrAtLeastOneProvided),
-		errors.Is(err, domain.ErrInvalidAssigneeID):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, err.Error()))
-	case errors.Is(err, domain.ErrAlreadyMember),
-		errors.Is(err, domain.ErrBoardAlreadyMember),
-		errors.Is(err, domain.ErrInconsistentState):
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeConflict, err.Error()))
-	default:
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusInternalServerError, apperrors.ErrCodeInternal, err.Error()))
 	}
 }
 
@@ -155,13 +122,7 @@ func (crh *CardHandler) CreateCard(ctx *gin.Context) {
 
 	out, err := crh.cardUseCase.CreateCard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleCardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -231,13 +192,7 @@ func (crh *CardHandler) UpdateCard(ctx *gin.Context) {
 
 	out, err := crh.cardUseCase.UpdateCard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleCardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -286,13 +241,7 @@ func (crh *CardHandler) DeleteCard(ctx *gin.Context) {
 
 	err := crh.cardUseCase.DeleteCard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleCardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -350,13 +299,7 @@ func (crh *CardHandler) MoveCardPosition(ctx *gin.Context) {
 
 	out, err := crh.cardUseCase.MoveCard(ctx.Request.Context(), input)
 	if err != nil {
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			response.HandleValidationError(ctx, err)
-			return
-		}
-
-		handleCardError(ctx, err)
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 

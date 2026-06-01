@@ -70,15 +70,15 @@ func ProvideWorkspaceUseCase(
 	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo)
 }
 func ProvideBoardUseCase(
+	boardAccessChecker common.BoardAccessChecker,
 	boardRepo repository.BoardRepository,
 	boardMemberRepo repository.BoardMemberRepository,
-	workspaceRepo repository.WorkspaceRepository,
 	workspaceMemberRepo repository.WorkspaceMemberRepository,
 	userRepo repository.UserRepository,
 	columnRepo repository.ColumnRepository,
 	cardRepo repository.CardRepository,
 ) board.BoardUseCase {
-	return board.NewBoardUseCase(boardRepo, boardMemberRepo, workspaceRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo)
+	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo)
 }
 func ProvideColumnUseCase(
 	columnRepo repository.ColumnRepository,

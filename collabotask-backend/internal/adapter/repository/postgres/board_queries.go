@@ -16,9 +16,6 @@ const (
 		WHERE id = $5
 		RETURNING id, workspace_id, title, description, created_by, is_archived, background_color, created_at, updated_at
 	`
-	deleteBoardQuery = `
-		DELETE FROM boards WHERE id = $1
-	`
 	getBoardByIDQuery = `
 		SELECT id, workspace_id, title, description, created_by, is_archived, background_color, created_at, updated_at
 		FROM boards

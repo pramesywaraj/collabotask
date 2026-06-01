@@ -6,7 +6,6 @@ import (
 	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -17,35 +16,13 @@ func (bu *BoardUseCaseImpl) GetBoardDetail(ctx context.Context, input GetBoardDe
 		return nil, fmt.Errorf("failed to validate board detail input: %w", err)
 	}
 
-	board, err := bu.boardRepo.GetByID(ctx, input.BoardID)
-	if err != nil || board == nil {
-		if errors.Is(err, domain.ErrBoardNotFound) {
-			return nil, domain.ErrBoardNotFound
-		}
-		return nil, fmt.Errorf("failed to fetch board: %w", err)
-	}
-	if board.IsArchived {
-		return nil, domain.ErrBoardNotFound
-	}
-
-	workspaceMembership, err := bu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, board.WorkspaceID, input.RequesterID)
-	if err != nil || workspaceMembership == nil || workspaceMembership.IsEmpty() {
-		return nil, domain.ErrUserNotInWorkspace
-	}
-
-	boardMembership, err := bu.boardMemberRepo.GetMemberByBoardAndUser(ctx, input.BoardID, input.RequesterID)
+	access, err := bu.boardAccessChecker.Resolve(ctx, input.BoardID, input.RequesterID)
 	if err != nil {
-		if !errors.Is(err, domain.ErrBoardMemberNotFound) {
-			return nil, fmt.Errorf("failed to fetch board membership: %w", err)
-		}
-
-		boardMembership = nil
+		return nil, err
 	}
 
-	hasAccess := workspaceMembership.IsAdmin() || board.CreatedBy == input.RequesterID || (boardMembership != nil && !boardMembership.IsEmpty())
-	if !hasAccess {
-		return nil, domain.ErrBoardAccessDenied
-	}
+	board := access.Board
+	boardMembership := access.BoardMember
 
 	members, err := bu.boardMemberRepo.GetMembersByBoard(ctx, input.BoardID)
 	if err != nil {
@@ -65,7 +42,6 @@ func (bu *BoardUseCaseImpl) GetBoardDetail(ctx context.Context, input GetBoardDe
 	boardMembers := make([]dto.BoardMemberDTO, 0, len(members))
 	for _, member := range members {
 		user, ok := users[member.UserID]
-
 		if !ok || user == nil {
 			return nil, domain.ErrUserNotFound
 		}
@@ -73,7 +49,7 @@ func (bu *BoardUseCaseImpl) GetBoardDetail(ctx context.Context, input GetBoardDe
 	}
 
 	var userRole *entity.BoardRole
-	var accessStatus entity.BoardAccessStatus = entity.BoardJoined
+	accessStatus := entity.BoardJoined
 	if boardMembership != nil && !boardMembership.IsEmpty() {
 		role := boardMembership.Role
 		userRole = &role

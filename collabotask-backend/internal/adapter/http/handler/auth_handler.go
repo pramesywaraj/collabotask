@@ -1,12 +1,10 @@
 package handler
 
 import (
-	apperrors "collabotask/internal/adapter/http/errors"
+	"collabotask/internal/adapter/http/helper"
 	"collabotask/internal/adapter/http/request"
 	"collabotask/internal/adapter/http/response"
-	"collabotask/internal/domain"
 	"collabotask/internal/usecase/auth"
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -43,12 +41,7 @@ func (ah *AuthHandler) Register(ctx *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		if errors.Is(err, domain.ErrEmailAlreadyExists) {
-			response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeConflict, err.Error()))
-			return
-		}
-
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusConflict, apperrors.ErrCodeValidation, err.Error()))
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
@@ -80,7 +73,7 @@ func (ah *AuthHandler) Login(ctx *gin.Context) {
 		Password: req.Password,
 	})
 	if err != nil {
-		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, err.Error()))
+		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 

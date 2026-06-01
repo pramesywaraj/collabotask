@@ -25,45 +25,6 @@ func NewBoardRepository(db *pgxpool.Pool) repository.BoardRepository {
 
 const defaultBoardCaps = 16
 
-func (br *BoardRepositoryImpl) Create(ctx context.Context, board *entity.Board) error {
-	var description *string
-	if board.Description != nil && *board.Description != "" {
-		description = board.Description
-	}
-
-	err := br.db.QueryRow(
-		ctx,
-		createBoardQuery,
-		board.WorkspaceID,
-		board.Title,
-		description,
-		board.CreatedBy,
-		board.BackgroundColor,
-	).Scan(
-		&board.ID,
-		&board.WorkspaceID,
-		&board.Title,
-		&board.Description,
-		&board.CreatedBy,
-		&board.IsArchived,
-		&board.BackgroundColor,
-		&board.CreatedAt,
-		&board.UpdatedAt,
-	)
-	if err != nil {
-		var pgErr *pgconn.PgError
-
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return domain.ErrConstraintViolation
-			}
-		}
-		return fmt.Errorf("failed to create board: %w", err)
-	}
-
-	return nil
-}
-
 func (br *BoardRepositoryImpl) CreateWithOwner(ctx context.Context, board *entity.Board, requesterID uuid.UUID) error {
 	tx, err := br.db.Begin(ctx)
 	if err != nil {
@@ -182,23 +143,6 @@ func (br *BoardRepositoryImpl) Update(ctx context.Context, board *entity.Board) 
 			return domain.ErrBoardNotFound
 		}
 		return fmt.Errorf("failed to update board: %w", err)
-	}
-
-	return nil
-}
-
-func (br *BoardRepositoryImpl) Delete(ctx context.Context, boardID uuid.UUID) error {
-	result, err := br.db.Exec(
-		ctx,
-		deleteBoardQuery,
-		boardID,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to delete board: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
-		return domain.ErrBoardNotFound
 	}
 
 	return nil
