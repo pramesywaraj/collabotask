@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func (cru *CardUseCaseImpl) DeleteCard(ctx context.Context, input DeleteCardInput) error {
+func (cru *CardUseCase) DeleteCard(ctx context.Context, input DeleteCardInput) error {
 	if err := validator.Struct(input); err != nil {
 		return fmt.Errorf("failed to validate delete card input: %w", err)
 	}

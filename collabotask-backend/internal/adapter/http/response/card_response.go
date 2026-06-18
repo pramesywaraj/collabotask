@@ -1,7 +1,7 @@
 package response
 
 import (
-	"collabotask/internal/dto"
+	"collabotask/internal/domain/entity"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,16 +26,18 @@ type AssignedToResponse struct {
 	AvatarURL *string   `json:"avatar_url"`
 }
 
-func CardDTOToResponse(card dto.CardWithAssigneeDTO) CardResponse {
+// CardToResponse maps a domain card (and its optional assignee) to the HTTP
+// response shape. assignee may be nil when the card is unassigned.
+func CardToResponse(card *entity.Card, assignee *entity.User) CardResponse {
 	var assignedTo *AssignedToResponse
 
 	if card.AssignedTo != nil {
 		assignedTo = &AssignedToResponse{
-			ID:        *card.AssignedTo,
-			AvatarURL: card.AssigneeAvatarURL,
+			ID: *card.AssignedTo,
 		}
-		if card.AssigneeName != nil {
-			assignedTo.Name = *card.AssigneeName
+		if assignee != nil {
+			assignedTo.Name = assignee.Name
+			assignedTo.AvatarURL = assignee.AvatarURL
 		}
 	}
 

@@ -13,10 +13,10 @@ import (
 )
 
 type CardHandler struct {
-	cardUseCase card.CardUseCase
+	cardUseCase *card.CardUseCase
 }
 
-func NewCardHandler(cu card.CardUseCase) *CardHandler {
+func NewCardHandler(cu *card.CardUseCase) *CardHandler {
 	return &CardHandler{
 		cardUseCase: cu,
 	}
@@ -129,7 +129,7 @@ func (crh *CardHandler) CreateCard(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Card created successfully",
-		response.CardDTOToResponse(out.Card),
+		response.CardToResponse(out.Card, out.Assignee),
 		http.StatusCreated,
 	)
 }
@@ -199,7 +199,7 @@ func (crh *CardHandler) UpdateCard(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Card updated successfully",
-		response.CardDTOToResponse(out.Card),
+		response.CardToResponse(out.Card, out.Assignee),
 	)
 }
 
@@ -306,6 +306,6 @@ func (crh *CardHandler) MoveCardPosition(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Card position updated successfully",
-		response.CardDTOToResponse(out.Card),
+		response.CardToResponse(out.Card, out.Assignee),
 	)
 }

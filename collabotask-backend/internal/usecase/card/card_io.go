@@ -1,18 +1,18 @@
 package card
 
 import (
-	"collabotask/internal/dto"
-	"context"
+	"collabotask/internal/domain/entity"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type CardUseCase interface {
-	CreateCard(ctx context.Context, input CreateCardInput) (*CreateCardOutput, error)
-	UpdateCard(ctx context.Context, input UpdateCardInput) (*UpdateCardOutput, error)
-	DeleteCard(ctx context.Context, input DeleteCardInput) error
-	MoveCard(ctx context.Context, input MoveCardInput) (*MoveCardOutput, error)
+// CardResult carries the persisted card together with its (optional) assignee.
+// Use cases return domain entities directly; the HTTP layer maps them to a
+// response shape. There is no intermediate DTO copy.
+type CardResult struct {
+	Card     *entity.Card
+	Assignee *entity.User
 }
 
 type CreateCardInput struct {
@@ -25,9 +25,7 @@ type CreateCardInput struct {
 	DueDate     *time.Time `validate:"omitempty"`
 }
 
-type CreateCardOutput struct {
-	Card dto.CardWithAssigneeDTO
-}
+type CreateCardOutput = CardResult
 
 type UpdateCardInput struct {
 	BoardID            uuid.UUID `validate:"required"`
@@ -43,9 +41,7 @@ type UpdateCardInput struct {
 	DueDatePresent     bool
 }
 
-type UpdateCardOutput struct {
-	Card dto.CardWithAssigneeDTO
-}
+type UpdateCardOutput = CardResult
 
 type DeleteCardInput struct {
 	BoardID     uuid.UUID `validate:"required"`
@@ -63,6 +59,4 @@ type MoveCardInput struct {
 	RequesterID  uuid.UUID `validate:"required"`
 }
 
-type MoveCardOutput struct {
-	Card dto.CardWithAssigneeDTO
-}
+type MoveCardOutput = CardResult

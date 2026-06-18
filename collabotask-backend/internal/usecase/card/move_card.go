@@ -3,14 +3,13 @@ package card
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
 	"fmt"
 )
 
-func (cru *CardUseCaseImpl) MoveCard(ctx context.Context, input MoveCardInput) (*MoveCardOutput, error) {
+func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*MoveCardOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate move card input: %w", err)
 	}
@@ -83,6 +82,7 @@ func (cru *CardUseCaseImpl) MoveCard(ctx context.Context, input MoveCardInput) (
 	}
 
 	return &MoveCardOutput{
-		Card: dto.CardWithAssigneeToDTO(movedCard, assignee),
+		Card:     movedCard,
+		Assignee: assignee,
 	}, nil
 }

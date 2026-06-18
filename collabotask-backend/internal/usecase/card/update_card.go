@@ -3,7 +3,6 @@ package card
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
@@ -13,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInput) (*UpdateCardOutput, error) {
+func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (*UpdateCardOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate update card input: %w", err)
 	}
@@ -93,6 +92,7 @@ func (cru *CardUseCaseImpl) UpdateCard(ctx context.Context, input UpdateCardInpu
 	}
 
 	return &UpdateCardOutput{
-		Card: dto.CardWithAssigneeToDTO(card, assignee),
+		Card:     card,
+		Assignee: assignee,
 	}, nil
 }
