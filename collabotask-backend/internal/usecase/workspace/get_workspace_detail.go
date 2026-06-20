@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
@@ -11,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (wu *WorkspaceUseCaseImpl) GetWorkspaceDetail(ctx context.Context, input GetWorkspaceDetailInput) (*GetWorkspaceDetailOutput, error) {
+func (wu *WorkspaceUseCase) GetWorkspaceDetail(ctx context.Context, input GetWorkspaceDetailInput) (*GetWorkspaceDetailOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("workspace detail validation failed: %w", err)
 	}
@@ -44,7 +43,7 @@ func (wu *WorkspaceUseCaseImpl) GetWorkspaceDetail(ctx context.Context, input Ge
 		return nil, fmt.Errorf("failed to fetch member details: %w", err)
 	}
 
-	workspaceMembers := make([]dto.WorkspaceMemberDTO, 0, len(members))
+	workspaceMembers := make([]WorkspaceMember, 0, len(members))
 	for _, member := range members {
 		user, ok := usersMap[member.UserID]
 
@@ -53,16 +52,21 @@ func (wu *WorkspaceUseCaseImpl) GetWorkspaceDetail(ctx context.Context, input Ge
 		if !ok || user == nil {
 			return nil, domain.ErrUserNotFound
 		}
-		workspaceMembers = append(workspaceMembers, dto.WorkspaceMemberToDTO(member, user))
-	}
-
-	output := &dto.WorkspaceDetailDTO{
-		WorkspaceDTO: dto.WorkspaceToDTO(workspace),
-		UserRole:     requesterMember.Role,
-		Members:      workspaceMembers,
+		workspaceMembers = append(workspaceMembers, WorkspaceMember{
+			UserID:    user.ID,
+			Email:     user.Email,
+			Name:      user.Name,
+			AvatarURL: user.AvatarURL,
+			Role:      member.Role,
+			JoinedAt:  member.JoinedAt,
+		})
 	}
 
 	return &GetWorkspaceDetailOutput{
-		Workspace: *output,
+		Workspace: WorkspaceDetail{
+			Workspace: workspace,
+			UserRole:  requesterMember.Role,
+			Members:   workspaceMembers,
+		},
 	}, nil
 }

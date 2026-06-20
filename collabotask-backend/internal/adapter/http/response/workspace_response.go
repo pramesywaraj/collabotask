@@ -2,7 +2,7 @@ package response
 
 import (
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
+	"collabotask/internal/usecase/workspace"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,45 +40,45 @@ type WorkspaceDetailResponse struct {
 	Members  []WorkspaceMemberResponse `json:"members"`
 }
 
-func WorkspaceDTOToResponse(d dto.WorkspaceDTO) WorkspaceResponse {
+func WorkspaceToResponse(w *entity.Workspace) WorkspaceResponse {
 	return WorkspaceResponse{
-		ID:          d.ID,
-		Name:        d.Name,
-		Description: d.Description,
-		OwnerID:     d.OwnerID,
-		CreatedAt:   d.CreatedAt,
-		UpdatedAt:   d.UpdatedAt,
+		ID:          w.ID,
+		Name:        w.Name,
+		Description: w.Description,
+		OwnerID:     w.OwnerID,
+		CreatedAt:   w.CreatedAt,
+		UpdatedAt:   w.UpdatedAt,
 	}
 }
 
-func WorkspaceWithMetaDTOToResponse(d dto.WorkspaceWithMetaDTO) WorkspaceWithMetaResponse {
+func WorkspaceWithMetaToResponse(w workspace.WorkspaceWithMeta) WorkspaceWithMetaResponse {
 	return WorkspaceWithMetaResponse{
-		WorkspaceResponse: WorkspaceDTOToResponse(d.WorkspaceDTO),
-		MemberCount:       d.MemberCount,
-		BoardCount:        d.BoardCount,
-		Role:              d.Role,
+		WorkspaceResponse: WorkspaceToResponse(w.Workspace),
+		MemberCount:       w.MemberCount,
+		BoardCount:        w.BoardCount,
+		Role:              w.Role,
 	}
 }
 
-func WorkspaceMemberDTOToResponse(d dto.WorkspaceMemberDTO) WorkspaceMemberResponse {
+func WorkspaceMemberToResponse(m workspace.WorkspaceMember) WorkspaceMemberResponse {
 	return WorkspaceMemberResponse{
-		UserID:    d.UserID,
-		Email:     d.Email,
-		Name:      d.Name,
-		AvatarURL: d.AvatarURL,
-		Role:      d.Role,
-		JoinedAt:  d.JoinedAt,
+		UserID:    m.UserID,
+		Email:     m.Email,
+		Name:      m.Name,
+		AvatarURL: m.AvatarURL,
+		Role:      m.Role,
+		JoinedAt:  m.JoinedAt,
 	}
 }
 
-func WorkspaceDetailDTOToResponse(d dto.WorkspaceDetailDTO) WorkspaceDetailResponse {
+func WorkspaceDetailToResponse(d workspace.WorkspaceDetail) WorkspaceDetailResponse {
 	members := make([]WorkspaceMemberResponse, 0, len(d.Members))
 	for _, member := range d.Members {
-		members = append(members, WorkspaceMemberDTOToResponse(member))
+		members = append(members, WorkspaceMemberToResponse(member))
 	}
 
 	return WorkspaceDetailResponse{
-		WorkspaceResponse: WorkspaceDTOToResponse(d.WorkspaceDTO),
+		WorkspaceResponse: WorkspaceToResponse(d.Workspace),
 		UserRole:          d.UserRole,
 		Members:           members,
 	}

@@ -1,18 +1,36 @@
 package workspace
 
 import (
-	"collabotask/internal/dto"
-	"context"
+	"collabotask/internal/domain/entity"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-type WorkspaceUseCase interface {
-	CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error)
-	GetWorkspaceDetail(ctx context.Context, input GetWorkspaceDetailInput) (*GetWorkspaceDetailOutput, error)
-	InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error)
-	GetWorkspaces(ctx context.Context, input GetWorkspacesInput) (*GetWorkspacesOutput, error)
-	RemoveMember(ctx context.Context, input RemoveMemberInput) error
+// Result types for the workspace use cases. Plain workspaces are returned as
+// *entity.Workspace directly; the types below carry genuine transformations
+// (joined/aggregated data) and live next to the use case that produces them.
+
+type WorkspaceWithMeta struct {
+	Workspace   *entity.Workspace
+	MemberCount uint
+	BoardCount  uint
+	Role        entity.WorkspaceRole
+}
+
+type WorkspaceMember struct {
+	UserID    uuid.UUID
+	Email     string
+	Name      string
+	AvatarURL *string
+	Role      entity.WorkspaceRole
+	JoinedAt  time.Time
+}
+
+type WorkspaceDetail struct {
+	Workspace *entity.Workspace
+	UserRole  entity.WorkspaceRole
+	Members   []WorkspaceMember
 }
 
 type CreateWorkspaceInput struct {
@@ -22,7 +40,7 @@ type CreateWorkspaceInput struct {
 }
 
 type CreateWorkspaceOutput struct {
-	Workspace dto.WorkspaceDTO
+	Workspace *entity.Workspace
 }
 
 type GetWorkspaceDetailInput struct {
@@ -31,7 +49,7 @@ type GetWorkspaceDetailInput struct {
 }
 
 type GetWorkspaceDetailOutput struct {
-	Workspace dto.WorkspaceDetailDTO
+	Workspace WorkspaceDetail
 }
 
 type InviteMemberInput struct {
@@ -49,7 +67,7 @@ type GetWorkspacesInput struct {
 }
 
 type GetWorkspacesOutput struct {
-	Workspaces []dto.WorkspaceWithMetaDTO
+	Workspaces []WorkspaceWithMeta
 }
 
 type RemoveMemberInput struct {

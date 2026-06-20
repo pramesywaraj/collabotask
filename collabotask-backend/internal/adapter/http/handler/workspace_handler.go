@@ -15,10 +15,10 @@ import (
 )
 
 type WorkspaceHandler struct {
-	workspaceUseCase workspace.WorkspaceUseCase
+	workspaceUseCase *workspace.WorkspaceUseCase
 }
 
-func NewWorkspaceHandler(workspaceUseCase workspace.WorkspaceUseCase) *WorkspaceHandler {
+func NewWorkspaceHandler(workspaceUseCase *workspace.WorkspaceUseCase) *WorkspaceHandler {
 	return &WorkspaceHandler{
 		workspaceUseCase: workspaceUseCase,
 	}
@@ -64,7 +64,7 @@ func (wh *WorkspaceHandler) CreateWorkspace(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Workspace created successfully",
-		response.WorkspaceDTOToResponse(out.Workspace),
+		response.WorkspaceToResponse(out.Workspace),
 		http.StatusCreated,
 	)
 }
@@ -94,7 +94,7 @@ func (wh *WorkspaceHandler) GetWorkspaces(ctx *gin.Context) {
 
 	workspaces := make([]response.WorkspaceWithMetaResponse, 0, len(out.Workspaces))
 	for _, w := range out.Workspaces {
-		workspaces = append(workspaces, response.WorkspaceWithMetaDTOToResponse(w))
+		workspaces = append(workspaces, response.WorkspaceWithMetaToResponse(w))
 	}
 
 	response.GenerateSuccessResponse(
@@ -251,5 +251,5 @@ func (wh *WorkspaceHandler) GetWorkspaceDetail(ctx *gin.Context) {
 		return
 	}
 
-	response.GenerateSuccessResponse(ctx, "Workspace detail retrieved successfully", response.WorkspaceDetailDTOToResponse(out.Workspace))
+	response.GenerateSuccessResponse(ctx, "Workspace detail retrieved successfully", response.WorkspaceDetailToResponse(out.Workspace))
 }

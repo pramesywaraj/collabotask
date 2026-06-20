@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (wu *WorkspaceUseCaseImpl) InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error) {
+func (wu *WorkspaceUseCase) InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("invite member validation failed: %w", err)
 	}

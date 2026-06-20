@@ -2,13 +2,12 @@ package workspace
 
 import (
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
 )
 
-func (wu *WorkspaceUseCaseImpl) CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error) {
+func (wu *WorkspaceUseCase) CreateWorkspace(ctx context.Context, input CreateWorkspaceInput) (*CreateWorkspaceOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("create workspace validation failed: %w", err)
 	}
@@ -30,6 +29,6 @@ func (wu *WorkspaceUseCaseImpl) CreateWorkspace(ctx context.Context, input Creat
 	}
 
 	return &CreateWorkspaceOutput{
-		Workspace: dto.WorkspaceToDTO(workspace),
+		Workspace: workspace,
 	}, nil
 }

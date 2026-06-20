@@ -66,7 +66,7 @@ func ProvideWorkspaceUseCase(
 	workspaceMemberRepo repository.WorkspaceMemberRepository,
 	userRepo repository.UserRepository,
 
-) workspace.WorkspaceUseCase {
+) *workspace.WorkspaceUseCase {
 	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo)
 }
 func ProvideBoardUseCase(
@@ -77,7 +77,7 @@ func ProvideBoardUseCase(
 	userRepo repository.UserRepository,
 	columnRepo repository.ColumnRepository,
 	cardRepo repository.CardRepository,
-) board.BoardUseCase {
+) *board.BoardUseCase {
 	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo)
 }
 func ProvideColumnUseCase(
@@ -111,10 +111,10 @@ func ProvideAuthHandler(authUseCase auth.AuthUseCase) *handler.AuthHandler {
 func ProvideUserHandler(authUseCase auth.AuthUseCase) *handler.UserHandler {
 	return handler.NewUserHandler(authUseCase)
 }
-func ProvideWorkspaceHandler(workspaceUseCase workspace.WorkspaceUseCase) *handler.WorkspaceHandler {
+func ProvideWorkspaceHandler(workspaceUseCase *workspace.WorkspaceUseCase) *handler.WorkspaceHandler {
 	return handler.NewWorkspaceHandler(workspaceUseCase)
 }
-func ProvideBoardHandler(boardUseCase board.BoardUseCase) *handler.BoardHandler {
+func ProvideBoardHandler(boardUseCase *board.BoardUseCase) *handler.BoardHandler {
 	return handler.NewBoardHandler(boardUseCase)
 }
 func ProvideColumnHandler(columnUseCase *column.ColumnUseCase) *handler.ColumnHandler {
