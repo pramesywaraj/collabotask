@@ -2,14 +2,13 @@ package column
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
 	"fmt"
 )
 
-func (cu *ColumnUseCaseImpl) UpdateColumn(ctx context.Context, input UpdateColumnInput) (*UpdateColumnOutput, error) {
+func (cu *ColumnUseCase) UpdateColumn(ctx context.Context, input UpdateColumnInput) (*UpdateColumnOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate update column input: %w", err)
 	}
@@ -38,6 +37,6 @@ func (cu *ColumnUseCaseImpl) UpdateColumn(ctx context.Context, input UpdateColum
 	}
 
 	return &UpdateColumnOutput{
-		Column: dto.ColumnToDTO(column),
+		Column: column,
 	}, nil
 }

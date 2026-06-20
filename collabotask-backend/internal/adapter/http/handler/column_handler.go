@@ -13,10 +13,10 @@ import (
 )
 
 type ColumnHandler struct {
-	columnUseCase column.ColumnUseCase
+	columnUseCase *column.ColumnUseCase
 }
 
-func NewColumnHandler(cu column.ColumnUseCase) *ColumnHandler {
+func NewColumnHandler(cu *column.ColumnUseCase) *ColumnHandler {
 	return &ColumnHandler{
 		columnUseCase: cu,
 	}
@@ -103,7 +103,7 @@ func (ch *ColumnHandler) CreateColumn(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Column created successfully",
-		response.ColumnDTOToResponse(out.Column),
+		response.ColumnToResponse(out.Column),
 		http.StatusCreated,
 	)
 }
@@ -159,7 +159,7 @@ func (ch *ColumnHandler) UpdateColumn(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Column updated successfully",
-		response.ColumnDTOToResponse(out.Column),
+		response.ColumnToResponse(out.Column),
 	)
 }
 
@@ -261,6 +261,6 @@ func (ch *ColumnHandler) UpdateColumnPosition(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Column position updated successfully",
-		response.ColumnDTOToResponse(out.Column),
+		response.ColumnToResponse(out.Column),
 	)
 }

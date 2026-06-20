@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
@@ -12,7 +11,7 @@ import (
 	"slices"
 )
 
-func (cu *ColumnUseCaseImpl) UpdateColumnPosition(ctx context.Context, input UpdateColumnPositionInput) (*UpdateColumnPositionOutput, error) {
+func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateColumnPositionInput) (*UpdateColumnPositionOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate update column position input: %w", err)
 	}
@@ -66,7 +65,7 @@ func (cu *ColumnUseCaseImpl) UpdateColumnPosition(ctx context.Context, input Upd
 
 	if oldIdx == newIdx {
 		return &UpdateColumnPositionOutput{
-			Column: dto.ColumnToDTO(columns[oldIdx]),
+			Column: columns[oldIdx],
 		}, nil
 	}
 
@@ -94,6 +93,6 @@ func (cu *ColumnUseCaseImpl) UpdateColumnPosition(ctx context.Context, input Upd
 	}
 
 	return &UpdateColumnPositionOutput{
-		Column: dto.ColumnToDTO(output),
+		Column: output,
 	}, nil
 }

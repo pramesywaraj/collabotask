@@ -2,13 +2,12 @@ package column
 
 import (
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
 )
 
-func (cu *ColumnUseCaseImpl) CreateColumn(ctx context.Context, input CreateColumnInput) (*CreateColumnOutput, error) {
+func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInput) (*CreateColumnOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate create column input: %w", err)
 	}
@@ -34,6 +33,6 @@ func (cu *ColumnUseCaseImpl) CreateColumn(ctx context.Context, input CreateColum
 	}
 
 	return &CreateColumnOutput{
-		Column: dto.ColumnToDTO(column),
+		Column: column,
 	}, nil
 }

@@ -83,7 +83,7 @@ func ProvideBoardUseCase(
 func ProvideColumnUseCase(
 	columnRepo repository.ColumnRepository,
 	boardAccessChecker common.BoardAccessChecker,
-) column.ColumnUseCase {
+) *column.ColumnUseCase {
 	return column.NewColumnUseCase(columnRepo, boardAccessChecker)
 }
 func ProvideCardUseCase(
@@ -117,7 +117,7 @@ func ProvideWorkspaceHandler(workspaceUseCase workspace.WorkspaceUseCase) *handl
 func ProvideBoardHandler(boardUseCase board.BoardUseCase) *handler.BoardHandler {
 	return handler.NewBoardHandler(boardUseCase)
 }
-func ProvideColumnHandler(columnUseCase column.ColumnUseCase) *handler.ColumnHandler {
+func ProvideColumnHandler(columnUseCase *column.ColumnUseCase) *handler.ColumnHandler {
 	return handler.NewColumnHandler(columnUseCase)
 }
 func ProvideCardHandler(cardUseCase *card.CardUseCase) *handler.CardHandler {

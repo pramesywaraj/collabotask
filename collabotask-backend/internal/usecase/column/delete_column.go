@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func (cu *ColumnUseCaseImpl) DeleteColumn(ctx context.Context, input DeleteColumnInput) error {
+func (cu *ColumnUseCase) DeleteColumn(ctx context.Context, input DeleteColumnInput) error {
 	if err := validator.Struct(input); err != nil {
 		return fmt.Errorf("failed to validate delete column input: %w", err)
 	}

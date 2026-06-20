@@ -1,17 +1,15 @@
 package column
 
 import (
-	"collabotask/internal/dto"
-	"context"
+	"collabotask/internal/domain/entity"
 
 	"github.com/google/uuid"
 )
 
-type ColumnUseCase interface {
-	CreateColumn(ctx context.Context, input CreateColumnInput) (*CreateColumnOutput, error)
-	UpdateColumn(ctx context.Context, input UpdateColumnInput) (*UpdateColumnOutput, error)
-	DeleteColumn(ctx context.Context, input DeleteColumnInput) error
-	UpdateColumnPosition(ctx context.Context, input UpdateColumnPositionInput) (*UpdateColumnPositionOutput, error)
+// ColumnResult carries the persisted column. Use cases return the domain entity
+// directly; the HTTP layer maps it to a response shape. No intermediate DTO copy.
+type ColumnResult struct {
+	Column *entity.Column
 }
 
 type CreateColumnInput struct {
@@ -20,9 +18,7 @@ type CreateColumnInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 }
 
-type CreateColumnOutput struct {
-	Column dto.ColumnDTO
-}
+type CreateColumnOutput = ColumnResult
 
 type UpdateColumnInput struct {
 	BoardID     uuid.UUID `validate:"required"`
@@ -31,9 +27,7 @@ type UpdateColumnInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 }
 
-type UpdateColumnOutput struct {
-	Column dto.ColumnDTO
-}
+type UpdateColumnOutput = ColumnResult
 
 type DeleteColumnInput struct {
 	BoardID     uuid.UUID `validate:"required"`
@@ -48,6 +42,4 @@ type UpdateColumnPositionInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 }
 
-type UpdateColumnPositionOutput struct {
-	Column dto.ColumnDTO
-}
+type UpdateColumnPositionOutput = ColumnResult
