@@ -9,10 +9,10 @@ import (
 )
 
 type UserHandler struct {
-	authUseCase auth.AuthUseCase
+	authUseCase *auth.AuthUseCase
 }
 
-func NewUserHandler(authUseCase auth.AuthUseCase) *UserHandler {
+func NewUserHandler(authUseCase *auth.AuthUseCase) *UserHandler {
 	return &UserHandler{authUseCase: authUseCase}
 }
 
@@ -40,11 +40,5 @@ func (h *UserHandler) GetProfile(ctx *gin.Context) {
 		return
 	}
 
-	response.GenerateSuccessResponse(ctx, "Profile retrieved successfully", response.UserResponse{
-		ID:         user.ID,
-		Email:      user.Email,
-		Name:       user.Name,
-		AvatarURL:  user.AvatarURL,
-		SystemRole: user.SystemRole,
-	})
+	response.GenerateSuccessResponse(ctx, "Profile retrieved successfully", response.UserToResponse(*user))
 }

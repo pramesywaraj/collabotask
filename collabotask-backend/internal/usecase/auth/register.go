@@ -3,7 +3,6 @@ package auth
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	infraauth "collabotask/internal/infrastructure/auth"
 	"context"
 	"errors"
@@ -11,7 +10,7 @@ import (
 	"strings"
 )
 
-func (u *AuthUseCaseImpl) Register(ctx context.Context, input RegisterInput) (*RegisterOutput, error) {
+func (u *AuthUseCase) Register(ctx context.Context, input RegisterInput) (*RegisterOutput, error) {
 	if err := ValidateRegisterInput(input); err != nil {
 		return nil, err
 	}
@@ -49,7 +48,7 @@ func (u *AuthUseCaseImpl) Register(ctx context.Context, input RegisterInput) (*R
 	}
 
 	return &RegisterOutput{
-		User:  dto.UserToDTO(user),
+		User:  userToProfile(user),
 		Token: token,
 	}, nil
 }

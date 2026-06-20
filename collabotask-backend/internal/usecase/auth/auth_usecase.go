@@ -13,13 +13,13 @@ const (
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
-type AuthUseCaseImpl struct {
+type AuthUseCase struct {
 	userRepo repository.UserRepository
 	authCfg  *config.AuthConfig
 }
 
-func NewAuthUseCase(userRepo repository.UserRepository, authCfg *config.AuthConfig) AuthUseCase {
-	return &AuthUseCaseImpl{
+func NewAuthUseCase(userRepo repository.UserRepository, authCfg *config.AuthConfig) *AuthUseCase {
+	return &AuthUseCase{
 		userRepo: userRepo,
 		authCfg:  authCfg,
 	}

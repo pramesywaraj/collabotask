@@ -11,10 +11,10 @@ import (
 )
 
 type AuthHandler struct {
-	authUseCase auth.AuthUseCase
+	authUseCase *auth.AuthUseCase
 }
 
-func NewAuthHandler(authUseCase auth.AuthUseCase) *AuthHandler {
+func NewAuthHandler(authUseCase *auth.AuthUseCase) *AuthHandler {
 	return &AuthHandler{authUseCase: authUseCase}
 }
 
@@ -46,7 +46,7 @@ func (ah *AuthHandler) Register(ctx *gin.Context) {
 	}
 
 	response.GenerateSuccessResponse(ctx, "User registered successfully", response.AuthResponse{
-		User:  response.UserDTOToResponse(out.User),
+		User:  response.UserToResponse(out.User),
 		Token: out.Token,
 	}, http.StatusCreated)
 }
@@ -78,7 +78,7 @@ func (ah *AuthHandler) Login(ctx *gin.Context) {
 	}
 
 	response.GenerateSuccessResponse(ctx, "Successfully logged in", response.AuthResponse{
-		User:  response.UserDTOToResponse(out.User),
+		User:  response.UserToResponse(out.User),
 		Token: out.Token,
 	})
 }

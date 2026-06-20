@@ -2,14 +2,13 @@ package auth
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	infraauth "collabotask/internal/infrastructure/auth"
 	"context"
 	"fmt"
 	"strings"
 )
 
-func (u *AuthUseCaseImpl) Login(ctx context.Context, input LoginInput) (*LoginOutput, error) {
+func (u *AuthUseCase) Login(ctx context.Context, input LoginInput) (*LoginOutput, error) {
 	if err := ValidateLoginInput(input); err != nil {
 		return nil, err
 	}
@@ -29,7 +28,7 @@ func (u *AuthUseCaseImpl) Login(ctx context.Context, input LoginInput) (*LoginOu
 	}
 
 	return &LoginOutput{
-		User:  dto.UserToDTO(user),
+		User:  userToProfile(user),
 		Token: token,
 	}, nil
 }

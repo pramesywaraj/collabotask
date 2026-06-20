@@ -2,13 +2,12 @@ package auth
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	"context"
 
 	"github.com/google/uuid"
 )
 
-func (u *AuthUseCaseImpl) GetProfile(ctx context.Context, userID uuid.UUID) (*dto.UserDTO, error) {
+func (u *AuthUseCase) GetProfile(ctx context.Context, userID uuid.UUID) (*UserProfile, error) {
 	user, err := u.userRepo.GetById(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -18,7 +17,7 @@ func (u *AuthUseCaseImpl) GetProfile(ctx context.Context, userID uuid.UUID) (*dt
 		return nil, domain.ErrUserNotFound
 	}
 
-	result := dto.UserToDTO(user)
+	result := userToProfile(user)
 
 	return &result, nil
 }

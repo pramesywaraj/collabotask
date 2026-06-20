@@ -58,7 +58,7 @@ func ProvideCardRepository(db *database.DB) repository.CardRepository {
 }
 
 // UseCase
-func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) auth.AuthUseCase {
+func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) *auth.AuthUseCase {
 	return auth.NewAuthUseCase(userRepo, &cfg.Auth)
 }
 func ProvideWorkspaceUseCase(
@@ -105,10 +105,10 @@ func ProvideBoardAccessChecker(
 }
 
 // Handler
-func ProvideAuthHandler(authUseCase auth.AuthUseCase) *handler.AuthHandler {
+func ProvideAuthHandler(authUseCase *auth.AuthUseCase) *handler.AuthHandler {
 	return handler.NewAuthHandler(authUseCase)
 }
-func ProvideUserHandler(authUseCase auth.AuthUseCase) *handler.UserHandler {
+func ProvideUserHandler(authUseCase *auth.AuthUseCase) *handler.UserHandler {
 	return handler.NewUserHandler(authUseCase)
 }
 func ProvideWorkspaceHandler(workspaceUseCase *workspace.WorkspaceUseCase) *handler.WorkspaceHandler {
