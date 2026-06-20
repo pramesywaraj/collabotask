@@ -2,7 +2,7 @@ package response
 
 import (
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
+	"collabotask/internal/usecase/board"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,30 +62,30 @@ type BoardKanbanResponse struct {
 	Columns []ColumnWithCardsResponse `json:"columns"`
 }
 
-func BoardDTOToResponse(board dto.BoardDTO) BoardResponse {
+func BoardToResponse(b *entity.Board) BoardResponse {
 	return BoardResponse{
-		ID:              board.ID,
-		WorkspaceID:     board.WorkspaceID,
-		Title:           board.Title,
-		Description:     board.Description,
-		BackgroundColor: board.BackgroundColor,
-		CreatedBy:       board.CreatedBy,
-		IsArchived:      board.IsArchived,
-		CreatedAt:       board.CreatedAt,
-		UpdatedAt:       board.UpdatedAt,
+		ID:              b.ID,
+		WorkspaceID:     b.WorkspaceID,
+		Title:           b.Title,
+		Description:     b.Description,
+		BackgroundColor: b.BackgroundColor,
+		CreatedBy:       b.CreatedBy,
+		IsArchived:      b.IsArchived,
+		CreatedAt:       b.CreatedAt,
+		UpdatedAt:       b.UpdatedAt,
 	}
 }
 
-func BoardWithMetaDTOToResponse(board dto.BoardWithMetaDTO) BoardWithMetaResponse {
+func BoardWithMetaToResponse(b board.BoardWithMeta) BoardWithMetaResponse {
 	return BoardWithMetaResponse{
-		BoardResponse: BoardDTOToResponse(board.BoardDTO),
-		UserRole:      board.UserRole,
-		AccessStatus:  board.AccessStatus,
-		MemberCount:   board.MemberCount,
+		BoardResponse: BoardToResponse(b.Board),
+		UserRole:      b.UserRole,
+		AccessStatus:  b.AccessStatus,
+		MemberCount:   b.MemberCount,
 	}
 }
 
-func BoardMemberDTOToResponse(member dto.BoardMemberDTO) BoardMemberResponse {
+func BoardMemberToResponse(member board.BoardMember) BoardMemberResponse {
 	return BoardMemberResponse{
 		UserID:    member.UserID,
 		Email:     member.Email,
@@ -96,21 +96,21 @@ func BoardMemberDTOToResponse(member dto.BoardMemberDTO) BoardMemberResponse {
 	}
 }
 
-func BoardDetailDTOToResponse(board dto.BoardDetailDTO) BoardDetailResponse {
-	members := make([]BoardMemberResponse, 0, len(board.Members))
-	for _, member := range board.Members {
-		members = append(members, BoardMemberDTOToResponse(member))
+func BoardDetailToResponse(b board.BoardDetail) BoardDetailResponse {
+	members := make([]BoardMemberResponse, 0, len(b.Members))
+	for _, member := range b.Members {
+		members = append(members, BoardMemberToResponse(member))
 	}
 
 	return BoardDetailResponse{
-		BoardResponse: BoardDTOToResponse(board.BoardDTO),
-		UserRole:      board.UserRole,
-		AccessStatus:  board.AccessStatus,
+		BoardResponse: BoardToResponse(b.Board),
+		UserRole:      b.UserRole,
+		AccessStatus:  b.AccessStatus,
 		Members:       members,
 	}
 }
 
-func BoardInviteeDTOToResponse(invitee dto.BoardInviteeDTO) BoardInviteeResponse {
+func BoardInviteeToResponse(invitee board.BoardInvitee) BoardInviteeResponse {
 	return BoardInviteeResponse{
 		UserID:        invitee.UserID,
 		Email:         invitee.Email,
@@ -121,10 +121,17 @@ func BoardInviteeDTOToResponse(invitee dto.BoardInviteeDTO) BoardInviteeResponse
 	}
 }
 
-func BoardKanbanToResponse(columns []dto.ColumnWithCardsDTO) BoardKanbanResponse {
+func BoardKanbanToResponse(columns []board.ColumnWithCards) BoardKanbanResponse {
 	out := make([]ColumnWithCardsResponse, 0, len(columns))
 	for _, col := range columns {
-		out = append(out, ColumnWithCardsDTOToResponse(col))
+		cards := make([]CardResponse, 0, len(col.Cards))
+		for _, c := range col.Cards {
+			cards = append(cards, CardToResponse(c.Card, c.Assignee))
+		}
+		out = append(out, ColumnWithCardsResponse{
+			ColumnResponse: ColumnToResponse(col.Column),
+			Cards:          cards,
+		})
 	}
 
 	return BoardKanbanResponse{Columns: out}

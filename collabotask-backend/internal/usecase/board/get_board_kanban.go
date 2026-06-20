@@ -2,7 +2,6 @@ package board
 
 import (
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
@@ -10,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (bu *BoardUseCaseImpl) GetBoardKanban(ctx context.Context, input GetBoardKanbanInput) (*GetBoardKanbanOutput, error) {
+func (bu *BoardUseCase) GetBoardKanban(ctx context.Context, input GetBoardKanbanInput) (*GetBoardKanbanOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate board kanban input: %w", err)
 	}
@@ -54,9 +53,9 @@ func (bu *BoardUseCaseImpl) GetBoardKanban(ctx context.Context, input GetBoardKa
 		return nil, fmt.Errorf("failed to fetch assignees: %w", err)
 	}
 
-	out := make([]dto.ColumnWithCardsDTO, len(columns))
+	out := make([]ColumnWithCards, len(columns))
 	for i, col := range columns {
-		dtos := make([]dto.CardWithAssigneeDTO, 0, len(cardsByColumn[i]))
+		cards := make([]CardWithAssignee, 0, len(cardsByColumn[i]))
 		for _, card := range cardsByColumn[i] {
 			var u *entity.User
 			if card.AssignedTo != nil {
@@ -64,11 +63,11 @@ func (bu *BoardUseCaseImpl) GetBoardKanban(ctx context.Context, input GetBoardKa
 					u = user
 				}
 			}
-			dtos = append(dtos, dto.CardWithAssigneeToDTO(card, u))
+			cards = append(cards, CardWithAssignee{Card: card, Assignee: u})
 		}
-		out[i] = dto.ColumnWithCardsDTO{
-			ColumnDTO: dto.ColumnToDTO(col),
-			Cards:     dtos,
+		out[i] = ColumnWithCards{
+			Column: col,
+			Cards:  cards,
 		}
 	}
 

@@ -5,7 +5,7 @@ import (
 	"collabotask/internal/usecase/common"
 )
 
-type BoardUseCaseImpl struct {
+type BoardUseCase struct {
 	boardAccessChecker  common.BoardAccessChecker
 	boardRepo           repository.BoardRepository
 	boardMemberRepo     repository.BoardMemberRepository
@@ -23,8 +23,8 @@ func NewBoardUseCase(
 	userRepo repository.UserRepository,
 	columnRepo repository.ColumnRepository,
 	cardRepo repository.CardRepository,
-) BoardUseCase {
-	return &BoardUseCaseImpl{
+) *BoardUseCase {
+	return &BoardUseCase{
 		boardAccessChecker:  boardAccessChecker,
 		boardRepo:           boardRepo,
 		boardMemberRepo:     boardMemberRepo,

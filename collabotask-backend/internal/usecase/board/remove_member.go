@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func (bu *BoardUseCaseImpl) RemoveMember(ctx context.Context, input RemoveMemberInput) error {
+func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInput) error {
 	if err := validator.Struct(input); err != nil {
 		return fmt.Errorf("failed to validate remove member input: %w", err)
 	}

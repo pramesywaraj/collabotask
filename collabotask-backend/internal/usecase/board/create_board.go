@@ -3,7 +3,6 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
@@ -11,7 +10,7 @@ import (
 
 const defaultBackgroundColor = "#0079BF"
 
-func (bu *BoardUseCaseImpl) CreateBoard(ctx context.Context, input CreateBoardInput) (*CreateBoardOutput, error) {
+func (bu *BoardUseCase) CreateBoard(ctx context.Context, input CreateBoardInput) (*CreateBoardOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("create board validation failed: %w", err)
 	}
@@ -50,6 +49,6 @@ func (bu *BoardUseCaseImpl) CreateBoard(ctx context.Context, input CreateBoardIn
 	}
 
 	return &CreateBoardOutput{
-		Board: dto.BoardToDTO(board),
+		Board: board,
 	}, nil
 }

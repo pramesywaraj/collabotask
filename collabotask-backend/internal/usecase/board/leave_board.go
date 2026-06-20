@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func (bu *BoardUseCaseImpl) LeaveBoard(ctx context.Context, input LeaveBoardInput) error {
+func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) error {
 	if err := validator.Struct(input); err != nil {
 		return fmt.Errorf("failed to validate leave board input: %w", err)
 	}

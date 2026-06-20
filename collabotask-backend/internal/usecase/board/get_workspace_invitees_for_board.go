@@ -2,7 +2,6 @@ package board
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
@@ -11,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (bu *BoardUseCaseImpl) GetWorkspaceInviteesForBoard(ctx context.Context, input GetWorkspaceInviteesForBoardInput) (*GetWorkspaceInviteesForBoardOutput, error) {
+func (bu *BoardUseCase) GetWorkspaceInviteesForBoard(ctx context.Context, input GetWorkspaceInviteesForBoardInput) (*GetWorkspaceInviteesForBoardOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate list workspace invitees for board input: %w", err)
 	}
@@ -70,13 +69,13 @@ func (bu *BoardUseCaseImpl) GetWorkspaceInviteesForBoard(ctx context.Context, in
 		return nil, fmt.Errorf("failed to fetch user details: %w", err)
 	}
 
-	members := make([]dto.BoardInviteeDTO, 0, len(workspaceMembers))
+	members := make([]BoardInvitee, 0, len(workspaceMembers))
 	for _, wm := range workspaceMembers {
 		user, ok := users[wm.UserID]
 		if !ok || user == nil {
 			continue
 		}
-		members = append(members, dto.BoardInviteeDTO{
+		members = append(members, BoardInvitee{
 			UserID:        wm.UserID,
 			Email:         user.Email,
 			Name:          user.Name,

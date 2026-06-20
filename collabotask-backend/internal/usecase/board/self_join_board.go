@@ -9,7 +9,7 @@ import (
 	"fmt"
 )
 
-func (bu *BoardUseCaseImpl) SelfJoinBoard(ctx context.Context, input SelfJoinBoardInput) error {
+func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardInput) error {
 	if err := validator.Struct(input); err != nil {
 		return fmt.Errorf("failed to validate self join board input: %w", err)
 	}

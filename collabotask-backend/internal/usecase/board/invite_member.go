@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-func (bu *BoardUseCaseImpl) InviteMember(ctx context.Context, input InviteMemberInput) error {
+func (bu *BoardUseCase) InviteMember(ctx context.Context, input InviteMemberInput) error {
 	if err := validator.Struct(input); err != nil {
 		return fmt.Errorf("failed to validate invite member input: %w", err)
 	}

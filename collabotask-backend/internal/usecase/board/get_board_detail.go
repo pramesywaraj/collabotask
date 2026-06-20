@@ -3,7 +3,6 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
@@ -11,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (bu *BoardUseCaseImpl) GetBoardDetail(ctx context.Context, input GetBoardDetailInput) (*GetBoardDetailOutput, error) {
+func (bu *BoardUseCase) GetBoardDetail(ctx context.Context, input GetBoardDetailInput) (*GetBoardDetailOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate board detail input: %w", err)
 	}
@@ -39,13 +38,20 @@ func (bu *BoardUseCaseImpl) GetBoardDetail(ctx context.Context, input GetBoardDe
 		return nil, fmt.Errorf("failed to fetch members details: %w", err)
 	}
 
-	boardMembers := make([]dto.BoardMemberDTO, 0, len(members))
+	boardMembers := make([]BoardMember, 0, len(members))
 	for _, member := range members {
 		user, ok := users[member.UserID]
 		if !ok || user == nil {
 			return nil, domain.ErrUserNotFound
 		}
-		boardMembers = append(boardMembers, dto.BoardMemberToDTO(member, user))
+		boardMembers = append(boardMembers, BoardMember{
+			UserID:    member.UserID,
+			Email:     user.Email,
+			Name:      user.Name,
+			AvatarURL: user.AvatarURL,
+			Role:      member.Role,
+			JoinedAt:  member.JoinedAt,
+		})
 	}
 
 	var userRole *entity.BoardRole
@@ -61,8 +67,8 @@ func (bu *BoardUseCaseImpl) GetBoardDetail(ctx context.Context, input GetBoardDe
 	}
 
 	return &GetBoardDetailOutput{
-		Board: dto.BoardDetailDTO{
-			BoardDTO:     dto.BoardToDTO(board),
+		Board: BoardDetail{
+			Board:        board,
 			UserRole:     userRole,
 			AccessStatus: accessStatus,
 			Members:      boardMembers,

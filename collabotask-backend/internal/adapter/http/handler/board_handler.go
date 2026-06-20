@@ -13,10 +13,10 @@ import (
 )
 
 type BoardHandler struct {
-	boardUseCase board.BoardUseCase
+	boardUseCase *board.BoardUseCase
 }
 
-func NewBoardHandler(bu board.BoardUseCase) *BoardHandler {
+func NewBoardHandler(bu *board.BoardUseCase) *BoardHandler {
 	return &BoardHandler{
 		boardUseCase: bu,
 	}
@@ -99,7 +99,7 @@ func (bh *BoardHandler) CreateBoard(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Board created successfully",
-		response.BoardDTOToResponse(out.Board),
+		response.BoardToResponse(out.Board),
 		http.StatusCreated,
 	)
 }
@@ -144,7 +144,7 @@ func (bh *BoardHandler) GetBoardDetail(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Board detail fetched successfully",
-		response.BoardDetailDTOToResponse(out.Board),
+		response.BoardDetailToResponse(out.Board),
 	)
 }
 
@@ -194,7 +194,7 @@ func (bh *BoardHandler) GetBoardsInWorkspace(ctx *gin.Context) {
 
 	boards := make([]response.BoardWithMetaResponse, 0, len(out.Boards))
 	for _, b := range out.Boards {
-		boards = append(boards, response.BoardWithMetaDTOToResponse(b))
+		boards = append(boards, response.BoardWithMetaToResponse(b))
 	}
 
 	response.GenerateSuccessResponse(
@@ -244,7 +244,7 @@ func (bh *BoardHandler) GetWorkspaceInviteesForBoard(ctx *gin.Context) {
 
 	members := make([]response.BoardInviteeResponse, 0, len(out.Members))
 	for _, m := range out.Members {
-		members = append(members, response.BoardInviteeDTOToResponse(m))
+		members = append(members, response.BoardInviteeToResponse(m))
 	}
 
 	response.GenerateSuccessResponse(
@@ -307,7 +307,7 @@ func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Board updated successfully",
-		response.BoardDTOToResponse(out.Board),
+		response.BoardToResponse(out.Board),
 	)
 }
 
@@ -359,7 +359,7 @@ func (bh *BoardHandler) SetBoardArchivedStatus(ctx *gin.Context) {
 	response.GenerateSuccessResponse(
 		ctx,
 		"Board archived status changed",
-		response.BoardDTOToResponse(out.Board),
+		response.BoardToResponse(out.Board),
 	)
 }
 

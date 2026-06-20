@@ -2,14 +2,13 @@ package board
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
 	"fmt"
 )
 
-func (bu *BoardUseCaseImpl) SetArchived(ctx context.Context, input SetArchivedInput) (*SetArchivedOutput, error) {
+func (bu *BoardUseCase) SetArchived(ctx context.Context, input SetArchivedInput) (*SetArchivedOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate set archived status in board input: %w", err)
 	}
@@ -44,6 +43,6 @@ func (bu *BoardUseCaseImpl) SetArchived(ctx context.Context, input SetArchivedIn
 	board.IsArchived = *input.IsArchived
 
 	return &SetArchivedOutput{
-		Board: dto.BoardToDTO(board),
+		Board: board,
 	}, nil
 }

@@ -3,13 +3,12 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"fmt"
 )
 
-func (bu *BoardUseCaseImpl) GetBoardsInWorkspace(ctx context.Context, input GetBoardsInput) (*GetBoardsOutput, error) {
+func (bu *BoardUseCase) GetBoardsInWorkspace(ctx context.Context, input GetBoardsInput) (*GetBoardsOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate list boards in workspace input: %w", err)
 	}
@@ -27,7 +26,7 @@ func (bu *BoardUseCaseImpl) GetBoardsInWorkspace(ctx context.Context, input GetB
 		return nil, fmt.Errorf("failed to fetch user boards in workspace: %w", err)
 	}
 
-	resultBoards := make([]dto.BoardWithMetaDTO, 0, len(boards))
+	resultBoards := make([]BoardWithMeta, 0, len(boards))
 	for _, board := range boards {
 		var userRole *entity.BoardRole
 		if board.UserRole != "" {
@@ -35,8 +34,9 @@ func (bu *BoardUseCaseImpl) GetBoardsInWorkspace(ctx context.Context, input GetB
 			userRole = &role
 		}
 
-		resultBoards = append(resultBoards, dto.BoardWithMetaDTO{
-			BoardDTO:     dto.BoardToDTO(&board.Board),
+		boardEntity := board.Board
+		resultBoards = append(resultBoards, BoardWithMeta{
+			Board:        &boardEntity,
 			UserRole:     userRole,
 			AccessStatus: board.AccessStatus,
 			MemberCount:  board.MemberCount,

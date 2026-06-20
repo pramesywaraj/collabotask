@@ -2,7 +2,6 @@ package board
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/dto"
 	"collabotask/internal/infrastructure/validator"
 	"context"
 	"errors"
@@ -10,7 +9,7 @@ import (
 	"strings"
 )
 
-func (bu *BoardUseCaseImpl) UpdateBoard(ctx context.Context, input UpdateBoardInput) (*UpdateBoardOutput, error) {
+func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput) (*UpdateBoardOutput, error) {
 	if err := validator.Struct(input); err != nil {
 		return nil, fmt.Errorf("failed to validate update board input: %w", err)
 	}
@@ -65,6 +64,6 @@ func (bu *BoardUseCaseImpl) UpdateBoard(ctx context.Context, input UpdateBoardIn
 	}
 
 	return &UpdateBoardOutput{
-		Board: dto.BoardToDTO(board),
+		Board: board,
 	}, nil
 }
