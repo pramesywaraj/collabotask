@@ -22,7 +22,7 @@ type BoardAccessChecker interface {
 	Resolve(ctx context.Context, boardID, requesterID uuid.UUID) (*BoardAccess, error)
 }
 
-type BoardAccessCheckerImpl struct {
+type boardAccessChecker struct {
 	boardRepo           repository.BoardRepository
 	boardMemberRepo     repository.BoardMemberRepository
 	workspaceMemberRepo repository.WorkspaceMemberRepository
@@ -33,14 +33,14 @@ func NewBoardAccessChecker(
 	boardMemberRepo repository.BoardMemberRepository,
 	workspaceMemberRepo repository.WorkspaceMemberRepository,
 ) BoardAccessChecker {
-	return &BoardAccessCheckerImpl{
+	return &boardAccessChecker{
 		boardRepo:           boardRepo,
 		boardMemberRepo:     boardMemberRepo,
 		workspaceMemberRepo: workspaceMemberRepo,
 	}
 }
 
-func (ba *BoardAccessCheckerImpl) Check(ctx context.Context, boardID, requesterID uuid.UUID) (*entity.Board, error) {
+func (ba *boardAccessChecker) Check(ctx context.Context, boardID, requesterID uuid.UUID) (*entity.Board, error) {
 	access, err := ba.Resolve(ctx, boardID, requesterID)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (ba *BoardAccessCheckerImpl) Check(ctx context.Context, boardID, requesterI
 	return access.Board, nil
 }
 
-func (ba *BoardAccessCheckerImpl) Resolve(ctx context.Context, boardID, requesterID uuid.UUID) (*BoardAccess, error) {
+func (ba *boardAccessChecker) Resolve(ctx context.Context, boardID, requesterID uuid.UUID) (*BoardAccess, error) {
 	board, err := ba.boardRepo.GetByID(ctx, boardID)
 	if err != nil {
 		if errors.Is(err, domain.ErrBoardNotFound) {

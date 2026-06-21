@@ -14,17 +14,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type WorkspaceMemberRepositoryImpl struct {
+type workspaceMemberRepository struct {
 	db *pgxpool.Pool
 }
 
 func NewWorkspaceMemberRepository(db *pgxpool.Pool) repository.WorkspaceMemberRepository {
-	return &WorkspaceMemberRepositoryImpl{
+	return &workspaceMemberRepository{
 		db: db,
 	}
 }
 
-func (wm *WorkspaceMemberRepositoryImpl) Create(ctx context.Context, workspaceMember *entity.WorkspaceMember) error {
+func (wm *workspaceMemberRepository) Create(ctx context.Context, workspaceMember *entity.WorkspaceMember) error {
 	err := wm.db.QueryRow(
 		ctx,
 		createWorkspaceMemberQuery,
@@ -51,7 +51,7 @@ func (wm *WorkspaceMemberRepositoryImpl) Create(ctx context.Context, workspaceMe
 	return nil
 }
 
-func (wm *WorkspaceMemberRepositoryImpl) Delete(ctx context.Context, workspaceID, userID uuid.UUID) error {
+func (wm *workspaceMemberRepository) Delete(ctx context.Context, workspaceID, userID uuid.UUID) error {
 	result, err := wm.db.Exec(ctx, deleteWorkspaceMemberQuery, workspaceID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to remove user from workspace: %w", err)
@@ -64,7 +64,7 @@ func (wm *WorkspaceMemberRepositoryImpl) Delete(ctx context.Context, workspaceID
 	return nil
 }
 
-func (wm *WorkspaceMemberRepositoryImpl) GetByWorkspaceAndUser(ctx context.Context, workspaceID, userID uuid.UUID) (*entity.WorkspaceMember, error) {
+func (wm *workspaceMemberRepository) GetByWorkspaceAndUser(ctx context.Context, workspaceID, userID uuid.UUID) (*entity.WorkspaceMember, error) {
 	workspaceMember := &entity.WorkspaceMember{}
 	err := wm.db.QueryRow(
 		ctx,
@@ -88,7 +88,7 @@ func (wm *WorkspaceMemberRepositoryImpl) GetByWorkspaceAndUser(ctx context.Conte
 	return workspaceMember, nil
 }
 
-func (wm *WorkspaceMemberRepositoryImpl) GetMembersByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]*entity.WorkspaceMember, error) {
+func (wm *workspaceMemberRepository) GetMembersByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]*entity.WorkspaceMember, error) {
 	rows, err := wm.db.Query(
 		ctx,
 		listMemberByWorkspaceQuery,
@@ -123,7 +123,7 @@ func (wm *WorkspaceMemberRepositoryImpl) GetMembersByWorkspace(ctx context.Conte
 	return workspaceMembers, nil
 }
 
-func (wm *WorkspaceMemberRepositoryImpl) IsUserExists(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error) {
+func (wm *workspaceMemberRepository) IsUserExists(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error) {
 	var exists bool
 	err := wm.db.QueryRow(
 		ctx,

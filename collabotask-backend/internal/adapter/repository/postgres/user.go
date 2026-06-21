@@ -14,15 +14,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type UserRepositoryImpl struct {
+type userRepository struct {
 	db *pgxpool.Pool
 }
 
 func NewUserRepository(db *pgxpool.Pool) repository.UserRepository {
-	return &UserRepositoryImpl{db: db}
+	return &userRepository{db: db}
 }
 
-func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
+func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 	var avatarURL *string
 	if user.AvatarURL != nil && *user.AvatarURL != "" {
 		avatarURL = user.AvatarURL
@@ -60,7 +60,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) erro
 	return nil
 }
 
-func (r *UserRepositoryImpl) GetById(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+func (r *userRepository) GetById(ctx context.Context, id uuid.UUID) (*entity.User, error) {
 	user := &entity.User{}
 	var avatarURL *string
 
@@ -86,7 +86,7 @@ func (r *UserRepositoryImpl) GetById(ctx context.Context, id uuid.UUID) (*entity
 	return user, nil
 }
 
-func (r *UserRepositoryImpl) GetByIds(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*entity.User, error) {
+func (r *userRepository) GetByIds(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*entity.User, error) {
 	if len(ids) == 0 {
 		return map[uuid.UUID]*entity.User{}, nil
 	}
@@ -126,7 +126,7 @@ func (r *UserRepositoryImpl) GetByIds(ctx context.Context, ids []uuid.UUID) (map
 	return users, nil
 }
 
-func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	user := &entity.User{}
 	var avatarURL *string
 
@@ -152,7 +152,7 @@ func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*ent
 	return user, nil
 }
 
-func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) error {
+func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 	var avatarURL *string
 	if user.AvatarURL != nil && *user.AvatarURL != "" {
 		avatarURL = user.AvatarURL
@@ -210,7 +210,7 @@ func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) erro
 	return nil
 }
 
-func (r *UserRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	result, err := r.db.Exec(ctx, deleteUserQuery, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
@@ -223,7 +223,7 @@ func (r *UserRepositoryImpl) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *UserRepositoryImpl) List(ctx context.Context, limit, offset int) ([]*entity.User, error) {
+func (r *userRepository) List(ctx context.Context, limit, offset int) ([]*entity.User, error) {
 	rows, err := r.db.Query(ctx, listUsersQuery, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
@@ -259,7 +259,7 @@ func (r *UserRepositoryImpl) List(ctx context.Context, limit, offset int) ([]*en
 	return users, nil
 }
 
-func (r *UserRepositoryImpl) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+func (r *userRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	var exists bool
 	err := r.db.QueryRow(ctx, existsUserByEmailQuery, email).Scan(&exists)
 	if err != nil {

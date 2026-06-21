@@ -15,17 +15,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type ColumnRepositoryImpl struct {
+type columnRepository struct {
 	db *pgxpool.Pool
 }
 
 func NewColumnRepository(db *pgxpool.Pool) repository.ColumnRepository {
-	return &ColumnRepositoryImpl{db: db}
+	return &columnRepository{db: db}
 }
 
 const columnsCap = 16
 
-func (cr *ColumnRepositoryImpl) Create(ctx context.Context, column *entity.Column) error {
+func (cr *columnRepository) Create(ctx context.Context, column *entity.Column) error {
 	err := cr.db.QueryRow(
 		ctx,
 		createColumnQuery,
@@ -54,7 +54,7 @@ func (cr *ColumnRepositoryImpl) Create(ctx context.Context, column *entity.Colum
 	return nil
 }
 
-func (cr *ColumnRepositoryImpl) CreateMany(ctx context.Context, columns []*entity.Column) error {
+func (cr *columnRepository) CreateMany(ctx context.Context, columns []*entity.Column) error {
 	if len(columns) == 0 {
 		return nil
 	}
@@ -85,7 +85,7 @@ func (cr *ColumnRepositoryImpl) CreateMany(ctx context.Context, columns []*entit
 	return tx.Commit(ctx)
 }
 
-func (cr *ColumnRepositoryImpl) GetByID(ctx context.Context, columnID uuid.UUID) (*entity.Column, error) {
+func (cr *columnRepository) GetByID(ctx context.Context, columnID uuid.UUID) (*entity.Column, error) {
 	column := &entity.Column{}
 
 	err := cr.db.QueryRow(
@@ -110,7 +110,7 @@ func (cr *ColumnRepositoryImpl) GetByID(ctx context.Context, columnID uuid.UUID)
 	return column, nil
 }
 
-func (cr *ColumnRepositoryImpl) GetColumnsByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.Column, error) {
+func (cr *columnRepository) GetColumnsByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.Column, error) {
 	rows, err := cr.db.Query(
 		ctx,
 		listColumnByBoardIDQuery,
@@ -147,7 +147,7 @@ func (cr *ColumnRepositoryImpl) GetColumnsByBoard(ctx context.Context, boardID u
 	return columns, nil
 }
 
-func (cr *ColumnRepositoryImpl) GetMaxPosition(ctx context.Context, boardID uuid.UUID) (int, error) {
+func (cr *columnRepository) GetMaxPosition(ctx context.Context, boardID uuid.UUID) (int, error) {
 	var position int
 
 	err := cr.db.QueryRow(
@@ -164,7 +164,7 @@ func (cr *ColumnRepositoryImpl) GetMaxPosition(ctx context.Context, boardID uuid
 	return position, nil
 }
 
-func (cr *ColumnRepositoryImpl) Update(ctx context.Context, column *entity.Column) error {
+func (cr *columnRepository) Update(ctx context.Context, column *entity.Column) error {
 	var title *string
 	if column.Title != "" {
 		title = &column.Title
@@ -196,7 +196,7 @@ func (cr *ColumnRepositoryImpl) Update(ctx context.Context, column *entity.Colum
 	return nil
 }
 
-func (cr *ColumnRepositoryImpl) Delete(ctx context.Context, columnID uuid.UUID) error {
+func (cr *columnRepository) Delete(ctx context.Context, columnID uuid.UUID) error {
 	result, err := cr.db.Exec(
 		ctx,
 		deleteColumnQuery,
@@ -212,7 +212,7 @@ func (cr *ColumnRepositoryImpl) Delete(ctx context.Context, columnID uuid.UUID) 
 	return nil
 }
 
-func (cr *ColumnRepositoryImpl) ReorderPositions(ctx context.Context, columns []*entity.Column) error {
+func (cr *columnRepository) ReorderPositions(ctx context.Context, columns []*entity.Column) error {
 	if len(columns) == 0 {
 		return nil
 	}

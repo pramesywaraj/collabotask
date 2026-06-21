@@ -15,17 +15,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type WorkspaceRepositoryImpl struct {
+type workspaceRepository struct {
 	db *pgxpool.Pool
 }
 
 func NewWorkspaceRepository(db *pgxpool.Pool) repository.WorkspaceRepository {
-	return &WorkspaceRepositoryImpl{db: db}
+	return &workspaceRepository{db: db}
 }
 
 const workspacesCap = 16
 
-func (w *WorkspaceRepositoryImpl) Create(ctx context.Context, workspace *entity.Workspace) error {
+func (w *workspaceRepository) Create(ctx context.Context, workspace *entity.Workspace) error {
 	var description *string
 	if workspace.Description != nil && *workspace.Description != "" {
 		description = workspace.Description
@@ -61,7 +61,7 @@ func (w *WorkspaceRepositoryImpl) Create(ctx context.Context, workspace *entity.
 	return nil
 }
 
-func (w *WorkspaceRepositoryImpl) CreateWithOwner(ctx context.Context, workspace *entity.Workspace, ownerID uuid.UUID) error {
+func (w *workspaceRepository) CreateWithOwner(ctx context.Context, workspace *entity.Workspace, ownerID uuid.UUID) error {
 	tx, err := w.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin create workspace with owner transaction: %w", err)
@@ -114,7 +114,7 @@ func (w *WorkspaceRepositoryImpl) CreateWithOwner(ctx context.Context, workspace
 	return nil
 }
 
-func (w *WorkspaceRepositoryImpl) Update(ctx context.Context, workspace *entity.Workspace) error {
+func (w *workspaceRepository) Update(ctx context.Context, workspace *entity.Workspace) error {
 	var name *string
 	if workspace.Name != "" {
 		name = &workspace.Name
@@ -154,7 +154,7 @@ func (w *WorkspaceRepositoryImpl) Update(ctx context.Context, workspace *entity.
 	return nil
 }
 
-func (w *WorkspaceRepositoryImpl) Delete(ctx context.Context, workspaceID uuid.UUID) error {
+func (w *workspaceRepository) Delete(ctx context.Context, workspaceID uuid.UUID) error {
 	result, err := w.db.Exec(ctx, deleteWorkspaceQuery, workspaceID)
 	if err != nil {
 		return fmt.Errorf("failed to delete workspace: %w", err)
@@ -167,7 +167,7 @@ func (w *WorkspaceRepositoryImpl) Delete(ctx context.Context, workspaceID uuid.U
 	return nil
 }
 
-func (w *WorkspaceRepositoryImpl) GetByID(ctx context.Context, workspaceID uuid.UUID) (*entity.Workspace, error) {
+func (w *workspaceRepository) GetByID(ctx context.Context, workspaceID uuid.UUID) (*entity.Workspace, error) {
 	var description *string
 	workspace := &entity.Workspace{}
 
@@ -192,7 +192,7 @@ func (w *WorkspaceRepositoryImpl) GetByID(ctx context.Context, workspaceID uuid.
 	return workspace, nil
 }
 
-func (w *WorkspaceRepositoryImpl) GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.WorkspaceListItem, error) {
+func (w *workspaceRepository) GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.WorkspaceListItem, error) {
 	rows, err := w.db.Query(ctx, getUserWorkspacesQuery, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user workspaces: %w", err)

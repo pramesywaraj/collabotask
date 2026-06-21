@@ -15,17 +15,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type CardRepositoryImpl struct {
+type cardRepository struct {
 	db *pgxpool.Pool
 }
 
 func NewCardRepository(db *pgxpool.Pool) repository.CardRepository {
-	return &CardRepositoryImpl{db: db}
+	return &cardRepository{db: db}
 }
 
 const cardCaps = 16
 
-func (cdr *CardRepositoryImpl) Create(ctx context.Context, card *entity.Card) error {
+func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error {
 	err := cdr.db.QueryRow(
 		ctx,
 		createCardQuery,
@@ -62,7 +62,7 @@ func (cdr *CardRepositoryImpl) Create(ctx context.Context, card *entity.Card) er
 	return nil
 }
 
-func (cdr *CardRepositoryImpl) Update(ctx context.Context, card *entity.Card) error {
+func (cdr *cardRepository) Update(ctx context.Context, card *entity.Card) error {
 	var title *string
 	if card.Title != "" {
 		title = &card.Title
@@ -101,7 +101,7 @@ func (cdr *CardRepositoryImpl) Update(ctx context.Context, card *entity.Card) er
 	return nil
 }
 
-func (cdr *CardRepositoryImpl) Delete(ctx context.Context, cardID uuid.UUID) error {
+func (cdr *cardRepository) Delete(ctx context.Context, cardID uuid.UUID) error {
 	result, err := cdr.db.Exec(
 		ctx,
 		deleteCardQuery,
@@ -118,7 +118,7 @@ func (cdr *CardRepositoryImpl) Delete(ctx context.Context, cardID uuid.UUID) err
 	return nil
 }
 
-func (cdr *CardRepositoryImpl) DeleteWithReorder(ctx context.Context, cardID uuid.UUID) error {
+func (cdr *cardRepository) DeleteWithReorder(ctx context.Context, cardID uuid.UUID) error {
 	tx, err := cdr.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin delete card with reorder transaction: %w", err)
@@ -164,7 +164,7 @@ func (cdr *CardRepositoryImpl) DeleteWithReorder(ctx context.Context, cardID uui
 	return nil
 }
 
-func (cdr *CardRepositoryImpl) GetByID(ctx context.Context, cardID uuid.UUID) (*entity.Card, error) {
+func (cdr *cardRepository) GetByID(ctx context.Context, cardID uuid.UUID) (*entity.Card, error) {
 	card := &entity.Card{}
 
 	err := cdr.db.QueryRow(
@@ -193,7 +193,7 @@ func (cdr *CardRepositoryImpl) GetByID(ctx context.Context, cardID uuid.UUID) (*
 	return card, nil
 }
 
-func (cdr *CardRepositoryImpl) GetCardsByColumn(ctx context.Context, columnID uuid.UUID) ([]*entity.Card, error) {
+func (cdr *cardRepository) GetCardsByColumn(ctx context.Context, columnID uuid.UUID) ([]*entity.Card, error) {
 	rows, err := cdr.db.Query(
 		ctx,
 		listCardByColumnQuery,
@@ -234,7 +234,7 @@ func (cdr *CardRepositoryImpl) GetCardsByColumn(ctx context.Context, columnID uu
 	return cards, nil
 }
 
-func (cdr *CardRepositoryImpl) GetMaxPosition(ctx context.Context, columnID uuid.UUID) (int, error) {
+func (cdr *cardRepository) GetMaxPosition(ctx context.Context, columnID uuid.UUID) (int, error) {
 	var position int
 
 	err := cdr.db.QueryRow(
@@ -251,7 +251,7 @@ func (cdr *CardRepositoryImpl) GetMaxPosition(ctx context.Context, columnID uuid
 	return position, nil
 }
 
-func (cdr *CardRepositoryImpl) IncrementPositionsFrom(ctx context.Context, columnID uuid.UUID, position int) error {
+func (cdr *cardRepository) IncrementPositionsFrom(ctx context.Context, columnID uuid.UUID, position int) error {
 	_, err := cdr.db.Exec(
 		ctx,
 		incrementPositionCardFromQuery,
@@ -265,7 +265,7 @@ func (cdr *CardRepositoryImpl) IncrementPositionsFrom(ctx context.Context, colum
 	return nil
 }
 
-func (cdr *CardRepositoryImpl) DecrementPositionsAfter(ctx context.Context, columnID uuid.UUID, position int) error {
+func (cdr *cardRepository) DecrementPositionsAfter(ctx context.Context, columnID uuid.UUID, position int) error {
 	_, err := cdr.db.Exec(
 		ctx,
 		decrementPositionCardAfterQuery,
@@ -279,7 +279,7 @@ func (cdr *CardRepositoryImpl) DecrementPositionsAfter(ctx context.Context, colu
 	return nil
 }
 
-func (cdr *CardRepositoryImpl) Move(ctx context.Context, cardID, fromColumnID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error) {
+func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error) {
 	tx, err := cdr.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin move card transaction: %w", err)

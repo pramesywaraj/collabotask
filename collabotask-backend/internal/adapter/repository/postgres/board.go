@@ -15,17 +15,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type BoardRepositoryImpl struct {
+type boardRepository struct {
 	db *pgxpool.Pool
 }
 
 func NewBoardRepository(db *pgxpool.Pool) repository.BoardRepository {
-	return &BoardRepositoryImpl{db: db}
+	return &boardRepository{db: db}
 }
 
 const defaultBoardCaps = 16
 
-func (br *BoardRepositoryImpl) CreateWithOwner(ctx context.Context, board *entity.Board, requesterID uuid.UUID) error {
+func (br *boardRepository) CreateWithOwner(ctx context.Context, board *entity.Board, requesterID uuid.UUID) error {
 	tx, err := br.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin create board with owner transaction: %w", err)
@@ -106,7 +106,7 @@ func (br *BoardRepositoryImpl) CreateWithOwner(ctx context.Context, board *entit
 	return nil
 }
 
-func (br *BoardRepositoryImpl) Update(ctx context.Context, board *entity.Board) error {
+func (br *boardRepository) Update(ctx context.Context, board *entity.Board) error {
 	var title *string
 	if board.Title != "" {
 		title = &board.Title
@@ -148,7 +148,7 @@ func (br *BoardRepositoryImpl) Update(ctx context.Context, board *entity.Board) 
 	return nil
 }
 
-func (br *BoardRepositoryImpl) GetByID(ctx context.Context, boardID uuid.UUID) (*entity.Board, error) {
+func (br *boardRepository) GetByID(ctx context.Context, boardID uuid.UUID) (*entity.Board, error) {
 	var description *string
 	board := &entity.Board{}
 
@@ -179,7 +179,7 @@ func (br *BoardRepositoryImpl) GetByID(ctx context.Context, boardID uuid.UUID) (
 	return board, nil
 }
 
-func (br *BoardRepositoryImpl) GetUserBoardsInWorkspace(ctx context.Context, workspaceID, userID uuid.UUID) ([]*entity.BoardListItem, error) {
+func (br *boardRepository) GetUserBoardsInWorkspace(ctx context.Context, workspaceID, userID uuid.UUID) ([]*entity.BoardListItem, error) {
 	rows, err := br.db.Query(
 		ctx,
 		getUserBoardsInWorkspace,
@@ -236,7 +236,7 @@ func (br *BoardRepositoryImpl) GetUserBoardsInWorkspace(ctx context.Context, wor
 	return boards, nil
 }
 
-func (br *BoardRepositoryImpl) SetArchived(ctx context.Context, boardID uuid.UUID, archived bool) error {
+func (br *boardRepository) SetArchived(ctx context.Context, boardID uuid.UUID, archived bool) error {
 	result, err := br.db.Exec(
 		ctx,
 		setBoardArchivedQuery,

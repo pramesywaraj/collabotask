@@ -14,19 +14,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type BoardMemberRepositoryImpl struct {
+type boardMemberRepository struct {
 	db *pgxpool.Pool
 }
 
 const boardMembersListCap = 16
 
 func NewBoardMemberRepository(db *pgxpool.Pool) repository.BoardMemberRepository {
-	return &BoardMemberRepositoryImpl{
+	return &boardMemberRepository{
 		db: db,
 	}
 }
 
-func (bmr *BoardMemberRepositoryImpl) Create(ctx context.Context, boardMember *entity.BoardMember) error {
+func (bmr *boardMemberRepository) Create(ctx context.Context, boardMember *entity.BoardMember) error {
 	_, err := bmr.db.Exec(
 		ctx,
 		createBoardMemberQuery,
@@ -47,7 +47,7 @@ func (bmr *BoardMemberRepositoryImpl) Create(ctx context.Context, boardMember *e
 	return nil
 }
 
-func (bmr *BoardMemberRepositoryImpl) CreateMany(ctx context.Context, boardMembers []*entity.BoardMember) error {
+func (bmr *boardMemberRepository) CreateMany(ctx context.Context, boardMembers []*entity.BoardMember) error {
 	if len(boardMembers) == 0 {
 		return nil
 	}
@@ -72,7 +72,7 @@ func (bmr *BoardMemberRepositoryImpl) CreateMany(ctx context.Context, boardMembe
 	return tx.Commit(ctx)
 }
 
-func (bmr *BoardMemberRepositoryImpl) Delete(ctx context.Context, boardID, userID uuid.UUID) error {
+func (bmr *boardMemberRepository) Delete(ctx context.Context, boardID, userID uuid.UUID) error {
 	result, err := bmr.db.Exec(
 		ctx,
 		deleteBoardMemberQuery,
@@ -90,7 +90,7 @@ func (bmr *BoardMemberRepositoryImpl) Delete(ctx context.Context, boardID, userI
 	return nil
 }
 
-func (bmr *BoardMemberRepositoryImpl) GetMembersByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.BoardMember, error) {
+func (bmr *boardMemberRepository) GetMembersByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.BoardMember, error) {
 	rows, err := bmr.db.Query(
 		ctx,
 		listMemberByBoardQuery,
@@ -124,7 +124,7 @@ func (bmr *BoardMemberRepositoryImpl) GetMembersByBoard(ctx context.Context, boa
 	return boardMembers, nil
 }
 
-func (bmr *BoardMemberRepositoryImpl) GetMemberByBoardAndUser(ctx context.Context, boardID, userID uuid.UUID) (*entity.BoardMember, error) {
+func (bmr *boardMemberRepository) GetMemberByBoardAndUser(ctx context.Context, boardID, userID uuid.UUID) (*entity.BoardMember, error) {
 	boardMember := &entity.BoardMember{}
 	err := bmr.db.QueryRow(
 		ctx,
@@ -147,7 +147,7 @@ func (bmr *BoardMemberRepositoryImpl) GetMemberByBoardAndUser(ctx context.Contex
 	return boardMember, nil
 }
 
-func (bmr *BoardMemberRepositoryImpl) IsUserExists(ctx context.Context, boardID, userID uuid.UUID) (bool, error) {
+func (bmr *boardMemberRepository) IsUserExists(ctx context.Context, boardID, userID uuid.UUID) (bool, error) {
 	var isExists bool
 	err := bmr.db.QueryRow(
 		ctx,
