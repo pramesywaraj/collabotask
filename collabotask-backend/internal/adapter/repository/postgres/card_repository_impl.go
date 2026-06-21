@@ -123,7 +123,7 @@ func (cdr *CardRepositoryImpl) DeleteWithReorder(ctx context.Context, cardID uui
 	if err != nil {
 		return fmt.Errorf("failed to begin delete card with reorder transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var columnID uuid.UUID
 	var position int
@@ -284,7 +284,7 @@ func (cdr *CardRepositoryImpl) Move(ctx context.Context, cardID, fromColumnID, t
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin move card transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var actualColumnID uuid.UUID
 	var oldPosition int

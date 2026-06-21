@@ -55,5 +55,4 @@ func HandleValidationError(c *gin.Context, err error) {
 		Message: "Request validation failed",
 		Details: details,
 	})
-	return
 }

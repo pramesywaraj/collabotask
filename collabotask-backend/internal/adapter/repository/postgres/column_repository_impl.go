@@ -63,7 +63,7 @@ func (cr *ColumnRepositoryImpl) CreateMany(ctx context.Context, columns []*entit
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction to create many columns: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	for _, column := range columns {
 		_, err := tx.Exec(
@@ -228,7 +228,7 @@ func (cr *ColumnRepositoryImpl) ReorderPositions(ctx context.Context, columns []
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction to reorder columns: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	for _, column := range columns {
 		updatedAt := time.Now()

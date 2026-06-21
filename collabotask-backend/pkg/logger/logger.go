@@ -84,12 +84,12 @@ func (l *Logger) Fatal(msg string) {
 }
 
 func (l *Logger) WithField(key string, value interface{}) *Logger {
-	logger := l.Logger.With().Interface(key, value).Logger()
+	logger := l.With().Interface(key, value).Logger()
 	return &Logger{Logger: &logger}
 }
 
 func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
-	ctx := l.Logger.With()
+	ctx := l.With()
 	for key, value := range fields {
 		ctx = ctx.Interface(key, value)
 	}
@@ -98,6 +98,6 @@ func (l *Logger) WithFields(fields map[string]interface{}) *Logger {
 }
 
 func (l *Logger) WithError(err error) *Logger {
-	logger := l.Logger.With().Err(err).Logger()
+	logger := l.With().Err(err).Logger()
 	return &Logger{Logger: &logger}
 }

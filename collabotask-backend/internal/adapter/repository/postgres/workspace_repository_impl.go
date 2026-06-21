@@ -66,7 +66,7 @@ func (w *WorkspaceRepositoryImpl) CreateWithOwner(ctx context.Context, workspace
 	if err != nil {
 		return fmt.Errorf("failed to begin create workspace with owner transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var description *string
 	if workspace.Description != nil && *workspace.Description != "" {

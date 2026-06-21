@@ -30,7 +30,7 @@ func (br *BoardRepositoryImpl) CreateWithOwner(ctx context.Context, board *entit
 	if err != nil {
 		return fmt.Errorf("failed to begin create board with owner transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var description *string
 	if board.Description != nil && *board.Description != "" {

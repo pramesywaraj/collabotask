@@ -56,7 +56,7 @@ func (bmr *BoardMemberRepositoryImpl) CreateMany(ctx context.Context, boardMembe
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	for _, member := range boardMembers {
 		_, err := tx.Exec(ctx, createBoardMemberQuery, member.BoardID, member.UserID, member.Role)

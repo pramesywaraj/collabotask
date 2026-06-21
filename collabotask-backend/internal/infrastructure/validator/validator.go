@@ -23,7 +23,7 @@ func AtLeastOneProvided(ptrs ...interface{}) bool {
 		}
 
 		v := reflect.ValueOf(p)
-		if v.Kind() == reflect.Ptr && !v.IsNil() {
+		if v.Kind() == reflect.Pointer && !v.IsNil() {
 			return true
 		}
 	}
