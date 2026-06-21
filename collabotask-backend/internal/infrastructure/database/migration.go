@@ -30,31 +30,31 @@ func newMigrate(cfg *config.Config) (*migrate.Migrate, *sql.DB, error) {
 	}
 
 	if err := db.PingContext(context.Background()); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("failed to create postgres driver: %w", err)
 	}
 
 	migrationPath, err := filepath.Abs("migrations")
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("failed to resolve migrations path: %w", err)
 	}
 
 	sourceDriver, err := iofs.New(os.DirFS(migrationPath), ".")
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("failed to create source driver: %w", err)
 	}
 
 	m, err := migrate.NewWithInstance("iofs", sourceDriver, "postgres", driver)
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
@@ -66,8 +66,8 @@ func RunMigrations(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
-	defer m.Close()
+	defer func() { _ = db.Close() }()
+	defer func() { _, _ = m.Close() }()
 
 	if err := m.Up(); err != nil {
 		if err == migrate.ErrNoChange {
@@ -84,8 +84,8 @@ func GetMigrationVersion(cfg *config.Config) (uint, bool, error) {
 	if err != nil {
 		return 0, false, err
 	}
-	defer db.Close()
-	defer m.Close()
+	defer func() { _ = db.Close() }()
+	defer func() { _, _ = m.Close() }()
 
 	version, dirty, err := m.Version()
 	if err != nil {
