@@ -2,7 +2,7 @@ package board
 
 import (
 	"collabotask/internal/domain"
-	"collabotask/internal/infrastructure/validator"
+	"collabotask/pkg/validator"
 	"context"
 	"errors"
 	"fmt"

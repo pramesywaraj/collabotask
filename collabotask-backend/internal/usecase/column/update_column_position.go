@@ -4,7 +4,7 @@ import (
 	"cmp"
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/infrastructure/validator"
+	"collabotask/pkg/validator"
 	"context"
 	"errors"
 	"fmt"

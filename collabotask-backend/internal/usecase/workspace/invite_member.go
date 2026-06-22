@@ -3,7 +3,7 @@ package workspace
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	"collabotask/internal/infrastructure/validator"
+	"collabotask/pkg/validator"
 	"context"
 	"fmt"
 	"strings"
