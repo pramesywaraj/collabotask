@@ -3,8 +3,9 @@ package auth
 import (
 	"regexp"
 
-	"collabotask/internal/config"
 	"collabotask/internal/domain/repository"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -13,14 +14,29 @@ const (
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
-type AuthUseCase struct {
-	userRepo repository.UserRepository
-	authCfg  *config.AuthConfig
+type PasswordHasher interface {
+	Hash(password string) (string, error)
+	Check(password, hash string) bool
 }
 
-func NewAuthUseCase(userRepo repository.UserRepository, authCfg *config.AuthConfig) *AuthUseCase {
+type TokenGenerator interface {
+	Generate(userID uuid.UUID, role string) (string, error)
+}
+
+type AuthUseCase struct {
+	userRepo repository.UserRepository
+	hasher   PasswordHasher
+	tokens   TokenGenerator
+}
+
+func NewAuthUseCase(
+	userRepo repository.UserRepository,
+	hasher PasswordHasher,
+	tokens TokenGenerator,
+) *AuthUseCase {
 	return &AuthUseCase{
 		userRepo: userRepo,
-		authCfg:  authCfg,
+		hasher:   hasher,
+		tokens:   tokens,
 	}
 }

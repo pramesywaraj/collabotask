@@ -6,11 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// UserProfile is the safe, outward-facing view of a user. It deliberately
-// OMITS entity.User.PasswordHash (and timestamps) so the credential hash can
-// never leak out of the use case. This is a genuine transformation of the
-// entity, which is exactly why it is kept (unlike the 1:1 DTOs that were
-// removed from other modules).
 type UserProfile struct {
 	ID         uuid.UUID
 	Email      string

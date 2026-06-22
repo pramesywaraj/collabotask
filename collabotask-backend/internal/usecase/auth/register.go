@@ -3,7 +3,6 @@ package auth
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
-	infraauth "collabotask/internal/infrastructure/auth"
 	"context"
 	"errors"
 	"fmt"
@@ -23,7 +22,7 @@ func (u *AuthUseCase) Register(ctx context.Context, input RegisterInput) (*Regis
 		return nil, domain.ErrEmailAlreadyExists
 	}
 
-	hash, err := infraauth.HashPassword(u.authCfg, input.Password)
+	hash, err := u.hasher.Hash(input.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +41,7 @@ func (u *AuthUseCase) Register(ctx context.Context, input RegisterInput) (*Regis
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	token, err := infraauth.GenerateToken(u.authCfg, user.ID, string(user.SystemRole))
+	token, err := u.tokens.Generate(user.ID, string(user.SystemRole))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"collabotask/internal/domain"
-	infraauth "collabotask/internal/infrastructure/auth"
 	"context"
 	"fmt"
 	"strings"
@@ -18,11 +17,11 @@ func (u *AuthUseCase) Login(ctx context.Context, input LoginInput) (*LoginOutput
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	if !infraauth.CheckPassword(input.Password, user.PasswordHash) {
+	if !u.hasher.Check(input.Password, user.PasswordHash) {
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	token, err := infraauth.GenerateToken(u.authCfg, user.ID, string(user.SystemRole))
+	token, err := u.tokens.Generate(user.ID, string(user.SystemRole))
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}

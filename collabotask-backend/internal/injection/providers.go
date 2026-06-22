@@ -8,6 +8,7 @@ import (
 	"collabotask/internal/adapter/repository/postgres"
 	"collabotask/internal/config"
 	"collabotask/internal/domain/repository"
+	infraauth "collabotask/internal/infrastructure/auth"
 	"collabotask/internal/infrastructure/database"
 	"collabotask/internal/server"
 	"collabotask/internal/usecase/auth"
@@ -59,7 +60,9 @@ func ProvideCardRepository(db *database.DB) repository.CardRepository {
 
 // UseCase
 func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) *auth.AuthUseCase {
-	return auth.NewAuthUseCase(userRepo, &cfg.Auth)
+	hasher := infraauth.NewBcryptHasher(&cfg.Auth)
+	tokens := infraauth.NewJWTGenerator(&cfg.Auth)
+	return auth.NewAuthUseCase(userRepo, hasher, tokens)
 }
 func ProvideWorkspaceUseCase(
 	workspaceRepo repository.WorkspaceRepository,
