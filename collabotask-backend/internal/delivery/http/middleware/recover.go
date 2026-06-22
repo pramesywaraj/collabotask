@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	apperrors "collabotask/internal/adapter/http/errors"
-	"collabotask/internal/adapter/http/response"
+	apperrors "collabotask/internal/delivery/http/errors"
+	"collabotask/internal/delivery/http/response"
 	"collabotask/pkg/logger"
 
 	"github.com/gin-gonic/gin"

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	apperrors "collabotask/internal/adapter/http/errors"
-	"collabotask/internal/adapter/http/response"
 	"collabotask/internal/config"
+	apperrors "collabotask/internal/delivery/http/errors"
+	"collabotask/internal/delivery/http/response"
 	infraauth "collabotask/internal/infrastructure/auth"
 
 	"github.com/gin-gonic/gin"

@@ -3,13 +3,13 @@ package injection
 import (
 	"github.com/gin-gonic/gin"
 
-	"collabotask/internal/adapter/http/handler"
-	"collabotask/internal/adapter/http/router"
-	"collabotask/internal/adapter/repository/postgres"
 	"collabotask/internal/config"
+	"collabotask/internal/delivery/http/handler"
+	"collabotask/internal/delivery/http/router"
 	"collabotask/internal/domain/repository"
 	infraauth "collabotask/internal/infrastructure/auth"
 	"collabotask/internal/infrastructure/database"
+	"collabotask/internal/repository/postgres"
 	"collabotask/internal/server"
 	"collabotask/internal/usecase/auth"
 	"collabotask/internal/usecase/board"

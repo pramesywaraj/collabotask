@@ -1,9 +1,9 @@
 package helper
 
 import (
-	"collabotask/internal/adapter/http/errors"
-	"collabotask/internal/adapter/http/middleware"
-	"collabotask/internal/adapter/http/response"
+	"collabotask/internal/delivery/http/errors"
+	"collabotask/internal/delivery/http/middleware"
+	"collabotask/internal/delivery/http/response"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

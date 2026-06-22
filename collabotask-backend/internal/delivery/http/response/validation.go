@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"collabotask/internal/adapter/http/errors"
+	"collabotask/internal/delivery/http/errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

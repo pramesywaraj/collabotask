@@ -1,9 +1,9 @@
 package router
 
 import (
-	"collabotask/internal/adapter/http/handler"
-	"collabotask/internal/adapter/http/middleware"
 	"collabotask/internal/config"
+	"collabotask/internal/delivery/http/handler"
+	"collabotask/internal/delivery/http/middleware"
 	"collabotask/pkg/logger"
 
 	"github.com/gin-gonic/gin"

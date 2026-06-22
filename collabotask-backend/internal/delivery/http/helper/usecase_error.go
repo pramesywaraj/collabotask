@@ -1,8 +1,8 @@
 package helper
 
 import (
-	apperrors "collabotask/internal/adapter/http/errors"
-	"collabotask/internal/adapter/http/response"
+	apperrors "collabotask/internal/delivery/http/errors"
+	"collabotask/internal/delivery/http/response"
 	"errors"
 
 	"github.com/gin-gonic/gin"

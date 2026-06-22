@@ -4,10 +4,10 @@ package handler
 // - Add update workspace handler
 
 import (
-	apperrors "collabotask/internal/adapter/http/errors"
-	"collabotask/internal/adapter/http/helper"
-	"collabotask/internal/adapter/http/request"
-	"collabotask/internal/adapter/http/response"
+	apperrors "collabotask/internal/delivery/http/errors"
+	"collabotask/internal/delivery/http/helper"
+	"collabotask/internal/delivery/http/request"
+	"collabotask/internal/delivery/http/response"
 	"collabotask/internal/usecase/workspace"
 	"net/http"
 

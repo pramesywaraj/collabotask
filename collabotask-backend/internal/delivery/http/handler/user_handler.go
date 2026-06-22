@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"collabotask/internal/adapter/http/helper"
-	"collabotask/internal/adapter/http/response"
+	"collabotask/internal/delivery/http/helper"
+	"collabotask/internal/delivery/http/response"
 	"collabotask/internal/usecase/auth"
 
 	"github.com/gin-gonic/gin"

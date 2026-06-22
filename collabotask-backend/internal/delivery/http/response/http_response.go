@@ -1,7 +1,7 @@
 package response
 
 import (
-	"collabotask/internal/adapter/http/errors"
+	"collabotask/internal/delivery/http/errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
