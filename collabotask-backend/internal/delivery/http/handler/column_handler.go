@@ -1,0 +1,266 @@
+package handler
+
+import (
+	apperrors "collabotask/internal/delivery/http/errors"
+	"collabotask/internal/delivery/http/helper"
+	"collabotask/internal/delivery/http/request"
+	"collabotask/internal/delivery/http/response"
+	"collabotask/internal/usecase/column"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
+
+type ColumnHandler struct {
+	columnUseCase *column.ColumnUseCase
+}
+
+func NewColumnHandler(cu *column.ColumnUseCase) *ColumnHandler {
+	return &ColumnHandler{
+		columnUseCase: cu,
+	}
+}
+
+func parseColumnPathParams(ctx *gin.Context) (boardID, columnID uuid.UUID, ok bool) {
+	boardID, okBoard := helper.ParseUUIDParams(ctx, "board_id")
+	columnID, okColumn := helper.ParseUUIDParams(ctx, "column_id")
+
+	if !okBoard || !okColumn {
+		var errMessage string
+		switch {
+		case !okBoard && !okColumn:
+			errMessage = "Invalid or missing board and column ids"
+		case !okBoard:
+			errMessage = "Invalid or missing board id"
+		default:
+			errMessage = "Invalid or missing column id"
+		}
+		response.GenerateErrorResponse(
+			ctx,
+			apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, errMessage),
+		)
+		return uuid.Nil, uuid.Nil, false
+	}
+
+	return boardID, columnID, true
+}
+
+// CreateColumn godoc
+// @Summary Create a column on a board
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param body body request.CreateColumnRequest true "Column payload"
+// @Success 201 {object} response.ColumnCreateSuccessDoc "Created"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid board id or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns [post]
+func (ch *ColumnHandler) CreateColumn(ctx *gin.Context) {
+	userID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	boardID, ok := helper.ParseUUIDParams(ctx, "board_id")
+	if !ok {
+		response.GenerateErrorResponse(
+			ctx,
+			apperrors.NewAppError(
+				http.StatusBadRequest,
+				apperrors.ErrCodeValidation,
+				"Invalid or missing board id",
+			),
+		)
+		return
+	}
+
+	var req request.CreateColumnRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.HandleValidationError(ctx, err)
+		return
+	}
+
+	input := column.CreateColumnInput{
+		BoardID:     boardID,
+		Title:       req.Title,
+		RequesterID: userID,
+	}
+
+	out, err := ch.columnUseCase.CreateColumn(ctx.Request.Context(), input)
+	if err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(
+		ctx,
+		"Column created successfully",
+		response.ColumnToResponse(out.Column),
+		http.StatusCreated,
+	)
+}
+
+// UpdateColumn godoc
+// @Summary Update a column
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Param body body request.UpdateColumnRequest true "Column payload"
+// @Success 200 {object} response.ColumnUpdateSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid ids or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id} [patch]
+func (ch *ColumnHandler) UpdateColumn(ctx *gin.Context) {
+	userID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	boardID, columnID, ok := parseColumnPathParams(ctx)
+	if !ok {
+		return
+	}
+
+	var req request.UpdateColumnRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.HandleValidationError(ctx, err)
+		return
+	}
+
+	input := column.UpdateColumnInput{
+		BoardID:     boardID,
+		ColumnID:    columnID,
+		Title:       req.Title,
+		RequesterID: userID,
+	}
+
+	out, err := ch.columnUseCase.UpdateColumn(ctx.Request.Context(), input)
+	if err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(
+		ctx,
+		"Column updated successfully",
+		response.ColumnToResponse(out.Column),
+	)
+}
+
+// DeleteColumn godoc
+// @Summary Delete a column
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Success 200 {object} response.ColumnDeleteSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid board/column id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id} [delete]
+func (ch *ColumnHandler) DeleteColumn(ctx *gin.Context) {
+	userID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	boardID, columnID, ok := parseColumnPathParams(ctx)
+	if !ok {
+		return
+	}
+
+	input := column.DeleteColumnInput{
+		BoardID:     boardID,
+		ColumnID:    columnID,
+		RequesterID: userID,
+	}
+
+	err := ch.columnUseCase.DeleteColumn(ctx.Request.Context(), input)
+	if err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(
+		ctx,
+		"Column deleted successfully",
+		nil,
+	)
+}
+
+// UpdateColumnPosition godoc
+// @Summary Update column order/position
+// @Tags column
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param column_id path string true "Column UUID"
+// @Param body body request.UpdateColumnPosition true "New position"
+// @Success 200 {object} response.ColumnPositionSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Invalid ids or validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Conflict"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/columns/{column_id}/position [patch]
+func (ch *ColumnHandler) UpdateColumnPosition(ctx *gin.Context) {
+	userID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	boardID, columnID, ok := parseColumnPathParams(ctx)
+	if !ok {
+		return
+	}
+
+	var req request.UpdateColumnPosition
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.HandleValidationError(ctx, err)
+		return
+	}
+
+	input := column.UpdateColumnPositionInput{
+		BoardID:     boardID,
+		ColumnID:    columnID,
+		Position:    req.Position,
+		RequesterID: userID,
+	}
+
+	out, err := ch.columnUseCase.UpdateColumnPosition(ctx.Request.Context(), input)
+	if err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(
+		ctx,
+		"Column position updated successfully",
+		response.ColumnToResponse(out.Column),
+	)
+}
