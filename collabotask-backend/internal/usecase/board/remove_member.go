@@ -28,11 +28,11 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 	}
 
 	boardMember, err := bu.boardMemberRepo.GetMemberByBoardAndUser(ctx, input.BoardID, input.RequesterID)
-	if err != nil {
+	if err != nil && !errors.Is(err, domain.ErrBoardMemberNotFound) {
 		return fmt.Errorf("failed to check requester permission: %w", err)
 	}
 
-	canManage := canManageBoardMembers(board.CreatedBy, input.RequesterID, boardMember, workspaceMember)
+	canManage := canAdministerBoard(board.CreatedBy, input.RequesterID, boardMember, workspaceMember)
 	if !canManage {
 		return domain.ErrBoardPermissionDenied
 	}

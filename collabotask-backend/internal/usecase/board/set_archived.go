@@ -24,14 +24,17 @@ func (bu *BoardUseCase) SetArchived(ctx context.Context, input SetArchivedInput)
 		return nil, domain.ErrBoardNotFound
 	}
 
+	workspaceMember, err := bu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, board.WorkspaceID, input.RequesterID)
+	if err != nil || workspaceMember == nil || workspaceMember.IsEmpty() {
+		return nil, domain.ErrUserNotInWorkspace
+	}
+
 	boardMember, err := bu.boardMemberRepo.GetMemberByBoardAndUser(ctx, input.BoardID, input.RequesterID)
-	if err != nil {
-		if errors.Is(err, domain.ErrBoardMemberNotFound) {
-			return nil, domain.ErrBoardMemberNotFound
-		}
+	if err != nil && !errors.Is(err, domain.ErrBoardMemberNotFound) {
 		return nil, fmt.Errorf("failed to fetch board membership: %w", err)
 	}
-	if boardMember == nil || !boardMember.IsOwner() {
+
+	if !canAdministerBoard(board.CreatedBy, input.RequesterID, boardMember, workspaceMember) {
 		return nil, domain.ErrBoardPermissionDenied
 	}
 
