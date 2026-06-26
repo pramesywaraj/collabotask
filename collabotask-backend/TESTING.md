@@ -34,24 +34,35 @@ go get github.com/stretchr/testify
 
 ### 3. Add `.mockery.yaml` at the backend root
 
+> Requires **mockery v3**. Key names changed from v2: `outpkg` → `pkgname`, `mockname` → `structname`, `with-expecter` is replaced by `template: testify` (expecter is included by default). Each source package needs its own output `filename` to avoid a "same source package" constraint.
+
 ```yaml
-with-expecter: true
-outpkg: mocks
 dir: internal/mocks
-filename: "{{.InterfaceName | snakecase}}.go"
-mockname: "Mock{{.InterfaceName}}"
+structname: Mock{{.InterfaceName}}
+pkgname: mocks
+template: testify
 packages:
   collabotask/internal/domain/repository:
+    config:
+      filename: repository_mocks.go
     interfaces:
-      BoardRepository:
-      BoardMemberRepository:
-      WorkspaceMemberRepository:
-      CardRepository:
-      ColumnRepository:
-      UserRepository:
+      BoardRepository: {}
+      BoardMemberRepository: {}
+      WorkspaceMemberRepository: {}
+      CardRepository: {}
+      ColumnRepository: {}
+      UserRepository: {}
   collabotask/internal/usecase/common:
+    config:
+      filename: common_mocks.go
     interfaces:
-      BoardAccessChecker:
+      BoardAccessChecker: {}
+  collabotask/internal/usecase/auth:
+    config:
+      filename: auth_mocks.go
+    interfaces:
+      PasswordHasher: {}
+      TokenGenerator: {}
 ```
 
 ### 4. Generate all mocks
