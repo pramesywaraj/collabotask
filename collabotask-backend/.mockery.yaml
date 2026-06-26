@@ -1,0 +1,26 @@
+dir: internal/mocks
+structname: Mock{{.InterfaceName}}
+pkgname: mocks
+template: testify
+packages:
+  collabotask/internal/domain/repository:
+    config:
+      filename: repository_mocks.go
+    interfaces:
+      BoardRepository: {}
+      BoardMemberRepository: {}
+      WorkspaceMemberRepository: {}
+      CardRepository: {}
+      ColumnRepository: {}
+      UserRepository: {}
+  collabotask/internal/usecase/common:
+    config:
+      filename: common_mocks.go
+    interfaces:
+      BoardAccessChecker: {}
+  collabotask/internal/usecase/auth:
+    config:
+      filename: auth_mocks.go
+    interfaces:
+      PasswordHasher: {}
+      TokenGenerator: {}
