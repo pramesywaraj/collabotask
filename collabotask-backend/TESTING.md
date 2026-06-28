@@ -353,3 +353,26 @@ go test -v ./internal/usecase/board/...
 # Regenerate mocks after changing an interface
 mockery
 ```
+
+## Check Unit Tests Coverage
+
+```bash
+# Quick percentage per package
+go test ./internal/usecase/auth/... -cover
+
+# Whole project
+go test ./... -cover
+
+# Function-level breakdown
+go test ./internal/usecase/auth/... -coverprofile=cov.out
+go tool cover -func=cov.out
+
+# Visual HTML report
+go test ./internal/usecase/auth/... -coverprofile=cov.out
+go tool cover -html=cov.out
+
+# Coverage across the whole module in one profile
+go test ./... -coverprofile=cov.out
+go tool cover -func=cov.out | tail -1
+
+```

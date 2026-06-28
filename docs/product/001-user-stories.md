@@ -34,6 +34,11 @@ Scenario: Email already taken
   When I register with that same email
   Then I get a 409 CONFLICT telling me the email is already registered
 
+Scenario: Email already taken (different casing)
+  Given an account already exists for "a@x.com"
+  When I register with "A@X.com"
+  Then I get a 409 CONFLICT (email matching is case-insensitive)
+
 Scenario: Invalid input
   When I register with a malformed email OR a password shorter than 8 characters
   Then I get a 400 VALIDATION_ERROR and no account is created

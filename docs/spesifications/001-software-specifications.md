@@ -212,7 +212,7 @@ Error shape:
 - **API:** `POST /api/v1/auth/register` · Public
 - **Request:** `{ "email", "name", "password" }`
 - **Response 201:** `{ "user": { "id", "email", "name", "avatar_url" }, "token": "<jwt>" }`
-- **Flow:** validate email format (client + server) → check email not taken → bcrypt hash → insert user → issue JWT (7d) → redirect to workspace list.
+- **Flow:** validate email format (client + server) → normalize email (lowercase + trim) → check email not taken (case-insensitive; the normalized email is both checked and stored) → bcrypt hash → insert user → issue JWT (7d) → redirect to workspace list.
 - **Errors:** Email exists → 409 `CONFLICT`; invalid body → 400 `VALIDATION_ERROR`.
 ```sql
 SELECT id FROM users WHERE email = $1;
@@ -224,6 +224,7 @@ RETURNING id, email, name, avatar_url, created_at;
 - **API:** `POST /api/v1/auth/login` · Public
 - **Request:** `{ "email", "password" }`
 - **Response 200:** `{ "user": {…}, "token": "<jwt>" }`
+- **Flow:** normalize email (lowercase + trim) → look up user → verify bcrypt password → issue JWT. Lookup is case-insensitive (same normalization as registration).
 - **Errors:** Email not found → 401 `UNAUTHORIZED`; wrong password → 401 `UNAUTHORIZED`. *(No "account disabled" case in Phase 1.)*
 ```sql
 SELECT id, email, password_hash, name, avatar_url FROM users WHERE email = $1;
