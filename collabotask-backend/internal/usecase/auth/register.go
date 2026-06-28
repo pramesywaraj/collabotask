@@ -14,7 +14,9 @@ func (u *AuthUseCase) Register(ctx context.Context, input RegisterInput) (*Regis
 		return nil, err
 	}
 
-	exists, err := u.userRepo.ExistsByEmail(ctx, input.Email)
+	email := normalizeEmail(input.Email)
+
+	exists, err := u.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check email: %w", err)
 	}
@@ -28,7 +30,7 @@ func (u *AuthUseCase) Register(ctx context.Context, input RegisterInput) (*Regis
 	}
 
 	user := &entity.User{
-		Email:        strings.TrimSpace(strings.ToLower(input.Email)),
+		Email:        email,
 		Name:         strings.TrimSpace(input.Name),
 		PasswordHash: hash,
 		SystemRole:   entity.SystemRoleUser,
