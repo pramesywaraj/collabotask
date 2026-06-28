@@ -9,7 +9,8 @@ The frontend (Next.js) is planned as a separate effort.
 ## Now
 <!-- Update "Building" when focus shifts. Read every turn. Full sequence: spec §9.1. -->
 Phase 1 · CRUD done: auth, workspace, board, column, card
-- **Building → P0 correctness fixes** (no realtime needed): layered permission for board *management* (`board/utils.go`, `update_board.go` — admin manages without joining) + `cards.created_by` NULLABLE migration bug.
+- **Building → unit-test coverage** (testify+mockery, per `collabotask-backend/temp_unit-test-checklist.md`): `usecase/auth` done (24/233 cases); surfaced & fixed auth correctness bugs along the way — case-insensitive email dedup, login nil-user guard, dead validation code. Next: `usecase/workspace` → board → column → card → common.
+- **P0 correctness fixes** (next feature work, no realtime needed): layered permission for board *management* (`board/utils.go`, `update_board.go` — admin manages without joining) + `cards.created_by` NULLABLE migration bug.
 - **Queue (in order):** ① fractional NUMERIC positioning (card move + column reorder) → ② WebSocket layer + `activities` table → ③ new features: board `visibility`, ownership transfer, promote/demote, leave/delete workspace → ④ assignment=participation (board-member validation + unassign cascade; **needs ② first**).
 - **Don't touch:** Phase-2 deferrals (comments, labels, attachments, public boards, refresh tokens, account deletion) and the planned Next.js frontend.
 
