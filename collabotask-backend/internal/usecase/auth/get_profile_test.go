@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"collabotask/internal/domain"
@@ -17,6 +18,7 @@ import (
 
 func TestGetProfile(t *testing.T) {
 	userID := uuid.New()
+	errDB := errors.New("db error")
 
 	aUser := func() *entity.User {
 		return &entity.User{
@@ -37,15 +39,15 @@ func TestGetProfile(t *testing.T) {
 			name:   "GetById returns error → error propagated",
 			userID: userID,
 			setupMocks: func(u *mocks.MockUserRepository) {
-				u.EXPECT().GetById(context.Background(), userID).Return(nil, errors.New("db error"))
+				u.EXPECT().GetById(mock.Anything, userID).Return(nil, errDB)
 			},
-			wantErr: errors.New("db error"),
+			wantErr: errDB,
 		},
 		{
 			name:   "GetById returns nil user → ErrUserNotFound",
 			userID: userID,
 			setupMocks: func(u *mocks.MockUserRepository) {
-				u.EXPECT().GetById(context.Background(), userID).Return(nil, nil)
+				u.EXPECT().GetById(mock.Anything, userID).Return(nil, nil)
 			},
 			wantErr: domain.ErrUserNotFound,
 		},
@@ -53,13 +55,16 @@ func TestGetProfile(t *testing.T) {
 			name:   "success → returns UserProfile",
 			userID: userID,
 			setupMocks: func(u *mocks.MockUserRepository) {
-				u.EXPECT().GetById(context.Background(), userID).Return(aUser(), nil)
+				u.EXPECT().GetById(mock.Anything, userID).Return(aUser(), nil)
 			},
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			userRepo := mocks.NewMockUserRepository(t)
 			hasher := mocks.NewMockPasswordHasher(t)
 			tokens := mocks.NewMockTokenGenerator(t)
@@ -70,7 +75,7 @@ func TestGetProfile(t *testing.T) {
 			profile, err := uc.GetProfile(context.Background(), tt.userID)
 
 			if tt.wantErr != nil {
-				require.Error(t, err)
+				require.ErrorIs(t, err, tt.wantErr)
 				assert.Nil(t, profile)
 			} else {
 				require.NoError(t, err)

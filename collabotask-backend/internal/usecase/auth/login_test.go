@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"collabotask/internal/domain"
@@ -32,12 +33,11 @@ func TestLogin(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		input       auth.LoginInput
-		setupMocks  func(userRepo *mocks.MockUserRepository, hasher *mocks.MockPasswordHasher, tokens *mocks.MockTokenGenerator)
-		wantErr     error
-		wantErrMsg  string
-		wantSuccess bool
+		name       string
+		input      auth.LoginInput
+		setupMocks func(userRepo *mocks.MockUserRepository, hasher *mocks.MockPasswordHasher, tokens *mocks.MockTokenGenerator)
+		wantErr    error
+		wantErrMsg string
 	}{
 		{
 			name:  "empty email → validation error",
@@ -57,7 +57,15 @@ func TestLogin(t *testing.T) {
 			name:  "GetByEmail returns error → ErrInvalidCredentials",
 			input: auth.LoginInput{Email: email, Password: password},
 			setupMocks: func(u *mocks.MockUserRepository, h *mocks.MockPasswordHasher, tk *mocks.MockTokenGenerator) {
-				u.EXPECT().GetByEmail(context.Background(), email).Return(nil, errors.New("not found"))
+				u.EXPECT().GetByEmail(mock.Anything, email).Return(nil, errors.New("not found"))
+			},
+			wantErr: domain.ErrInvalidCredentials,
+		},
+		{
+			name:  "GetByEmail returns nil user → ErrInvalidCredentials",
+			input: auth.LoginInput{Email: email, Password: password},
+			setupMocks: func(u *mocks.MockUserRepository, h *mocks.MockPasswordHasher, tk *mocks.MockTokenGenerator) {
+				u.EXPECT().GetByEmail(mock.Anything, email).Return(nil, nil)
 			},
 			wantErr: domain.ErrInvalidCredentials,
 		},
@@ -65,7 +73,7 @@ func TestLogin(t *testing.T) {
 			name:  "wrong password → ErrInvalidCredentials",
 			input: auth.LoginInput{Email: email, Password: password},
 			setupMocks: func(u *mocks.MockUserRepository, h *mocks.MockPasswordHasher, tk *mocks.MockTokenGenerator) {
-				u.EXPECT().GetByEmail(context.Background(), email).Return(aUser(), nil)
+				u.EXPECT().GetByEmail(mock.Anything, email).Return(aUser(), nil)
 				h.EXPECT().Check(password, hashedPassword).Return(false)
 			},
 			wantErr: domain.ErrInvalidCredentials,
@@ -74,7 +82,7 @@ func TestLogin(t *testing.T) {
 			name:  "tokens.Generate fails → wrapped error",
 			input: auth.LoginInput{Email: email, Password: password},
 			setupMocks: func(u *mocks.MockUserRepository, h *mocks.MockPasswordHasher, tk *mocks.MockTokenGenerator) {
-				u.EXPECT().GetByEmail(context.Background(), email).Return(aUser(), nil)
+				u.EXPECT().GetByEmail(mock.Anything, email).Return(aUser(), nil)
 				h.EXPECT().Check(password, hashedPassword).Return(true)
 				tk.EXPECT().Generate(userID, "USER").Return("", errors.New("signing error"))
 			},
@@ -84,16 +92,29 @@ func TestLogin(t *testing.T) {
 			name:  "success → returns UserProfile + token",
 			input: auth.LoginInput{Email: email, Password: password},
 			setupMocks: func(u *mocks.MockUserRepository, h *mocks.MockPasswordHasher, tk *mocks.MockTokenGenerator) {
-				u.EXPECT().GetByEmail(context.Background(), email).Return(aUser(), nil)
+				u.EXPECT().GetByEmail(mock.Anything, email).Return(aUser(), nil)
 				h.EXPECT().Check(password, hashedPassword).Return(true)
 				tk.EXPECT().Generate(userID, "USER").Return("jwt.token.here", nil)
 			},
-			wantSuccess: true,
+		},
+		{
+			name:  "success → normalizes email before lookup",
+			input: auth.LoginInput{Email: "Alice@Example.COM", Password: password},
+			setupMocks: func(u *mocks.MockUserRepository, h *mocks.MockPasswordHasher, tk *mocks.MockTokenGenerator) {
+				// Login lowercases/trims the email before the lookup, so the repo must
+				// be queried with the normalized form regardless of input casing.
+				u.EXPECT().GetByEmail(mock.Anything, email).Return(aUser(), nil)
+				h.EXPECT().Check(password, hashedPassword).Return(true)
+				tk.EXPECT().Generate(userID, "USER").Return("jwt.token.here", nil)
+			},
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			userRepo := mocks.NewMockUserRepository(t)
 			hasher := mocks.NewMockPasswordHasher(t)
 			tokens := mocks.NewMockTokenGenerator(t)
@@ -112,6 +133,7 @@ func TestLogin(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, out)
+				assert.Equal(t, userID, out.User.ID)
 				assert.Equal(t, email, out.User.Email)
 				assert.Equal(t, "Alice", out.User.Name)
 				assert.Equal(t, "USER", out.User.SystemRole)
