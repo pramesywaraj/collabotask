@@ -251,14 +251,24 @@ COMMIT;
 #### UC-04: Invite Member(s) to Workspace
 - **API:** `POST /api/v1/workspace/:workspace_id/member/invite` · Auth · **Workspace ADMIN**
 - **Request:** `{ "emails": ["a@x.com", "b@y.com"] }` (batch supported)
-- **Response 200:** updated member list.
-- **Flow:** verify requester is ADMIN → resolve each email to a user → add as `MEMBER` (idempotent) → optional invite email (Phase 2).
-- **Errors:** user not found → 404; already member → 409 (surfaced per-email); not admin → 403.
+- **Response 200:** per-email results array — each email is processed independently:
+  ```json
+  { "results": [
+      { "email": "a@x.com", "success": true,  "error_code": "" },
+      { "email": "b@y.com", "success": false, "error_code": "NOT_FOUND" },
+      { "email": "c@z.com", "success": false, "error_code": "CONFLICT" }
+  ]}
+  ```
+  HTTP status is always **200** when the batch runs. Domain errors (`NOT_FOUND`, `CONFLICT`) are surfaced per-email in the payload, not as top-level HTTP errors.
+- **Flow:** verify requester is ADMIN (abort with 403 if not) → for each email independently: resolve to user → check workspace membership → insert as `MEMBER` → collect result. Infrastructure errors (DB failures) abort the whole batch with a top-level 5xx.
+- **Errors:** not admin → 403 `FORBIDDEN` (top-level, before loop); DB/infra failure → 500 (top-level, aborts batch); per-email domain errors are in the results payload (`NOT_FOUND` / `CONFLICT`), not HTTP status codes.
+- **`error_code` values:** `""` = success · `"NOT_FOUND"` = no account for that email · `"CONFLICT"` = already a workspace member.
 ```sql
 SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2 AND role='ADMIN';
-SELECT id, email, name FROM users WHERE email = ANY($1);
-INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1,$2,'MEMBER')
-ON CONFLICT (workspace_id, user_id) DO NOTHING RETURNING *;
+-- per email:
+SELECT id, email, name FROM users WHERE email = $1;
+SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2; -- explicit check (not ON CONFLICT) so CONFLICT is detectable per-email
+INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1,$2,'MEMBER');
 ```
 
 #### UC-05: List User's Workspaces
