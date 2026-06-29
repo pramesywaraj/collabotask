@@ -17,6 +17,7 @@ import (
 
 func TestCreateWorkspace(t *testing.T) {
 	ownerID := uuid.New()
+	assignedID := uuid.New()
 	validName := "My Workspace"
 	desc := "A description"
 
@@ -54,7 +55,9 @@ func TestCreateWorkspace(t *testing.T) {
 			setupMocks: func(wsRepo *mocks.MockWorkspaceRepository) {
 				wsRepo.EXPECT().CreateWithOwner(mock.Anything, mock.MatchedBy(func(w *entity.Workspace) bool {
 					return w.Description == nil
-				}), ownerID).Return(nil)
+				}), ownerID).Run(func(_ context.Context, w *entity.Workspace, _ uuid.UUID) {
+					w.ID = assignedID
+				}).Return(nil)
 			},
 			wantNilDesc: true,
 		},
@@ -64,7 +67,9 @@ func TestCreateWorkspace(t *testing.T) {
 			setupMocks: func(wsRepo *mocks.MockWorkspaceRepository) {
 				wsRepo.EXPECT().CreateWithOwner(mock.Anything, mock.MatchedBy(func(w *entity.Workspace) bool {
 					return w.Description == nil
-				}), ownerID).Return(nil)
+				}), ownerID).Run(func(_ context.Context, w *entity.Workspace, _ uuid.UUID) {
+					w.ID = assignedID
+				}).Return(nil)
 			},
 			wantNilDesc: true,
 		},
@@ -74,7 +79,9 @@ func TestCreateWorkspace(t *testing.T) {
 			setupMocks: func(wsRepo *mocks.MockWorkspaceRepository) {
 				wsRepo.EXPECT().CreateWithOwner(mock.Anything, mock.MatchedBy(func(w *entity.Workspace) bool {
 					return w.Description != nil && *w.Description == desc
-				}), ownerID).Return(nil)
+				}), ownerID).Run(func(_ context.Context, w *entity.Workspace, _ uuid.UUID) {
+					w.ID = assignedID
+				}).Return(nil)
 			},
 			wantDesc: &desc,
 		},
@@ -103,6 +110,7 @@ func TestCreateWorkspace(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, out)
+			assert.Equal(t, assignedID, out.Workspace.ID)
 			assert.Equal(t, tt.input.Name, out.Workspace.Name)
 			assert.Equal(t, ownerID, out.Workspace.OwnerID)
 			if tt.wantNilDesc {
