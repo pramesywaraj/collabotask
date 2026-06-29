@@ -9,6 +9,7 @@ packages:
     interfaces:
       BoardRepository: {}
       BoardMemberRepository: {}
+      WorkspaceRepository: {}
       WorkspaceMemberRepository: {}
       CardRepository: {}
       ColumnRepository: {}
