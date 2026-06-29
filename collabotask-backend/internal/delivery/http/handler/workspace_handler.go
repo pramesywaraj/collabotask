@@ -106,20 +106,18 @@ func (wh *WorkspaceHandler) GetWorkspaces(ctx *gin.Context) {
 
 // InviteMember godoc
 // @Summary Invite users to a workspace by email
-// @Description Requires workspace admin. Invalid workspace id or body validation returns 400.
+// @Description Requires workspace admin. Each email is processed independently; domain errors (NOT_FOUND, CONFLICT) are reported per-email in the results array, not as HTTP error codes. HTTP 200 is returned as long as the batch runs. Infrastructure errors or a non-admin requester still return 4xx/5xx.
 // @Tags workspace
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param workspace_id path string true "Workspace UUID"
 // @Param body body request.InviteMemberRequest true "Email list"
-// @Success 200 {object} response.WorkspaceInviteSuccessDoc "OK (message from use case; data may be null)"
-// @Failure 400 {object} response.Failure400ValidationDoc "Validation failed, invalid workspace id, or use case validation"
+// @Success 200 {object} response.WorkspaceInviteSuccessDoc "OK — per-email results in data array"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation failed or invalid workspace id"
 // @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
 // @Failure 403 {object} response.Failure403ForbiddenDoc "Requester is not workspace admin"
-// @Failure 404 {object} response.Failure404NotFoundDoc "User not found"
-// @Failure 409 {object} response.Failure409ConflictDoc "User already in workspace"
-// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error (infra failure mid-batch)"
 // @Router /workspace/{workspace_id}/member/invite [post]
 func (wh *WorkspaceHandler) InviteMember(ctx *gin.Context) {
 	userID, ok := helper.GetAndCheckUserID(ctx)
@@ -154,7 +152,7 @@ func (wh *WorkspaceHandler) InviteMember(ctx *gin.Context) {
 		return
 	}
 
-	response.GenerateSuccessResponse(ctx, out.Message, nil)
+	response.GenerateSuccessResponse(ctx, "Invitation processed", response.InviteResultsToResponse(out.Results))
 }
 
 // RemoveMember godoc

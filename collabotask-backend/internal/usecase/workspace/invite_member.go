@@ -19,6 +19,7 @@ func (wu *WorkspaceUseCase) InviteMember(ctx context.Context, input InviteMember
 		return nil, domain.ErrNotWorkspaceAdmin
 	}
 
+	results := make([]InviteResult, 0, len(input.Emails))
 	for _, email := range input.Emails {
 		trimmedEmail := strings.TrimSpace(strings.ToLower(email))
 		if trimmedEmail == "" {
@@ -27,7 +28,8 @@ func (wu *WorkspaceUseCase) InviteMember(ctx context.Context, input InviteMember
 
 		user, err := wu.userRepo.GetByEmail(ctx, trimmedEmail)
 		if err != nil || user == nil {
-			return nil, domain.ErrUserNotFound
+			results = append(results, InviteResult{Email: trimmedEmail, Success: false, ErrorCode: "NOT_FOUND"})
+			continue
 		}
 
 		existsInWorkspace, err := wu.workspaceMemberRepo.IsUserExists(ctx, input.WorkspaceID, user.ID)
@@ -35,7 +37,8 @@ func (wu *WorkspaceUseCase) InviteMember(ctx context.Context, input InviteMember
 			return nil, fmt.Errorf("failed to check member existence: %w", err)
 		}
 		if existsInWorkspace {
-			return nil, domain.ErrAlreadyMember
+			results = append(results, InviteResult{Email: trimmedEmail, Success: false, ErrorCode: "CONFLICT"})
+			continue
 		}
 
 		member := &entity.WorkspaceMember{
@@ -46,9 +49,9 @@ func (wu *WorkspaceUseCase) InviteMember(ctx context.Context, input InviteMember
 		if err := wu.workspaceMemberRepo.Create(ctx, member); err != nil {
 			return nil, fmt.Errorf("failed to add member to workspace: %w", err)
 		}
+
+		results = append(results, InviteResult{Email: trimmedEmail, Success: true, ErrorCode: ""})
 	}
 
-	return &InviteMemberOutput{
-		Message: "Users have been added to the workspace",
-	}, nil
+	return &InviteMemberOutput{Results: results}, nil
 }

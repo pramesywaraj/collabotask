@@ -8,6 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type InviteResultResponse struct {
+	Email     string `json:"email"`
+	Success   bool   `json:"success"`
+	ErrorCode string `json:"error_code"`
+}
+
 type WorkspaceResponse struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
@@ -69,6 +75,18 @@ func WorkspaceMemberToResponse(m workspace.WorkspaceMember) WorkspaceMemberRespo
 		Role:      m.Role,
 		JoinedAt:  m.JoinedAt,
 	}
+}
+
+func InviteResultsToResponse(results []workspace.InviteResult) []InviteResultResponse {
+	out := make([]InviteResultResponse, 0, len(results))
+	for _, r := range results {
+		out = append(out, InviteResultResponse{
+			Email:     r.Email,
+			Success:   r.Success,
+			ErrorCode: r.ErrorCode,
+		})
+	}
+	return out
 }
 
 func WorkspaceDetailToResponse(d workspace.WorkspaceDetail) WorkspaceDetailResponse {

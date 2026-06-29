@@ -52,6 +52,12 @@ type GetWorkspaceDetailOutput struct {
 	Workspace WorkspaceDetail
 }
 
+type InviteResult struct {
+	Email     string
+	Success   bool
+	ErrorCode string // "" | "NOT_FOUND" | "CONFLICT"
+}
+
 type InviteMemberInput struct {
 	RequesterID uuid.UUID `validate:"required"`
 	WorkspaceID uuid.UUID `validate:"required"`
@@ -59,7 +65,7 @@ type InviteMemberInput struct {
 }
 
 type InviteMemberOutput struct {
-	Message string
+	Results []InviteResult
 }
 
 type GetWorkspacesInput struct {

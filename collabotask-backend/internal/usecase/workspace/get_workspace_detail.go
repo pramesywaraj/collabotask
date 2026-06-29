@@ -22,10 +22,13 @@ func (wu *WorkspaceUseCase) GetWorkspaceDetail(ctx context.Context, input GetWor
 
 	workspace, err := wu.workspaceRepo.GetByID(ctx, input.WorkspaceID)
 	if err != nil {
-		if errors.Is(err, domain.ErrWorkspaceNotFound) || workspace == nil {
+		if errors.Is(err, domain.ErrWorkspaceNotFound) {
 			return nil, domain.ErrWorkspaceNotFound
 		}
 		return nil, fmt.Errorf("failed to fetch workspace: %w", err)
+	}
+	if workspace == nil {
+		return nil, domain.ErrWorkspaceNotFound
 	}
 
 	members, err := wu.workspaceMemberRepo.GetMembersByWorkspace(ctx, input.WorkspaceID)
