@@ -131,6 +131,25 @@ func TestInviteMember(t *testing.T) {
 			},
 		},
 		{
+			name: "email normalization — mixed case lowercased before GetByEmail and reflected in result Email field",
+			input: workspace.InviteMemberInput{
+				RequesterID: requesterID,
+				WorkspaceID: workspaceID,
+				Emails:      []string{"Alice@Example.COM"},
+			},
+			setupMocks: func(wsRepo *mocks.MockWorkspaceRepository, wsMemberRepo *mocks.MockWorkspaceMemberRepository, userRepo *mocks.MockUserRepository) {
+				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
+				userRepo.EXPECT().GetByEmail(mock.Anything, "alice@example.com").Return(&entity.User{ID: userAID}, nil)
+				wsMemberRepo.EXPECT().IsUserExists(mock.Anything, workspaceID, userAID).Return(false, nil)
+				wsMemberRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(m *entity.WorkspaceMember) bool {
+					return m.UserID == userAID
+				})).Return(nil)
+			},
+			wantResults: []workspace.InviteResult{
+				{Email: "alice@example.com", Success: true, ErrorCode: ""},
+			},
+		},
+		{
 			name: "success — mixed batch (NOT_FOUND + CONFLICT + success) → all three entries in order",
 			input: workspace.InviteMemberInput{
 				RequesterID: requesterID,

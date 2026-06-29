@@ -6,7 +6,6 @@ import (
 	"collabotask/pkg/validator"
 	"context"
 	"fmt"
-	"strings"
 )
 
 func (wu *WorkspaceUseCase) InviteMember(ctx context.Context, input InviteMemberInput) (*InviteMemberOutput, error) {
@@ -21,7 +20,7 @@ func (wu *WorkspaceUseCase) InviteMember(ctx context.Context, input InviteMember
 
 	results := make([]InviteResult, 0, len(input.Emails))
 	for _, email := range input.Emails {
-		trimmedEmail := strings.TrimSpace(strings.ToLower(email))
+		trimmedEmail := normalizeEmail(email)
 		if trimmedEmail == "" {
 			continue
 		}
