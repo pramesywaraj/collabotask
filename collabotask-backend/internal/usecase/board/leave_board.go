@@ -18,7 +18,7 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 		if errors.Is(err, domain.ErrBoardNotFound) {
 			return domain.ErrBoardNotFound
 		}
-		return fmt.Errorf("failed to fetch board detail: %w", err)
+		return fmt.Errorf("failed to verify board existence: %w", err)
 	}
 	if board == nil || board.IsEmpty() || board.IsArchived {
 		return domain.ErrBoardNotFound

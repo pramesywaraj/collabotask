@@ -19,7 +19,7 @@ func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardIn
 		if errors.Is(err, domain.ErrBoardNotFound) {
 			return domain.ErrBoardNotFound
 		}
-		return fmt.Errorf("failed to fetch board detail: %w", err)
+		return fmt.Errorf("failed to verify board existence: %w", err)
 	}
 	if board == nil || board.IsEmpty() || board.IsArchived || board.WorkspaceID != input.WorkspaceID {
 		return domain.ErrBoardNotFound

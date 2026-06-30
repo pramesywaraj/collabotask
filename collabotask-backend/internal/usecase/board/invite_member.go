@@ -15,10 +15,13 @@ func (bu *BoardUseCase) InviteMember(ctx context.Context, input InviteMemberInpu
 	}
 
 	board, err := bu.boardRepo.GetByID(ctx, input.BoardID)
-	if err != nil || board == nil {
-		return domain.ErrBoardNotFound
+	if err != nil {
+		if errors.Is(err, domain.ErrBoardNotFound) {
+			return domain.ErrBoardNotFound
+		}
+		return fmt.Errorf("failed to verify board existence: %w", err)
 	}
-	if board.WorkspaceID != input.WorkspaceID {
+	if board == nil || board.IsEmpty() || board.IsArchived || board.WorkspaceID != input.WorkspaceID {
 		return domain.ErrBoardNotFound
 	}
 

@@ -18,7 +18,13 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 	}
 
 	board, err := bu.boardRepo.GetByID(ctx, input.BoardID)
-	if err != nil || board == nil || board.WorkspaceID != input.WorkspaceID {
+	if err != nil {
+		if errors.Is(err, domain.ErrBoardNotFound) {
+			return domain.ErrBoardNotFound
+		}
+		return fmt.Errorf("failed to verify board existence: %w", err)
+	}
+	if board == nil || board.IsEmpty() || board.IsArchived || board.WorkspaceID != input.WorkspaceID {
 		return domain.ErrBoardNotFound
 	}
 
