@@ -19,6 +19,7 @@ func TestInviteMemberBoard(t *testing.T) {
 	boardID := uuid.New()
 	requesterID := uuid.New()
 	inviteeID := uuid.New()
+	inviteeID2 := uuid.New()
 
 	existingBoard := &entity.Board{
 		ID:          boardID,
@@ -226,6 +227,68 @@ func TestInviteMemberBoard(t *testing.T) {
 					return len(members) == 1 && members[0].UserID == inviteeID && members[0].Role == entity.BoardRoleMember
 				})).Return(nil)
 			},
+		},
+		{
+			name: "success — adds multiple members (CreateMany receives all)",
+			input: board.InviteMemberInput{
+				RequesterID: requesterID,
+				WorkspaceID: workspaceID,
+				BoardID:     boardID,
+				UserIDs:     []uuid.UUID{inviteeID, inviteeID2},
+			},
+			setupMocks: func(d boardTestDeps) {
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
+				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
+				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(map[uuid.UUID]*entity.User{
+					inviteeID:  {ID: inviteeID},
+					inviteeID2: {ID: inviteeID2},
+				}, nil)
+				d.wsMbrRepo.EXPECT().IsUserExists(mock.Anything, workspaceID, inviteeID).Return(true, nil)
+				d.boardMbrRepo.EXPECT().IsUserExists(mock.Anything, boardID, inviteeID).Return(false, nil)
+				d.wsMbrRepo.EXPECT().IsUserExists(mock.Anything, workspaceID, inviteeID2).Return(true, nil)
+				d.boardMbrRepo.EXPECT().IsUserExists(mock.Anything, boardID, inviteeID2).Return(false, nil)
+				d.boardMbrRepo.EXPECT().CreateMany(mock.Anything, mock.MatchedBy(func(members []*entity.BoardMember) bool {
+					if len(members) != 2 {
+						return false
+					}
+					got := make(map[uuid.UUID]bool, 2)
+					for _, m := range members {
+						if m.BoardID != boardID || m.Role != entity.BoardRoleMember {
+							return false
+						}
+						got[m.UserID] = true
+					}
+					return got[inviteeID] && got[inviteeID2]
+				})).Return(nil)
+			},
+		},
+		{
+			name: "second invitee already a member → aborts whole batch, CreateMany not called",
+			input: board.InviteMemberInput{
+				RequesterID: requesterID,
+				WorkspaceID: workspaceID,
+				BoardID:     boardID,
+				UserIDs:     []uuid.UUID{inviteeID, inviteeID2},
+			},
+			setupMocks: func(d boardTestDeps) {
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
+				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
+				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(map[uuid.UUID]*entity.User{
+					inviteeID:  {ID: inviteeID},
+					inviteeID2: {ID: inviteeID2},
+				}, nil)
+				// first invitee is valid and gets queued...
+				d.wsMbrRepo.EXPECT().IsUserExists(mock.Anything, workspaceID, inviteeID).Return(true, nil)
+				d.boardMbrRepo.EXPECT().IsUserExists(mock.Anything, boardID, inviteeID).Return(false, nil)
+				// ...but the second is already on the board, so the whole call aborts
+				// before CreateMany — the first invitee is NOT persisted.
+				d.wsMbrRepo.EXPECT().IsUserExists(mock.Anything, workspaceID, inviteeID2).Return(true, nil)
+				d.boardMbrRepo.EXPECT().IsUserExists(mock.Anything, boardID, inviteeID2).Return(true, nil)
+				// No CreateMany expectation: NewMockX(t) fails the test if it is called.
+			},
+			wantErr: domain.ErrBoardAlreadyMember,
 		},
 	}
 

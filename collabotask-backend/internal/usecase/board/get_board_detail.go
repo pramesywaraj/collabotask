@@ -56,6 +56,10 @@ func (bu *BoardUseCase) GetBoardDetail(ctx context.Context, input GetBoardDetail
 
 	var userRole *entity.BoardRole
 	accessStatus := entity.BoardJoined
+	// The membership row is the source of truth for the role, so it is checked
+	// first. A creator is always seeded as BoardRoleOwner at creation time, so
+	// when both conditions hold the two branches agree — the ordering only ever
+	// matters as a fallback for a creator who has no membership row yet.
 	if boardMembership != nil && !boardMembership.IsEmpty() {
 		role := boardMembership.Role
 		userRole = &role

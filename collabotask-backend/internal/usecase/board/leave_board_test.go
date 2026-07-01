@@ -52,7 +52,23 @@ func TestLeaveBoard(t *testing.T) {
 			wantErr: domain.ErrBoardNotFound,
 		},
 		{
-			name:  "board nil/empty/archived → ErrBoardNotFound",
+			name:  "board is nil → ErrBoardNotFound",
+			input: validInput,
+			setupMocks: func(d boardTestDeps) {
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(nil, nil)
+			},
+			wantErr: domain.ErrBoardNotFound,
+		},
+		{
+			name:  "board is empty → ErrBoardNotFound",
+			input: validInput,
+			setupMocks: func(d boardTestDeps) {
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(&entity.Board{}, nil)
+			},
+			wantErr: domain.ErrBoardNotFound,
+		},
+		{
+			name:  "board archived → ErrBoardNotFound",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				b := *existingBoard
