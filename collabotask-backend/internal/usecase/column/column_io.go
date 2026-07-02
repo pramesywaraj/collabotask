@@ -38,7 +38,9 @@ type DeleteColumnInput struct {
 type UpdateColumnPositionInput struct {
 	BoardID     uuid.UUID `validate:"required"`
 	ColumnID    uuid.UUID `validate:"required"`
-	Position    int       `validate:"required,min=0"`
+	// Position is a 0-based target index; out-of-range values are clamped in the
+	// use case, so it carries no range constraint here (0 and negatives are valid input).
+	Position    int
 	RequesterID uuid.UUID `validate:"required"`
 }
 
