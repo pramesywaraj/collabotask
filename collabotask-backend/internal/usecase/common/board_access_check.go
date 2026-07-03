@@ -62,7 +62,13 @@ func (ba *boardAccessChecker) Resolve(ctx context.Context, boardID, requesterID 
 	}
 
 	workspaceMember, err := ba.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, board.WorkspaceID, requesterID)
-	if err != nil || workspaceMember == nil || workspaceMember.IsEmpty() {
+	if err != nil {
+		if errors.Is(err, domain.ErrMemberNotFound) {
+			return nil, domain.ErrUserNotInWorkspace
+		}
+		return nil, fmt.Errorf("failed to fetch workspace membership: %w", err)
+	}
+	if workspaceMember == nil || workspaceMember.IsEmpty() {
 		return nil, domain.ErrUserNotInWorkspace
 	}
 
