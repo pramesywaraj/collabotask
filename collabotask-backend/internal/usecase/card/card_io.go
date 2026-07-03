@@ -55,8 +55,11 @@ type MoveCardInput struct {
 	CardID       uuid.UUID `validate:"required"`
 	FromColumnID uuid.UUID `validate:"required"`
 	ToColumnID   uuid.UUID `validate:"required"`
-	ToPosition   int       `validate:"required,min=0"`
-	RequesterID  uuid.UUID `validate:"required"`
+	// ToPosition is a 0-based target index; the top slot is 0. Only the upper
+	// bound is clamped in the use case, so negatives are rejected here (min=0),
+	// but 0 must stay valid — hence no `required` (which would reject the zero value).
+	ToPosition  int       `validate:"min=0"`
+	RequesterID uuid.UUID `validate:"required"`
 }
 
 type MoveCardOutput = CardResult

@@ -293,7 +293,7 @@ func (crh *CardHandler) MoveCardPosition(ctx *gin.Context) {
 		CardID:       cardID,
 		FromColumnID: columnID,
 		ToColumnID:   req.ToColumnID,
-		ToPosition:   req.ToPosition,
+		ToPosition:   *req.ToPosition,
 		RequesterID:  userID,
 	}
 
