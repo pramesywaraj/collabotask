@@ -74,11 +74,9 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 		card.DueDate = input.DueDate
 	}
 
-	err = cru.cardRepo.Update(ctx, card)
-	if err != nil {
-		return nil, err
-	}
-
+	// Resolve the assignee before persisting so an unresolvable assignee can't
+	// leave a committed write behind (mirrors CreateCard's ordering). When the
+	// board-member rule (§2.8) is added, it belongs here too — before Update.
 	if card.AssignedTo != nil {
 		user, err := cru.userRepo.GetById(ctx, *card.AssignedTo)
 		if err != nil {
@@ -89,6 +87,11 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 		}
 
 		assignee = user
+	}
+
+	err = cru.cardRepo.Update(ctx, card)
+	if err != nil {
+		return nil, err
 	}
 
 	return &UpdateCardOutput{
