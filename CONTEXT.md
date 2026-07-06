@@ -10,7 +10,7 @@ The canonical vocabulary for this project. When naming things in code, issues, t
 
 **Board** — A project container within a workspace. Has columns, cards, members, and a visibility setting. Every board belongs to exactly one workspace.
 
-**Column** — An ordered lane within a board representing a stage of work (e.g. To Do / In Progress / Done). Position is stored as fractional NUMERIC; one column is never aware of another's position.
+**Column** — An ordered lane within a board representing a stage of work (e.g. To Do / In Progress / Done). Ordered by fractional **Position** (see Positioning); one column is never aware of another's position.
 
 **Card** — The atomic unit of work. Lives in a column, moves across columns to show progress. Canonical term is **Card** — "Ticket" is an accepted alias in the spec but Card is preferred in code and conversation.
 
@@ -49,6 +49,14 @@ There are two independent role layers. **Effective permission is always computed
 **PRIVATE** — Only board members and workspace admins can see the board. Admins always see metadata, but must Join to open content (break-glass, logged).
 
 **PUBLIC** — Deferred to Phase 2. Not a valid value in Phase 1.
+
+---
+
+## Positioning
+
+**Position** — Where a card sits within a column, or a column within a board. Stored as fractional `NUMERIC`. A position is a **coordinate on an infinite line, not an index or a count** — `0` and negative values are valid and expected (repeated inserts at the head produce them). The only thing that matters is relative order; absolute values are meaningless. A move changes exactly one row's position; neighbors are never touched.
+
+**Rebalancing** — Rewriting all positions in one column (or all columns in one board) to evenly-spaced values when the gap between two neighbors falls below the rebalance threshold. It is **storage mechanics, not domain logic** — it exists only because a finite-precision numeric representation eventually runs out of midpoints, and it lives in the repository layer, atomic with the move that triggered it. Rare under normal use. See [ADR-004](docs/architecture/adr/adr-004-fractional-positioning.md).
 
 ---
 
