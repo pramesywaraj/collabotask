@@ -11,7 +11,7 @@ type Card struct {
 	ColumnID    uuid.UUID  `json:"column_id" db:"column_id"`
 	Title       string     `json:"title" db:"title"`
 	Description *string    `json:"description" db:"description"`
-	Position    int        `json:"position" db:"position"`
+	Position    float64    `json:"position" db:"position"`
 	AssignedTo  *uuid.UUID `json:"assigned_to" db:"assigned_to"`
 	DueDate     *time.Time `json:"due_date" db:"due_date"`
 	CreatedBy   uuid.UUID  `json:"created_by" db:"created_by"`

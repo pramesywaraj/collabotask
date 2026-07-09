@@ -38,9 +38,10 @@ type DeleteColumnInput struct {
 type UpdateColumnPositionInput struct {
 	BoardID     uuid.UUID `validate:"required"`
 	ColumnID    uuid.UUID `validate:"required"`
-	// Position is a 0-based target index; out-of-range values are clamped in the
-	// use case, so it carries no range constraint here (0 and negatives are valid input).
-	Position    int
+	// Position is a fractional coordinate computed client-side. Any finite float64
+	// is valid (negative values are legal for head-inserts). Presence is enforced
+	// at the HTTP layer via a *float64 pointer field on the request.
+	Position    float64
 	RequesterID uuid.UUID `validate:"required"`
 }
 

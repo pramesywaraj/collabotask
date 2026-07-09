@@ -122,7 +122,7 @@ func TestCreateCard(t *testing.T) {
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(-1, errors.New("db error"))
+				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(0, errors.New("db error"))
 			},
 			wantErrMsg: "failed to get cards max position",
 		},
@@ -132,32 +132,32 @@ func TestCreateCard(t *testing.T) {
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(3, nil)
+				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(float64(3000), nil)
 				d.cardRepo.EXPECT().Create(mock.Anything, mock.Anything).Return(errors.New("db error"))
 			},
 			wantErrMsg: "failed to create card",
 		},
 		{
-			name:  "success — without assignee (position = maxPos + 1)",
+			name:  "success — without assignee (maxPos=4000 → position=5000)",
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(4, nil)
+				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(float64(4000), nil)
 				d.cardRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Card) bool {
-					return c.ColumnID == columnID && c.Title == "My Card" && c.Position == 5 &&
+					return c.ColumnID == columnID && c.Title == "My Card" && c.Position == 5000 &&
 						c.AssignedTo == nil && c.CreatedBy == requesterID
 				})).Return(nil)
 			},
 			checkOut: func(t *testing.T, out *card.CreateCardOutput) {
 				assert.Equal(t, columnID, out.Card.ColumnID)
-				assert.Equal(t, 5, out.Card.Position)
+				assert.Equal(t, float64(5000), out.Card.Position)
 				assert.Nil(t, out.Card.AssignedTo)
 				assert.Nil(t, out.Assignee)
 			},
 		},
 		{
-			name:  "success — with assignee",
+			name:  "success — first card in empty column (maxPos=0 → position=1000)",
 			input: assigneeInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
@@ -165,13 +165,13 @@ func TestCreateCard(t *testing.T) {
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(
 					&entity.User{ID: assigneeID, Name: "Assignee"}, nil,
 				)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(0, nil)
+				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(float64(0), nil)
 				d.cardRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Card) bool {
-					return c.Position == 1 && c.AssignedTo != nil && *c.AssignedTo == assigneeID
+					return c.Position == 1000 && c.AssignedTo != nil && *c.AssignedTo == assigneeID
 				})).Return(nil)
 			},
 			checkOut: func(t *testing.T, out *card.CreateCardOutput) {
-				assert.Equal(t, 1, out.Card.Position)
+				assert.Equal(t, float64(1000), out.Card.Position)
 				require.NotNil(t, out.Assignee)
 				assert.Equal(t, assigneeID, out.Assignee.ID)
 			},

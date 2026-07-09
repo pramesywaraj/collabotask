@@ -111,13 +111,13 @@ func TestDeleteCard(t *testing.T) {
 			wantErr: domain.ErrBoardAccessDenied,
 		},
 		{
-			name:  "cardRepo.DeleteWithReorder fails → error",
+			name:  "cardRepo.Delete fails → error",
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.cardRepo.EXPECT().DeleteWithReorder(mock.Anything, cardID).Return(errors.New("db error"))
+				d.cardRepo.EXPECT().Delete(mock.Anything, cardID).Return(errors.New("db error"))
 			},
 			wantErrMsg: "db error",
 		},
@@ -128,7 +128,7 @@ func TestDeleteCard(t *testing.T) {
 				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.cardRepo.EXPECT().DeleteWithReorder(mock.Anything, cardID).Return(nil)
+				d.cardRepo.EXPECT().Delete(mock.Anything, cardID).Return(nil)
 			},
 		},
 	}

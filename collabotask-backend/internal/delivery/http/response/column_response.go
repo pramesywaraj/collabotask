@@ -11,7 +11,7 @@ type ColumnResponse struct {
 	ID        uuid.UUID `json:"id"`
 	BoardID   uuid.UUID `json:"board_id"`
 	Title     string    `json:"title"`
-	Position  int       `json:"position"`
+	Position  float64   `json:"position"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

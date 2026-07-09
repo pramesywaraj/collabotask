@@ -18,8 +18,9 @@ const (
 		UPDATE columns
 		SET
 			position = $1,
-			updated_at = $2
-		WHERE id = $3
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+		RETURNING id, board_id, title, position, created_at, updated_at
 	`
 	deleteColumnQuery = `
 		DELETE FROM columns WHERE id = $1
@@ -33,10 +34,10 @@ const (
 		SELECT id, board_id, title, position, created_at, updated_at
 		FROM columns
 		WHERE board_id = $1
-		ORDER BY position ASC
+		ORDER BY position ASC, id ASC
 	`
 	getColumnMaxPositionQuery = `
-		SELECT COALESCE(MAX(position), -1)
+		SELECT COALESCE(MAX(position), 0)
 		FROM columns
 		WHERE board_id = $1
 	`

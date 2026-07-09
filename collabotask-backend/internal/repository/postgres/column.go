@@ -147,8 +147,8 @@ func (cr *columnRepository) GetColumnsByBoard(ctx context.Context, boardID uuid.
 	return columns, nil
 }
 
-func (cr *columnRepository) GetMaxPosition(ctx context.Context, boardID uuid.UUID) (int, error) {
-	var position int
+func (cr *columnRepository) GetMaxPosition(ctx context.Context, boardID uuid.UUID) (float64, error) {
+	var position float64
 
 	err := cr.db.QueryRow(
 		ctx,
@@ -158,7 +158,7 @@ func (cr *columnRepository) GetMaxPosition(ctx context.Context, boardID uuid.UUI
 		&position,
 	)
 	if err != nil {
-		return -1, fmt.Errorf("failed to get column max position: %w", err)
+		return 0, fmt.Errorf("failed to get column max position: %w", err)
 	}
 
 	return position, nil
@@ -196,6 +196,41 @@ func (cr *columnRepository) Update(ctx context.Context, column *entity.Column) e
 	return nil
 }
 
+func (cr *columnRepository) UpdatePosition(ctx context.Context, columnID uuid.UUID, position float64) (float64, error) {
+	tx, err := cr.db.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin update column position transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var col entity.Column
+	err = tx.QueryRow(ctx, updateColumnPositionQuery, position, columnID).Scan(
+		&col.ID,
+		&col.BoardID,
+		&col.Title,
+		&col.Position,
+		&col.CreatedAt,
+		&col.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, domain.ErrColumnNotFound
+		}
+		return 0, fmt.Errorf("failed to update column position: %w", err)
+	}
+
+	newPos, err := rebalanceIfNeeded(ctx, tx, "columns", "board_id", col.BoardID, col.ID, col.Position)
+	if err != nil {
+		return 0, fmt.Errorf("failed to rebalance columns: %w", err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("failed to commit update column position: %w", err)
+	}
+
+	return newPos, nil
+}
+
 func (cr *columnRepository) Delete(ctx context.Context, columnID uuid.UUID) error {
 	result, err := cr.db.Exec(
 		ctx,
@@ -207,49 +242,6 @@ func (cr *columnRepository) Delete(ctx context.Context, columnID uuid.UUID) erro
 	}
 	if result.RowsAffected() == 0 {
 		return domain.ErrColumnNotFound
-	}
-
-	return nil
-}
-
-func (cr *columnRepository) ReorderPositions(ctx context.Context, columns []*entity.Column) error {
-	if len(columns) == 0 {
-		return nil
-	}
-
-	boardID := columns[0].BoardID
-	for _, c := range columns {
-		if c.BoardID != boardID {
-			return fmt.Errorf("reorder columns: mixed board_id")
-		}
-	}
-
-	tx, err := cr.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction to reorder columns: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	for _, column := range columns {
-		updatedAt := time.Now()
-		result, err := tx.Exec(
-			ctx,
-			updateColumnPositionQuery,
-			column.Position,
-			updatedAt,
-			column.ID,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to update column position in reorder: %w", err)
-		}
-		if result.RowsAffected() == 0 {
-			return domain.ErrColumnNotFound
-		}
-		column.UpdatedAt = updatedAt
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit reorder columns: %w", err)
 	}
 
 	return nil

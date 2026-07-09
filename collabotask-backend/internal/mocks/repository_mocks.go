@@ -866,69 +866,6 @@ func (_c *MockCardRepository_Create_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
-// DecrementPositionsAfter provides a mock function for the type MockCardRepository
-func (_mock *MockCardRepository) DecrementPositionsAfter(ctx context.Context, columnID uuid.UUID, position int) error {
-	ret := _mock.Called(ctx, columnID, position)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DecrementPositionsAfter")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int) error); ok {
-		r0 = returnFunc(ctx, columnID, position)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockCardRepository_DecrementPositionsAfter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DecrementPositionsAfter'
-type MockCardRepository_DecrementPositionsAfter_Call struct {
-	*mock.Call
-}
-
-// DecrementPositionsAfter is a helper method to define mock.On call
-//   - ctx context.Context
-//   - columnID uuid.UUID
-//   - position int
-func (_e *MockCardRepository_Expecter) DecrementPositionsAfter(ctx any, columnID any, position any) *MockCardRepository_DecrementPositionsAfter_Call {
-	return &MockCardRepository_DecrementPositionsAfter_Call{Call: _e.mock.On("DecrementPositionsAfter", ctx, columnID, position)}
-}
-
-func (_c *MockCardRepository_DecrementPositionsAfter_Call) Run(run func(ctx context.Context, columnID uuid.UUID, position int)) *MockCardRepository_DecrementPositionsAfter_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 int
-		if args[2] != nil {
-			arg2 = args[2].(int)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockCardRepository_DecrementPositionsAfter_Call) Return(err error) *MockCardRepository_DecrementPositionsAfter_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockCardRepository_DecrementPositionsAfter_Call) RunAndReturn(run func(ctx context.Context, columnID uuid.UUID, position int) error) *MockCardRepository_DecrementPositionsAfter_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Delete provides a mock function for the type MockCardRepository
 func (_mock *MockCardRepository) Delete(ctx context.Context, cardID uuid.UUID) error {
 	ret := _mock.Called(ctx, cardID)
@@ -982,63 +919,6 @@ func (_c *MockCardRepository_Delete_Call) Return(err error) *MockCardRepository_
 }
 
 func (_c *MockCardRepository_Delete_Call) RunAndReturn(run func(ctx context.Context, cardID uuid.UUID) error) *MockCardRepository_Delete_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DeleteWithReorder provides a mock function for the type MockCardRepository
-func (_mock *MockCardRepository) DeleteWithReorder(ctx context.Context, cardID uuid.UUID) error {
-	ret := _mock.Called(ctx, cardID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteWithReorder")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
-		r0 = returnFunc(ctx, cardID)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockCardRepository_DeleteWithReorder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteWithReorder'
-type MockCardRepository_DeleteWithReorder_Call struct {
-	*mock.Call
-}
-
-// DeleteWithReorder is a helper method to define mock.On call
-//   - ctx context.Context
-//   - cardID uuid.UUID
-func (_e *MockCardRepository_Expecter) DeleteWithReorder(ctx any, cardID any) *MockCardRepository_DeleteWithReorder_Call {
-	return &MockCardRepository_DeleteWithReorder_Call{Call: _e.mock.On("DeleteWithReorder", ctx, cardID)}
-}
-
-func (_c *MockCardRepository_DeleteWithReorder_Call) Run(run func(ctx context.Context, cardID uuid.UUID)) *MockCardRepository_DeleteWithReorder_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockCardRepository_DeleteWithReorder_Call) Return(err error) *MockCardRepository_DeleteWithReorder_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockCardRepository_DeleteWithReorder_Call) RunAndReturn(run func(ctx context.Context, cardID uuid.UUID) error) *MockCardRepository_DeleteWithReorder_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1180,22 +1060,22 @@ func (_c *MockCardRepository_GetCardsByColumn_Call) RunAndReturn(run func(ctx co
 }
 
 // GetMaxPosition provides a mock function for the type MockCardRepository
-func (_mock *MockCardRepository) GetMaxPosition(ctx context.Context, columnID uuid.UUID) (int, error) {
+func (_mock *MockCardRepository) GetMaxPosition(ctx context.Context, columnID uuid.UUID) (float64, error) {
 	ret := _mock.Called(ctx, columnID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMaxPosition")
 	}
 
-	var r0 int
+	var r0 float64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (float64, error)); ok {
 		return returnFunc(ctx, columnID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) int); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) float64); ok {
 		r0 = returnFunc(ctx, columnID)
 	} else {
-		r0 = ret.Get(0).(int)
+		r0 = ret.Get(0).(float64)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, columnID)
@@ -1235,81 +1115,18 @@ func (_c *MockCardRepository_GetMaxPosition_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *MockCardRepository_GetMaxPosition_Call) Return(n int, err error) *MockCardRepository_GetMaxPosition_Call {
-	_c.Call.Return(n, err)
+func (_c *MockCardRepository_GetMaxPosition_Call) Return(f float64, err error) *MockCardRepository_GetMaxPosition_Call {
+	_c.Call.Return(f, err)
 	return _c
 }
 
-func (_c *MockCardRepository_GetMaxPosition_Call) RunAndReturn(run func(ctx context.Context, columnID uuid.UUID) (int, error)) *MockCardRepository_GetMaxPosition_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// IncrementPositionsFrom provides a mock function for the type MockCardRepository
-func (_mock *MockCardRepository) IncrementPositionsFrom(ctx context.Context, columnID uuid.UUID, position int) error {
-	ret := _mock.Called(ctx, columnID, position)
-
-	if len(ret) == 0 {
-		panic("no return value specified for IncrementPositionsFrom")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, int) error); ok {
-		r0 = returnFunc(ctx, columnID, position)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockCardRepository_IncrementPositionsFrom_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncrementPositionsFrom'
-type MockCardRepository_IncrementPositionsFrom_Call struct {
-	*mock.Call
-}
-
-// IncrementPositionsFrom is a helper method to define mock.On call
-//   - ctx context.Context
-//   - columnID uuid.UUID
-//   - position int
-func (_e *MockCardRepository_Expecter) IncrementPositionsFrom(ctx any, columnID any, position any) *MockCardRepository_IncrementPositionsFrom_Call {
-	return &MockCardRepository_IncrementPositionsFrom_Call{Call: _e.mock.On("IncrementPositionsFrom", ctx, columnID, position)}
-}
-
-func (_c *MockCardRepository_IncrementPositionsFrom_Call) Run(run func(ctx context.Context, columnID uuid.UUID, position int)) *MockCardRepository_IncrementPositionsFrom_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 int
-		if args[2] != nil {
-			arg2 = args[2].(int)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockCardRepository_IncrementPositionsFrom_Call) Return(err error) *MockCardRepository_IncrementPositionsFrom_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockCardRepository_IncrementPositionsFrom_Call) RunAndReturn(run func(ctx context.Context, columnID uuid.UUID, position int) error) *MockCardRepository_IncrementPositionsFrom_Call {
+func (_c *MockCardRepository_GetMaxPosition_Call) RunAndReturn(run func(ctx context.Context, columnID uuid.UUID) (float64, error)) *MockCardRepository_GetMaxPosition_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Move provides a mock function for the type MockCardRepository
-func (_mock *MockCardRepository) Move(ctx context.Context, cardID uuid.UUID, fromColumnID uuid.UUID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error) {
+func (_mock *MockCardRepository) Move(ctx context.Context, cardID uuid.UUID, fromColumnID uuid.UUID, toColumnID uuid.UUID, toPosition float64) (*entity.Card, error) {
 	ret := _mock.Called(ctx, cardID, fromColumnID, toColumnID, toPosition)
 
 	if len(ret) == 0 {
@@ -1318,17 +1135,17 @@ func (_mock *MockCardRepository) Move(ctx context.Context, cardID uuid.UUID, fro
 
 	var r0 *entity.Card
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, int) (*entity.Card, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, float64) (*entity.Card, error)); ok {
 		return returnFunc(ctx, cardID, fromColumnID, toColumnID, toPosition)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, int) *entity.Card); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, float64) *entity.Card); ok {
 		r0 = returnFunc(ctx, cardID, fromColumnID, toColumnID, toPosition)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*entity.Card)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, int) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, float64) error); ok {
 		r1 = returnFunc(ctx, cardID, fromColumnID, toColumnID, toPosition)
 	} else {
 		r1 = ret.Error(1)
@@ -1346,12 +1163,12 @@ type MockCardRepository_Move_Call struct {
 //   - cardID uuid.UUID
 //   - fromColumnID uuid.UUID
 //   - toColumnID uuid.UUID
-//   - toPosition int
+//   - toPosition float64
 func (_e *MockCardRepository_Expecter) Move(ctx any, cardID any, fromColumnID any, toColumnID any, toPosition any) *MockCardRepository_Move_Call {
 	return &MockCardRepository_Move_Call{Call: _e.mock.On("Move", ctx, cardID, fromColumnID, toColumnID, toPosition)}
 }
 
-func (_c *MockCardRepository_Move_Call) Run(run func(ctx context.Context, cardID uuid.UUID, fromColumnID uuid.UUID, toColumnID uuid.UUID, toPosition int)) *MockCardRepository_Move_Call {
+func (_c *MockCardRepository_Move_Call) Run(run func(ctx context.Context, cardID uuid.UUID, fromColumnID uuid.UUID, toColumnID uuid.UUID, toPosition float64)) *MockCardRepository_Move_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1369,9 +1186,9 @@ func (_c *MockCardRepository_Move_Call) Run(run func(ctx context.Context, cardID
 		if args[3] != nil {
 			arg3 = args[3].(uuid.UUID)
 		}
-		var arg4 int
+		var arg4 float64
 		if args[4] != nil {
-			arg4 = args[4].(int)
+			arg4 = args[4].(float64)
 		}
 		run(
 			arg0,
@@ -1389,7 +1206,7 @@ func (_c *MockCardRepository_Move_Call) Return(card *entity.Card, err error) *Mo
 	return _c
 }
 
-func (_c *MockCardRepository_Move_Call) RunAndReturn(run func(ctx context.Context, cardID uuid.UUID, fromColumnID uuid.UUID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error)) *MockCardRepository_Move_Call {
+func (_c *MockCardRepository_Move_Call) RunAndReturn(run func(ctx context.Context, cardID uuid.UUID, fromColumnID uuid.UUID, toColumnID uuid.UUID, toPosition float64) (*entity.Card, error)) *MockCardRepository_Move_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1786,22 +1603,22 @@ func (_c *MockColumnRepository_GetColumnsByBoard_Call) RunAndReturn(run func(ctx
 }
 
 // GetMaxPosition provides a mock function for the type MockColumnRepository
-func (_mock *MockColumnRepository) GetMaxPosition(ctx context.Context, boardID uuid.UUID) (int, error) {
+func (_mock *MockColumnRepository) GetMaxPosition(ctx context.Context, boardID uuid.UUID) (float64, error) {
 	ret := _mock.Called(ctx, boardID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMaxPosition")
 	}
 
-	var r0 int
+	var r0 float64
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (float64, error)); ok {
 		return returnFunc(ctx, boardID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) int); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) float64); ok {
 		r0 = returnFunc(ctx, boardID)
 	} else {
-		r0 = ret.Get(0).(int)
+		r0 = ret.Get(0).(float64)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
 		r1 = returnFunc(ctx, boardID)
@@ -1841,69 +1658,12 @@ func (_c *MockColumnRepository_GetMaxPosition_Call) Run(run func(ctx context.Con
 	return _c
 }
 
-func (_c *MockColumnRepository_GetMaxPosition_Call) Return(n int, err error) *MockColumnRepository_GetMaxPosition_Call {
-	_c.Call.Return(n, err)
+func (_c *MockColumnRepository_GetMaxPosition_Call) Return(f float64, err error) *MockColumnRepository_GetMaxPosition_Call {
+	_c.Call.Return(f, err)
 	return _c
 }
 
-func (_c *MockColumnRepository_GetMaxPosition_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID) (int, error)) *MockColumnRepository_GetMaxPosition_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ReorderPositions provides a mock function for the type MockColumnRepository
-func (_mock *MockColumnRepository) ReorderPositions(ctx context.Context, columns []*entity.Column) error {
-	ret := _mock.Called(ctx, columns)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ReorderPositions")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []*entity.Column) error); ok {
-		r0 = returnFunc(ctx, columns)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockColumnRepository_ReorderPositions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReorderPositions'
-type MockColumnRepository_ReorderPositions_Call struct {
-	*mock.Call
-}
-
-// ReorderPositions is a helper method to define mock.On call
-//   - ctx context.Context
-//   - columns []*entity.Column
-func (_e *MockColumnRepository_Expecter) ReorderPositions(ctx any, columns any) *MockColumnRepository_ReorderPositions_Call {
-	return &MockColumnRepository_ReorderPositions_Call{Call: _e.mock.On("ReorderPositions", ctx, columns)}
-}
-
-func (_c *MockColumnRepository_ReorderPositions_Call) Run(run func(ctx context.Context, columns []*entity.Column)) *MockColumnRepository_ReorderPositions_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 []*entity.Column
-		if args[1] != nil {
-			arg1 = args[1].([]*entity.Column)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockColumnRepository_ReorderPositions_Call) Return(err error) *MockColumnRepository_ReorderPositions_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockColumnRepository_ReorderPositions_Call) RunAndReturn(run func(ctx context.Context, columns []*entity.Column) error) *MockColumnRepository_ReorderPositions_Call {
+func (_c *MockColumnRepository_GetMaxPosition_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID) (float64, error)) *MockColumnRepository_GetMaxPosition_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1961,6 +1721,78 @@ func (_c *MockColumnRepository_Update_Call) Return(err error) *MockColumnReposit
 }
 
 func (_c *MockColumnRepository_Update_Call) RunAndReturn(run func(ctx context.Context, column *entity.Column) error) *MockColumnRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdatePosition provides a mock function for the type MockColumnRepository
+func (_mock *MockColumnRepository) UpdatePosition(ctx context.Context, columnID uuid.UUID, position float64) (float64, error) {
+	ret := _mock.Called(ctx, columnID, position)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdatePosition")
+	}
+
+	var r0 float64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, float64) (float64, error)); ok {
+		return returnFunc(ctx, columnID, position)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, float64) float64); ok {
+		r0 = returnFunc(ctx, columnID, position)
+	} else {
+		r0 = ret.Get(0).(float64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, float64) error); ok {
+		r1 = returnFunc(ctx, columnID, position)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockColumnRepository_UpdatePosition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdatePosition'
+type MockColumnRepository_UpdatePosition_Call struct {
+	*mock.Call
+}
+
+// UpdatePosition is a helper method to define mock.On call
+//   - ctx context.Context
+//   - columnID uuid.UUID
+//   - position float64
+func (_e *MockColumnRepository_Expecter) UpdatePosition(ctx any, columnID any, position any) *MockColumnRepository_UpdatePosition_Call {
+	return &MockColumnRepository_UpdatePosition_Call{Call: _e.mock.On("UpdatePosition", ctx, columnID, position)}
+}
+
+func (_c *MockColumnRepository_UpdatePosition_Call) Run(run func(ctx context.Context, columnID uuid.UUID, position float64)) *MockColumnRepository_UpdatePosition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 float64
+		if args[2] != nil {
+			arg2 = args[2].(float64)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockColumnRepository_UpdatePosition_Call) Return(f float64, err error) *MockColumnRepository_UpdatePosition_Call {
+	_c.Call.Return(f, err)
+	return _c
+}
+
+func (_c *MockColumnRepository_UpdatePosition_Call) RunAndReturn(run func(ctx context.Context, columnID uuid.UUID, position float64) (float64, error)) *MockColumnRepository_UpdatePosition_Call {
 	_c.Call.Return(run)
 	return _c
 }

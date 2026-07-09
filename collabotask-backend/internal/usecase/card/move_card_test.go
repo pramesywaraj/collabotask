@@ -33,10 +33,10 @@ func TestMoveCard(t *testing.T) {
 		CardID:       cardID,
 		FromColumnID: fromColumnID,
 		ToColumnID:   toColumnID,
-		ToPosition:   1,
+		ToPosition:   1500,
 		RequesterID:  requesterID,
 	}
-	withPosition := func(pos int) card.MoveCardInput {
+	withPosition := func(pos float64) card.MoveCardInput {
 		in := validInput
 		in.ToPosition = pos
 		return in
@@ -60,7 +60,7 @@ func TestMoveCard(t *testing.T) {
 	}{
 		{
 			name:       "invalid input → validation error",
-			input:      card.MoveCardInput{BoardID: boardID, CardID: cardID, FromColumnID: fromColumnID, ToColumnID: toColumnID, ToPosition: 1}, // missing RequesterID
+			input:      card.MoveCardInput{BoardID: boardID, CardID: cardID, FromColumnID: fromColumnID, ToColumnID: toColumnID, ToPosition: 1500}, // missing RequesterID
 			setupMocks: func(d cardTestDeps) {},
 			wantErrMsg: "validation",
 		},
@@ -163,21 +163,11 @@ func TestMoveCard(t *testing.T) {
 			wantErr: domain.ErrBoardAccessDenied,
 		},
 		{
-			name:  "cardRepo.GetMaxPosition fails → error",
-			input: validInput,
-			setupMocks: func(d cardTestDeps) {
-				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(-1, errors.New("db error"))
-			},
-			wantErrMsg: "db error",
-		},
-		{
 			name:  "cardRepo.Move fails → error",
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 1).Return(nil, errors.New("db error"))
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(1500)).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "db error",
 		},
@@ -186,8 +176,7 @@ func TestMoveCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 1).Return(
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(1500)).Return(
 					&entity.Card{ID: cardID, ColumnID: toColumnID, AssignedTo: ptr(assigneeID)}, nil,
 				)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(nil, errors.New("db error"))
@@ -199,8 +188,7 @@ func TestMoveCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 1).Return(
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(1500)).Return(
 					&entity.Card{ID: cardID, ColumnID: toColumnID, AssignedTo: ptr(assigneeID)}, nil,
 				)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(&entity.User{}, nil)
@@ -208,46 +196,46 @@ func TestMoveCard(t *testing.T) {
 			wantErr: domain.ErrUserNotFound,
 		},
 		{
-			name:  "success — ToPosition = 0 moves to front (regression guard: 0 must not be rejected)",
+			// Regression guard: position 0 must not be rejected (was incorrectly
+			// treated as "not provided" when the field was int with validate:"min=0").
+			name:  "success — ToPosition = 0 is valid (not rejected as zero value)",
 			input: withPosition(0),
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 0).Return(
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(0)).Return(
 					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 0}, nil,
 				)
 			},
 			checkOut: func(t *testing.T, out *card.MoveCardOutput) {
-				assert.Equal(t, 0, out.Card.Position)
+				assert.Equal(t, float64(0), out.Card.Position)
 				assert.Nil(t, out.Assignee)
 			},
 		},
 		{
-			name:  "success — ToPosition within range",
-			input: withPosition(3),
+			// Regression guard: negative positions are valid for head-inserts.
+			name:  "success — negative ToPosition is valid (head-insert)",
+			input: withPosition(-1000),
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 3).Return(
-					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 3}, nil,
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(-1000)).Return(
+					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: -1000}, nil,
 				)
 			},
 			checkOut: func(t *testing.T, out *card.MoveCardOutput) {
-				assert.Equal(t, 3, out.Card.Position)
+				assert.Equal(t, float64(-1000), out.Card.Position)
 			},
 		},
 		{
-			name:  "success — ToPosition clamped to max+1",
-			input: withPosition(100),
+			name:  "success — midpoint position",
+			input: withPosition(1500),
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 6).Return(
-					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 6}, nil,
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(1500)).Return(
+					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 1500}, nil,
 				)
 			},
 			checkOut: func(t *testing.T, out *card.MoveCardOutput) {
-				assert.Equal(t, 6, out.Card.Position)
+				assert.Equal(t, float64(1500), out.Card.Position)
 			},
 		},
 		{
@@ -255,16 +243,15 @@ func TestMoveCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 1).Return(
-					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 1, AssignedTo: ptr(assigneeID)}, nil,
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(1500)).Return(
+					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 1500, AssignedTo: ptr(assigneeID)}, nil,
 				)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(
 					&entity.User{ID: assigneeID, Name: "Assignee"}, nil,
 				)
 			},
 			checkOut: func(t *testing.T, out *card.MoveCardOutput) {
-				assert.Equal(t, 1, out.Card.Position)
+				assert.Equal(t, float64(1500), out.Card.Position)
 				require.NotNil(t, out.Assignee)
 				assert.Equal(t, assigneeID, out.Assignee.ID)
 			},
@@ -274,9 +261,8 @@ func TestMoveCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				setupUntilMove(d)
-				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, toColumnID).Return(5, nil)
-				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, 1).Return(
-					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 1, AssignedTo: nil}, nil,
+				d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(1500)).Return(
+					&entity.Card{ID: cardID, ColumnID: toColumnID, Position: 1500, AssignedTo: nil}, nil,
 				)
 			},
 			checkOut: func(t *testing.T, out *card.MoveCardOutput) {

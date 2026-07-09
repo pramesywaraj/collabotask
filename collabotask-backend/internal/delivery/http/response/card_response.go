@@ -12,7 +12,7 @@ type CardResponse struct {
 	ColumnID    uuid.UUID           `json:"column_id"`
 	Title       string              `json:"title"`
 	Description *string             `json:"description"`
-	Position    int                 `json:"position"`
+	Position    float64             `json:"position"`
 	AssignedTo  *AssignedToResponse `json:"assigned_to"`
 	DueDate     *time.Time          `json:"due_date"`
 	CreatedBy   uuid.UUID           `json:"created_by"`

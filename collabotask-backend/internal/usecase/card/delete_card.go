@@ -40,10 +40,5 @@ func (cru *CardUseCase) DeleteCard(ctx context.Context, input DeleteCardInput) e
 		return err
 	}
 
-	err = cru.cardRepo.DeleteWithReorder(ctx, input.CardID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cru.cardRepo.Delete(ctx, input.CardID)
 }

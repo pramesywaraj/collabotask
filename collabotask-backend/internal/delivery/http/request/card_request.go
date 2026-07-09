@@ -21,10 +21,8 @@ type UpdateCardRequest struct {
 }
 
 type MoveCardRequest struct {
-	// Do Not Delete, maybe will use later
-	// FromColumnID uuid.UUID `json:"from_column_id" binding:"required"`
 	ToColumnID uuid.UUID `json:"to_column_id" binding:"required"`
-	// Pointer so presence is enforced (omitted → 400) without rejecting the
-	// legitimate value 0 (top slot). The use case validates the range.
-	ToPosition *int `json:"to_position" binding:"required"`
+	// Pointer enforces presence (omitted or null → 400). Any finite float64 value
+	// is valid; the JSON decoder rejects NaN/±Inf before binding runs.
+	ToPosition *float64 `json:"to_position" binding:"required"`
 }

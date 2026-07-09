@@ -1,6 +1,7 @@
 package column
 
 import (
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/pkg/validator"
 	"context"
@@ -17,7 +18,7 @@ func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInp
 		return nil, err
 	}
 
-	nextPosition, err := cu.columnRepo.GetMaxPosition(ctx, board.ID)
+	maxPos, err := cu.columnRepo.GetMaxPosition(ctx, board.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get max position for the column: %w", err)
 	}
@@ -25,7 +26,7 @@ func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInp
 	column := &entity.Column{
 		BoardID:  board.ID,
 		Title:    input.Title,
-		Position: nextPosition + 1,
+		Position: maxPos + domain.PositionStep,
 	}
 	err = cu.columnRepo.Create(ctx, column)
 	if err != nil {

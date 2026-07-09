@@ -15,10 +15,10 @@ const (
 		SELECT id, column_id, title, description, position, assigned_to, due_date, created_by, created_at, updated_at
 		FROM cards
 		WHERE column_id = $1
-		ORDER BY position ASC
+		ORDER BY position ASC, id ASC
 	`
 	getMaxCardPositionQuery = `
-		SELECT COALESCE(MAX(position), -1)
+		SELECT COALESCE(MAX(position), 0)
 		FROM cards
 		WHERE column_id = $1
 	`
@@ -31,26 +31,14 @@ const (
 			due_date = $4,
 			updated_at = $5
 		WHERE id = $6
-		RETURNING id, column_id, title, description, position, assigned_to, due_date, created_by, created_at, updated_at 
+		RETURNING id, column_id, title, description, position, assigned_to, due_date, created_by, created_at, updated_at
 	`
 	deleteCardQuery = `
 		DELETE FROM cards
 		WHERE id = $1
 	`
-	incrementPositionCardFromQuery = `
-		UPDATE cards
-		SET
-			position = position + 1
-		WHERE column_id = $1 AND position >= $2
-	`
-	decrementPositionCardAfterQuery = `
-		UPDATE cards
-		SET
-			position = position - 1
-		WHERE column_id = $1 AND position > $2
-	`
-	lockCardQuery = `
-		SELECT column_id, position
+	lockCardForMoveQuery = `
+		SELECT column_id
 		FROM cards
 		WHERE id = $1
 		FOR UPDATE

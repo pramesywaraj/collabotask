@@ -118,52 +118,6 @@ func (cdr *cardRepository) Delete(ctx context.Context, cardID uuid.UUID) error {
 	return nil
 }
 
-func (cdr *cardRepository) DeleteWithReorder(ctx context.Context, cardID uuid.UUID) error {
-	tx, err := cdr.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin delete card with reorder transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	var columnID uuid.UUID
-	var position int
-
-	err = tx.QueryRow(
-		ctx,
-		lockCardQuery,
-		cardID,
-	).Scan(&columnID, &position)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ErrCardNotFound
-		}
-		return fmt.Errorf("failed to lock card when delete with reorder: %w", err)
-	}
-
-	result, err := tx.Exec(
-		ctx,
-		deleteCardQuery,
-		cardID,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to delete card: %w", err)
-	}
-	if result.RowsAffected() == 0 {
-		return domain.ErrCardNotFound
-	}
-
-	// Reorder remaining column's cards
-	if _, err := tx.Exec(ctx, decrementPositionCardAfterQuery, columnID, position); err != nil {
-		return fmt.Errorf("failed to reorder cards after delete: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit delete card transaction: %w", err)
-	}
-
-	return nil
-}
-
 func (cdr *cardRepository) GetByID(ctx context.Context, cardID uuid.UUID) (*entity.Card, error) {
 	card := &entity.Card{}
 
@@ -234,8 +188,8 @@ func (cdr *cardRepository) GetCardsByColumn(ctx context.Context, columnID uuid.U
 	return cards, nil
 }
 
-func (cdr *cardRepository) GetMaxPosition(ctx context.Context, columnID uuid.UUID) (int, error) {
-	var position int
+func (cdr *cardRepository) GetMaxPosition(ctx context.Context, columnID uuid.UUID) (float64, error) {
+	var position float64
 
 	err := cdr.db.QueryRow(
 		ctx,
@@ -245,41 +199,13 @@ func (cdr *cardRepository) GetMaxPosition(ctx context.Context, columnID uuid.UUI
 		&position,
 	)
 	if err != nil {
-		return -1, fmt.Errorf("failed to get card max position: %w", err)
+		return 0, fmt.Errorf("failed to get card max position: %w", err)
 	}
 
 	return position, nil
 }
 
-func (cdr *cardRepository) IncrementPositionsFrom(ctx context.Context, columnID uuid.UUID, position int) error {
-	_, err := cdr.db.Exec(
-		ctx,
-		incrementPositionCardFromQuery,
-		columnID,
-		position,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to increment card positions from: %w", err)
-	}
-
-	return nil
-}
-
-func (cdr *cardRepository) DecrementPositionsAfter(ctx context.Context, columnID uuid.UUID, position int) error {
-	_, err := cdr.db.Exec(
-		ctx,
-		decrementPositionCardAfterQuery,
-		columnID,
-		position,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to decrement card positions after: %w", err)
-	}
-
-	return nil
-}
-
-func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toColumnID uuid.UUID, toPosition int) (*entity.Card, error) {
+func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toColumnID uuid.UUID, toPosition float64) (*entity.Card, error) {
 	tx, err := cdr.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin move card transaction: %w", err)
@@ -287,9 +213,7 @@ func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toCol
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var actualColumnID uuid.UUID
-	var oldPosition int
-
-	err = tx.QueryRow(ctx, lockCardQuery, cardID).Scan(&actualColumnID, &oldPosition)
+	err = tx.QueryRow(ctx, lockCardForMoveQuery, cardID).Scan(&actualColumnID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrCardNotFound
@@ -300,21 +224,8 @@ func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toCol
 		return nil, domain.ErrInconsistentState
 	}
 
-	if _, err := tx.Exec(ctx, decrementPositionCardAfterQuery, actualColumnID, oldPosition); err != nil {
-		return nil, fmt.Errorf("failed to decrement card position: %w", err)
-	}
-	if _, err := tx.Exec(ctx, incrementPositionCardFromQuery, toColumnID, toPosition); err != nil {
-		return nil, fmt.Errorf("failed to increment card position: %w", err)
-	}
-
 	moved := &entity.Card{}
-	err = tx.QueryRow(
-		ctx,
-		moveCardQuery,
-		toColumnID,
-		toPosition,
-		cardID,
-	).Scan(
+	err = tx.QueryRow(ctx, moveCardQuery, toColumnID, toPosition, cardID).Scan(
 		&moved.ID,
 		&moved.ColumnID,
 		&moved.Title,
@@ -333,7 +244,13 @@ func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toCol
 		return nil, fmt.Errorf("failed to move card: %w", err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	newPos, err := rebalanceIfNeeded(ctx, tx, "cards", "column_id", toColumnID, moved.ID, moved.Position)
+	if err != nil {
+		return nil, fmt.Errorf("failed to rebalance cards: %w", err)
+	}
+	moved.Position = newPos
+
+	if err = tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit move card transaction: %w", err)
 	}
 

@@ -53,12 +53,11 @@ func (cru *CardUseCase) CreateCard(ctx context.Context, input CreateCardInput) (
 		return nil, fmt.Errorf("failed to get cards max position in the column: %w", err)
 	}
 
-	nextPos := maxPos + 1
 	card := &entity.Card{
 		ColumnID:    column.ID,
 		Title:       input.Title,
 		Description: input.Description,
-		Position:    nextPos,
+		Position:    maxPos + domain.PositionStep,
 		AssignedTo:  input.AssignedTo,
 		DueDate:     input.DueDate,
 		CreatedBy:   input.RequesterID,

@@ -53,7 +53,7 @@ func TestCreateColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(-1, errors.New("db error"))
+				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(0, errors.New("db error"))
 			},
 			wantErrMsg: "failed to get max position",
 		},
@@ -62,27 +62,42 @@ func TestCreateColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(2, nil)
+				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(2000), nil)
 				d.columnRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
-					return c.Position == 3
+					return c.Position == 3000
 				})).Return(errors.New("db error"))
 			},
 			wantErrMsg: "db error",
 		},
 		{
-			name:  "success — position = maxPos + 1",
+			name:  "success — first column in empty board (maxPos=0 → position=1000)",
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
-				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(4, nil)
+				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(0), nil)
 				d.columnRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
-					return c.BoardID == boardID && c.Title == "My Column" && c.Position == 5
+					return c.BoardID == boardID && c.Title == "My Column" && c.Position == 1000
 				})).Return(nil)
 			},
 			checkOut: func(t *testing.T, out *column.CreateColumnOutput) {
 				assert.Equal(t, boardID, out.Column.BoardID)
 				assert.Equal(t, "My Column", out.Column.Title)
-				assert.Equal(t, 5, out.Column.Position)
+				assert.Equal(t, float64(1000), out.Column.Position)
+			},
+		},
+		{
+			name:  "success — appends after existing column (maxPos=4000 → position=5000)",
+			input: validInput,
+			setupMocks: func(d columnTestDeps) {
+				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(4000), nil)
+				d.columnRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
+					return c.BoardID == boardID && c.Title == "My Column" && c.Position == 5000
+				})).Return(nil)
+			},
+			checkOut: func(t *testing.T, out *column.CreateColumnOutput) {
+				assert.Equal(t, boardID, out.Column.BoardID)
+				assert.Equal(t, float64(5000), out.Column.Position)
 			},
 		},
 	}

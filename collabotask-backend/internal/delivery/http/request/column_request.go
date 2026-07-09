@@ -9,5 +9,7 @@ type UpdateColumnRequest struct {
 }
 
 type UpdateColumnPosition struct {
-	Position *int `json:"position" binding:"required"`
+	// Pointer enforces presence (omitted or null → 400). Any finite float64 value
+	// is valid; the JSON decoder rejects NaN/±Inf before binding runs.
+	Position *float64 `json:"position" binding:"required"`
 }

@@ -248,7 +248,7 @@ func (ch *ColumnHandler) UpdateColumnPosition(ctx *gin.Context) {
 	input := column.UpdateColumnPositionInput{
 		BoardID:     boardID,
 		ColumnID:    columnID,
-		Position:    *req.Position,
+		Position:    *req.Position, // *float64 → float64
 		RequesterID: userID,
 	}
 

@@ -53,17 +53,7 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 		return nil, err
 	}
 
-	max, err := cru.cardRepo.GetMaxPosition(ctx, input.ToColumnID)
-	if err != nil {
-		return nil, err
-	}
-
-	newPos := input.ToPosition
-	if newPos > max+1 {
-		newPos = max + 1
-	}
-
-	movedCard, err := cru.cardRepo.Move(ctx, input.CardID, input.FromColumnID, input.ToColumnID, newPos)
+	movedCard, err := cru.cardRepo.Move(ctx, input.CardID, input.FromColumnID, input.ToColumnID, input.ToPosition)
 	if err != nil {
 		return nil, err
 	}
