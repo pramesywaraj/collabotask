@@ -158,6 +158,10 @@ Card and column ordering uses **fractional positions** stored as `NUMERIC`, not 
 - **One UPDATE per move** — other rows are never touched. Concurrency-friendly (no whole-column lock), broadcast payload is tiny ("card X is now at 1500").
 - **Rebalancing:** when the gap between two neighbors falls below a threshold (precision exhaustion), rewrite that column's positions back to evenly-spaced values in one transaction. Rare under normal use.
 - *Migration required:* change `columns.position` and `cards.position` from `INTEGER` → `NUMERIC`. (Lexorank was considered and rejected as overkill for Phase 1.)
+- **Deterministic order:** fetch queries sort by `position ASC, id ASC`. The `id` tiebreak makes a transient position tie resolve identically on every read.
+- **Known limitations (accepted for Phase 1):**
+  - *Append is not atomic.* Card/column create reads `MAX(position)` then writes `MAX + STEP` in two steps, so two concurrent appends to the same column/board can land on the **same** position. Order stays stable via the `position, id` tiebreak, and the tie self-heals on the next adjacent move (gap 0 < threshold → rebalance). Not worth a lock at Phase-1 scale.
+  - *Rebalance can deadlock under contention.* Rebalancing rewrites the whole partition (`UPDATE … WHERE column_id = …`); two threshold-crossing moves in the **same** column at the same instant can deadlock — Postgres aborts one (`40P01`) and the client retries. Rare (rebalancing itself is rare) and recoverable; a retry-on-deadlock wrapper is later hardening, not Phase-1.
 
 ### 3.3 Delete strategy
 - Workspace and board deletion = **hard delete relying on `ON DELETE CASCADE`** (boards→columns→cards→…). UI must show a confirmation dialog.
@@ -436,7 +440,7 @@ WHERE b.id=$board AND (
 #### UC-13c: Delete Column — **(in code)**
 - **API:** `DELETE /…/columns/:column_id` — cascades to its cards. Requires confirmation in UI. **WS:** `COLUMN_DELETED`.
 
-#### UC-13d: Reorder Column — **(in code, but see §9)**
+#### UC-13d: Reorder Column
 - **API:** `PATCH /…/columns/:column_id/position` · `{ "position" }`
 - **Target model:** fractional — compute midpoint between neighbors; 1 UPDATE. **WS:** `COLUMN_MOVED`.
 
@@ -587,10 +591,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **🟡 P1 — Missing Phase-1 features (need to be built):** board `visibility` column + logic; ownership transfer (UC-12e); promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
 
-**🟡 P1 — Positioning is INTEGER-shift today:**
-- Card move: `internal/repository/postgres/card.go:282-341` shifts neighbor positions in a transaction with `FOR UPDATE`.
-- Column reorder: `internal/usecase/column/update_column_position.go` reassigns `0,1,2,…` sequentially (thrashes under concurrency).
-- Migrate to fractional NUMERIC (§3.2).
+**✅ FIXED (P1) — Positioning migrated off INTEGER-shift:** card move and column reorder now use fractional NUMERIC coordinates with repository-layer rebalancing (**ADR-004**, migration **000006_fractional_positioning**). One UPDATE per move; the integer-shift methods (`IncrementPositionsFrom`, `DecrementPositionsAfter`, `ReorderPositions`, `DeleteWithReorder`) and the `max+1` clamp are removed. See §3.2 for the contract + accepted limitations. *Repository-layer rebalance tests deferred — no DB-backed test harness exists yet.*
 
 **🟡 P1 — Assignee not validated as a board member:** `create_card.go:40`, `update_card.go:83` check the user exists but not that they are a **board member** of the card's board (assignment = participation, §2.8). Add the board-membership check (UC-14/UC-16). *(Supersedes the earlier "validate against workspace" framing — board membership is the stricter, correct rule.)*
 
@@ -605,10 +606,16 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 ### 9.1 Suggested build order
 Correctness/security first, then features. (Story IDs reference [001-user-stories.md](./001-user-stories.md).)
 1. ~~**P0 fixes:** layered permission for board management + `cards.created_by` NULLABLE bug.~~ **✅ DONE** (`canAdministerBoard` helper across update/archive/invite/remove; migration 000005). Tests pending — approach TBD.
-2. **Fractional positioning:** migrate card-move and column-reorder off integer-shift to NUMERIC (§3.2).
-3. **WebSocket layer:** the entire realtime layer (UC-18/19) + `activities` table & writes.
-4. **NEW features:** board `visibility`, ownership transfer (UC-12e), promote/demote (UC-06b), leave workspace (UC-06c), delete workspace (UC-06d).
-5. **Assignment = participation (§2.8):** tighten assignee validation to **board member** (UC-14/UC-16), and add the unassign-on-lost-participation cascade + `CARD_UPDATED` broadcast via one shared helper (UC-06, UC-06c, UC-10, UC-12d). Depends on the WebSocket layer (#3) for the broadcast.
+2. ~~**Fractional positioning:** migrate card-move and column-reorder off integer-shift to NUMERIC (§3.2).~~ **✅ DONE** (ADR-004, migration 000006). Repository-layer rebalance tests deferred (no DB harness yet).
+3. **REST features — complete the Phase 1 surface before realtime.** Build order within this step: visibility first (cross-cutting), then workspace ops, then board ops, then assignee validation + cascade, then activities.
+   - Board `visibility` column + access logic (UC-07, UC-08, UC-09, UC-12) — do first; affects create-board, list-boards, self-join gate, and the board access checker used everywhere.
+   - Promote/demote workspace member (UC-06b), leave workspace (UC-06c), delete workspace (UC-06d).
+   - Ownership transfer (UC-12e).
+   - Assignee = board member validation (UC-14/UC-16) + unassign-on-lost-participation data correction (UC-06, UC-06c, UC-10, UC-12d). The cascade is a plain `UPDATE cards SET assigned_to = NULL` — no WebSocket dependency. Only the *broadcast* waits for step ④.
+   - `activities` table migration + write an activity row on every mutation. Writing happens here so step ④ only wires broadcast calls and never revisits mutation code just to add a log write.
+4. **WebSocket layer + participation broadcast:** full realtime layer (UC-18/19); wire broadcast calls (`CARD_UPDATED`, `CARD_MOVED`, `COLUMN_MOVED`, etc.) onto the already-correct mutations; add the `CARD_UPDATED` broadcast for the unassign cascade completed in step ③.
+
+> **Why ③ and ④ were arranged this way:** REST features first means the WebSocket layer wraps a complete, correct surface from day one — no retrofit pass. Activities writes belong in step ③ because they are plain DB inserts tied to each mutation; adding them alongside the feature avoids reopening those code paths in step ④. The participation *cascade* (data correction) goes in step ③ too — it has no WebSocket dependency; only its *broadcast* waits for step ④.
 
 ### 9.2 Audit → use-case → story map
 Which use cases an audit item touches, and the story that asserts the fixed behavior.

@@ -9,9 +9,10 @@ The frontend (Next.js) is planned as a separate effort.
 ## Now
 <!-- Update "Building" when focus shifts. Read every turn. Full sequence: spec §9.1. -->
 Phase 1 · CRUD done: auth, workspace, board, column, card
-- **Unit-test coverage complete ✅** (275/275 cases; `collabotask-backend/temp_unit-test-checklist.md`). Each layer surfaced & fixed correctness bugs — auth: case-insensitive email dedup, login nil-user guard, dead validation code; column: `position` validation rejected `0` (fixed to `*int` presence-required + clamped, commit `31d858d`); card: same `0`-rejected bug on `to_position` (fixed), `UpdateCard` assignee resolved *before* write; common: `board_access_check.go` workspace-member lookup swallowed unexpected DB errors as `ErrUserNotInWorkspace` (fixed to wrap and propagate; `ErrMemberNotFound` still maps to `ErrUserNotInWorkspace`). Deferred test cases noted in checklist for when `visibility` column lands (step ③).
-- **Building → fractional NUMERIC positioning** (build-order step ①): migrate card-move and column-reorder off integer-shift to NUMERIC midpoint (spec §3.2; design in `docs/architecture/adr/adr-004-fractional-positioning.md`). No realtime needed yet.
-- **Queue (in order):** ① fractional NUMERIC positioning ← *here* → ② WebSocket layer + `activities` table → ③ new features: board `visibility`, ownership transfer, promote/demote, leave/delete workspace → ④ assignment=participation (board-member validation + unassign cascade; **needs ② first**).
+- **Unit-test coverage complete ✅** (275/275 cases; `collabotask-backend/temp_unit-test-checklist.md`). Deferred test cases noted in checklist for when `visibility` column lands (step ③).
+- **Fractional NUMERIC positioning complete ✅** (build-order step ②, spec §3.2, ADR-004, migration 000006). Single UPDATE per move; repository-layer rebalance; `domain.PositionStep`/`PositionRebalanceThreshold` as single source of truth. Repo-layer rebalance tests deferred (no DB harness yet).
+- **Building → REST feature completion** (build-order step ③ per spec §9.1): board `visibility` (cross-cutting, do first) → workspace ops (promote/demote UC-06b, leave UC-06c, delete UC-06d) → board ownership transfer (UC-12e) → assignee board-member validation + unassign cascade (UC-14/UC-16, data correction only) → activities table + writes.
+- **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ← *here* → ④ WebSocket + participation broadcast.
 - **Don't touch:** Phase-2 deferrals (comments, labels, attachments, public boards, refresh tokens, account deletion) and the planned Next.js frontend.
 
 ## Core Concepts
