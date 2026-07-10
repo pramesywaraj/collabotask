@@ -36,8 +36,8 @@ type DeleteColumnInput struct {
 }
 
 type UpdateColumnPositionInput struct {
-	BoardID     uuid.UUID `validate:"required"`
-	ColumnID    uuid.UUID `validate:"required"`
+	BoardID  uuid.UUID `validate:"required"`
+	ColumnID uuid.UUID `validate:"required"`
 	// Position is a fractional coordinate computed client-side. Any finite float64
 	// is valid (negative values are legal for head-inserts). Presence is enforced
 	// at the HTTP layer via a *float64 pointer field on the request.

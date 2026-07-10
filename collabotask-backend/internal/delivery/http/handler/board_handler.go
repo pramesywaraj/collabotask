@@ -88,6 +88,7 @@ func (bh *BoardHandler) CreateBoard(ctx *gin.Context) {
 		Title:           req.Title,
 		Description:     req.Description,
 		BackgroundColor: req.BackgroundColor,
+		Visibility:      req.Visibility,
 	}
 
 	out, err := bh.boardUseCase.CreateBoard(ctx.Request.Context(), input)
@@ -292,6 +293,7 @@ func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 		BoardID:         boardID,
 		Title:           req.Title,
 		BackgroundColor: req.BackgroundColor,
+		Visibility:      req.Visibility,
 	}
 	if req.Description.Present {
 		input.DescriptionPresent = true
@@ -472,18 +474,18 @@ func (bh *BoardHandler) RemoveMemberFromBoard(ctx *gin.Context) {
 
 // SelfJoinToBoard godoc
 // @Summary Join the board (self-service)
-// @Description For now, its only eligible for Workspace Admin
+// @Description Admins may join any board; plain members may join WORKSPACE-visible boards only. Idempotent: re-joining returns 200 with joined=false.
 // @Tags board
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
-// @Success 200 {object} response.BoardSelfJoinSuccessDoc "OK"
+// @Success 200 {object} response.BoardSelfJoinSuccessDoc "OK (joined=true when newly added, false when already a member)"
 // @Failure 400 {object} response.Failure400BadRequestDoc "Invalid ids"
 // @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
-// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
-// @Failure 409 {object} response.Failure409ConflictDoc "Already a member or cannot join"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Ineligible to join"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Board not found or hidden"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace/{workspace_id}/board/{board_id}/join [post]
 func (bh *BoardHandler) SelfJoinToBoard(ctx *gin.Context) {
@@ -503,17 +505,23 @@ func (bh *BoardHandler) SelfJoinToBoard(ctx *gin.Context) {
 		BoardID:     boardID,
 	}
 
-	err := bh.boardUseCase.SelfJoinBoard(ctx.Request.Context(), input)
+	out, err := bh.boardUseCase.SelfJoinBoard(ctx.Request.Context(), input)
 	if err != nil {
 		helper.HandleUseCaseError(ctx, err)
 		return
 	}
 
-	response.GenerateSuccessResponse(
-		ctx,
-		"Successfully joined the board",
-		nil,
-	)
+	// Idempotent: a re-join reports joined=false with a friendly message so
+	// optimistic/reconnecting clients can distinguish "just joined" from
+	// "already in" without treating the good outcome as an error.
+	message := "Successfully joined the board"
+	body := response.BoardSelfJoinResponse{Joined: out.Joined}
+	if !out.Joined {
+		message = "You are already a member of this board"
+		body.Message = message
+	}
+
+	response.GenerateSuccessResponse(ctx, message, body)
 }
 
 // LeaveBoard godoc

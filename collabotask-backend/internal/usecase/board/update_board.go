@@ -2,6 +2,7 @@ package board
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -14,7 +15,7 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 		return nil, fmt.Errorf("failed to validate update board input: %w", err)
 	}
 
-	atLeastOne := validator.AtLeastOneProvided(input.Title, input.BackgroundColor) || input.DescriptionPresent
+	atLeastOne := validator.AtLeastOneProvided(input.Title, input.BackgroundColor, input.Visibility) || input.DescriptionPresent
 	if !atLeastOne {
 		return nil, domain.ErrAtLeastOneProvided
 	}
@@ -59,6 +60,11 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 	}
 	if input.BackgroundColor != nil {
 		board.BackgroundColor = *input.BackgroundColor
+	}
+	// Flipping visibility has no data cascade: members stay and assignments
+	// already require membership. WORKSPACE→PRIVATE only affects future access.
+	if input.Visibility != nil {
+		board.Visibility = entity.BoardVisibility(*input.Visibility)
 	}
 
 	err = bu.boardRepo.Update(ctx, board)

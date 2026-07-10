@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/common"
 	"context"
 
@@ -40,86 +39,12 @@ func (_m *MockBoardAccessChecker) EXPECT() *MockBoardAccessChecker_Expecter {
 	return &MockBoardAccessChecker_Expecter{mock: &_m.Mock}
 }
 
-// Check provides a mock function for the type MockBoardAccessChecker
-func (_mock *MockBoardAccessChecker) Check(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*entity.Board, error) {
+// CheckMetadataAccess provides a mock function for the type MockBoardAccessChecker
+func (_mock *MockBoardAccessChecker) CheckMetadataAccess(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error) {
 	ret := _mock.Called(ctx, boardID, requesterID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Check")
-	}
-
-	var r0 *entity.Board
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*entity.Board, error)); ok {
-		return returnFunc(ctx, boardID, requesterID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *entity.Board); ok {
-		r0 = returnFunc(ctx, boardID, requesterID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*entity.Board)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
-		r1 = returnFunc(ctx, boardID, requesterID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockBoardAccessChecker_Check_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Check'
-type MockBoardAccessChecker_Check_Call struct {
-	*mock.Call
-}
-
-// Check is a helper method to define mock.On call
-//   - ctx context.Context
-//   - boardID uuid.UUID
-//   - requesterID uuid.UUID
-func (_e *MockBoardAccessChecker_Expecter) Check(ctx any, boardID any, requesterID any) *MockBoardAccessChecker_Check_Call {
-	return &MockBoardAccessChecker_Check_Call{Call: _e.mock.On("Check", ctx, boardID, requesterID)}
-}
-
-func (_c *MockBoardAccessChecker_Check_Call) Run(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID)) *MockBoardAccessChecker_Check_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uuid.UUID
-		if args[1] != nil {
-			arg1 = args[1].(uuid.UUID)
-		}
-		var arg2 uuid.UUID
-		if args[2] != nil {
-			arg2 = args[2].(uuid.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockBoardAccessChecker_Check_Call) Return(board *entity.Board, err error) *MockBoardAccessChecker_Check_Call {
-	_c.Call.Return(board, err)
-	return _c
-}
-
-func (_c *MockBoardAccessChecker_Check_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*entity.Board, error)) *MockBoardAccessChecker_Check_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Resolve provides a mock function for the type MockBoardAccessChecker
-func (_mock *MockBoardAccessChecker) Resolve(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error) {
-	ret := _mock.Called(ctx, boardID, requesterID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Resolve")
+		panic("no return value specified for CheckMetadataAccess")
 	}
 
 	var r0 *common.BoardAccess
@@ -142,20 +67,20 @@ func (_mock *MockBoardAccessChecker) Resolve(ctx context.Context, boardID uuid.U
 	return r0, r1
 }
 
-// MockBoardAccessChecker_Resolve_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Resolve'
-type MockBoardAccessChecker_Resolve_Call struct {
+// MockBoardAccessChecker_CheckMetadataAccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckMetadataAccess'
+type MockBoardAccessChecker_CheckMetadataAccess_Call struct {
 	*mock.Call
 }
 
-// Resolve is a helper method to define mock.On call
+// CheckMetadataAccess is a helper method to define mock.On call
 //   - ctx context.Context
 //   - boardID uuid.UUID
 //   - requesterID uuid.UUID
-func (_e *MockBoardAccessChecker_Expecter) Resolve(ctx any, boardID any, requesterID any) *MockBoardAccessChecker_Resolve_Call {
-	return &MockBoardAccessChecker_Resolve_Call{Call: _e.mock.On("Resolve", ctx, boardID, requesterID)}
+func (_e *MockBoardAccessChecker_Expecter) CheckMetadataAccess(ctx any, boardID any, requesterID any) *MockBoardAccessChecker_CheckMetadataAccess_Call {
+	return &MockBoardAccessChecker_CheckMetadataAccess_Call{Call: _e.mock.On("CheckMetadataAccess", ctx, boardID, requesterID)}
 }
 
-func (_c *MockBoardAccessChecker_Resolve_Call) Run(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID)) *MockBoardAccessChecker_Resolve_Call {
+func (_c *MockBoardAccessChecker_CheckMetadataAccess_Call) Run(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID)) *MockBoardAccessChecker_CheckMetadataAccess_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -178,12 +103,160 @@ func (_c *MockBoardAccessChecker_Resolve_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockBoardAccessChecker_Resolve_Call) Return(boardAccess *common.BoardAccess, err error) *MockBoardAccessChecker_Resolve_Call {
+func (_c *MockBoardAccessChecker_CheckMetadataAccess_Call) Return(boardAccess *common.BoardAccess, err error) *MockBoardAccessChecker_CheckMetadataAccess_Call {
 	_c.Call.Return(boardAccess, err)
 	return _c
 }
 
-func (_c *MockBoardAccessChecker_Resolve_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error)) *MockBoardAccessChecker_Resolve_Call {
+func (_c *MockBoardAccessChecker_CheckMetadataAccess_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error)) *MockBoardAccessChecker_CheckMetadataAccess_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CheckMutateAccess provides a mock function for the type MockBoardAccessChecker
+func (_mock *MockBoardAccessChecker) CheckMutateAccess(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error) {
+	ret := _mock.Called(ctx, boardID, requesterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckMutateAccess")
+	}
+
+	var r0 *common.BoardAccess
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*common.BoardAccess, error)); ok {
+		return returnFunc(ctx, boardID, requesterID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *common.BoardAccess); ok {
+		r0 = returnFunc(ctx, boardID, requesterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.BoardAccess)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, boardID, requesterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBoardAccessChecker_CheckMutateAccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckMutateAccess'
+type MockBoardAccessChecker_CheckMutateAccess_Call struct {
+	*mock.Call
+}
+
+// CheckMutateAccess is a helper method to define mock.On call
+//   - ctx context.Context
+//   - boardID uuid.UUID
+//   - requesterID uuid.UUID
+func (_e *MockBoardAccessChecker_Expecter) CheckMutateAccess(ctx any, boardID any, requesterID any) *MockBoardAccessChecker_CheckMutateAccess_Call {
+	return &MockBoardAccessChecker_CheckMutateAccess_Call{Call: _e.mock.On("CheckMutateAccess", ctx, boardID, requesterID)}
+}
+
+func (_c *MockBoardAccessChecker_CheckMutateAccess_Call) Run(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID)) *MockBoardAccessChecker_CheckMutateAccess_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBoardAccessChecker_CheckMutateAccess_Call) Return(boardAccess *common.BoardAccess, err error) *MockBoardAccessChecker_CheckMutateAccess_Call {
+	_c.Call.Return(boardAccess, err)
+	return _c
+}
+
+func (_c *MockBoardAccessChecker_CheckMutateAccess_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error)) *MockBoardAccessChecker_CheckMutateAccess_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CheckViewAccess provides a mock function for the type MockBoardAccessChecker
+func (_mock *MockBoardAccessChecker) CheckViewAccess(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error) {
+	ret := _mock.Called(ctx, boardID, requesterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckViewAccess")
+	}
+
+	var r0 *common.BoardAccess
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*common.BoardAccess, error)); ok {
+		return returnFunc(ctx, boardID, requesterID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *common.BoardAccess); ok {
+		r0 = returnFunc(ctx, boardID, requesterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*common.BoardAccess)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, boardID, requesterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBoardAccessChecker_CheckViewAccess_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckViewAccess'
+type MockBoardAccessChecker_CheckViewAccess_Call struct {
+	*mock.Call
+}
+
+// CheckViewAccess is a helper method to define mock.On call
+//   - ctx context.Context
+//   - boardID uuid.UUID
+//   - requesterID uuid.UUID
+func (_e *MockBoardAccessChecker_Expecter) CheckViewAccess(ctx any, boardID any, requesterID any) *MockBoardAccessChecker_CheckViewAccess_Call {
+	return &MockBoardAccessChecker_CheckViewAccess_Call{Call: _e.mock.On("CheckViewAccess", ctx, boardID, requesterID)}
+}
+
+func (_c *MockBoardAccessChecker_CheckViewAccess_Call) Run(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID)) *MockBoardAccessChecker_CheckViewAccess_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBoardAccessChecker_CheckViewAccess_Call) Return(boardAccess *common.BoardAccess, err error) *MockBoardAccessChecker_CheckViewAccess_Call {
+	_c.Call.Return(boardAccess, err)
+	return _c
+}
+
+func (_c *MockBoardAccessChecker_CheckViewAccess_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID, requesterID uuid.UUID) (*common.BoardAccess, error)) *MockBoardAccessChecker_CheckViewAccess_Call {
 	_c.Call.Return(run)
 	return _c
 }

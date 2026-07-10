@@ -40,6 +40,7 @@ func (bu *BoardUseCase) GetBoardsInWorkspace(ctx context.Context, input GetBoard
 			UserRole:     userRole,
 			AccessStatus: board.AccessStatus,
 			MemberCount:  board.MemberCount,
+			CardCount:    board.CardCount,
 		})
 	}
 

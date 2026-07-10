@@ -13,18 +13,17 @@ func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInp
 		return nil, fmt.Errorf("failed to validate create column input: %w", err)
 	}
 
-	board, err := cu.boardAccessChecker.Check(ctx, input.BoardID, input.RequesterID)
-	if err != nil {
+	if _, err := cu.boardAccessChecker.CheckMutateAccess(ctx, input.BoardID, input.RequesterID); err != nil {
 		return nil, err
 	}
 
-	maxPos, err := cu.columnRepo.GetMaxPosition(ctx, board.ID)
+	maxPos, err := cu.columnRepo.GetMaxPosition(ctx, input.BoardID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get max position for the column: %w", err)
 	}
 
 	column := &entity.Column{
-		BoardID:  board.ID,
+		BoardID:  input.BoardID,
 		Title:    input.Title,
 		Position: maxPos + domain.PositionStep,
 	}

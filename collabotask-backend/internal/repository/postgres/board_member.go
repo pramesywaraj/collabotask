@@ -26,25 +26,24 @@ func NewBoardMemberRepository(db *pgxpool.Pool) repository.BoardMemberRepository
 	}
 }
 
-func (bmr *boardMemberRepository) Create(ctx context.Context, boardMember *entity.BoardMember) error {
-	_, err := bmr.db.Exec(
+func (bmr *boardMemberRepository) CreateIfAbsent(ctx context.Context, boardMember *entity.BoardMember) (bool, error) {
+	var boardID uuid.UUID
+	err := bmr.db.QueryRow(
 		ctx,
-		createBoardMemberQuery,
+		createBoardMemberIfAbsentQuery,
 		boardMember.BoardID,
 		boardMember.UserID,
 		boardMember.Role,
-	)
+	).Scan(&boardID)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return domain.ErrBoardAlreadyMember
-			}
+		if errors.Is(err, pgx.ErrNoRows) {
+			// ON CONFLICT DO NOTHING returned no row: already a member.
+			return false, nil
 		}
-		return fmt.Errorf("failed to add member to board: %w", err)
+		return false, fmt.Errorf("failed to add member to board: %w", err)
 	}
 
-	return nil
+	return true, nil
 }
 
 func (bmr *boardMemberRepository) CreateMany(ctx context.Context, boardMembers []*entity.BoardMember) error {

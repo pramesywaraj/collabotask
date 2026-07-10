@@ -49,7 +49,7 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 		return nil, domain.ErrColumnNotInBoard
 	}
 
-	_, err = cru.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
+	_, err = cru.boardAccessChecker.CheckMutateAccess(ctx, column.BoardID, input.RequesterID)
 	if err != nil {
 		return nil, err
 	}

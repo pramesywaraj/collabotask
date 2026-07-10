@@ -17,6 +17,7 @@ type BoardWithMeta struct {
 	UserRole     *entity.BoardRole
 	AccessStatus entity.BoardAccessStatus
 	MemberCount  uint
+	CardCount    uint
 }
 
 type BoardMember struct {
@@ -60,6 +61,7 @@ type CreateBoardInput struct {
 	Description     *string   `validate:"omitempty,max=1000"`
 	RequesterID     uuid.UUID `validate:"required"`
 	BackgroundColor *string   `validate:"omitempty,min=4,max=8"`
+	Visibility      *string   `validate:"omitempty,oneof=PRIVATE WORKSPACE"`
 }
 
 type CreateBoardOutput struct {
@@ -119,6 +121,13 @@ type SelfJoinBoardInput struct {
 	WorkspaceID uuid.UUID `validate:"required"`
 }
 
+type SelfJoinBoardOutput struct {
+	// Joined is true when the requester was newly added, false when they were
+	// already a member (idempotent re-join). It also gates the future activity
+	// log / WebSocket broadcast so a no-op re-join stays silent.
+	Joined bool
+}
+
 type UpdateBoardInput struct {
 	RequesterID        uuid.UUID `validate:"required"`
 	BoardID            uuid.UUID `validate:"required"`
@@ -126,6 +135,7 @@ type UpdateBoardInput struct {
 	Description        *string   `validate:"omitempty,max=1000"`
 	DescriptionPresent bool
 	Title              *string `validate:"omitempty,min=3,max=255"`
+	Visibility         *string `validate:"omitempty,oneof=PRIVATE WORKSPACE"`
 }
 
 type UpdateBoardOutput struct {

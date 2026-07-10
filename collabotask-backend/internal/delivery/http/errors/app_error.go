@@ -8,6 +8,7 @@ const (
 	ErrCodeNotFound           = "NOT_FOUND"
 	ErrCodeConflict           = "CONFLICT"
 	ErrCodeInternal           = "INTERNAL_ERROR"
+	ErrCodeBoardJoinRequired  = "BOARD_JOIN_REQUIRED"
 )
 
 type AppError struct {

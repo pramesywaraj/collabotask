@@ -48,7 +48,7 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 		return nil, domain.ErrInconsistentState
 	}
 
-	_, err = cru.boardAccessChecker.Check(ctx, fromColumn.BoardID, input.RequesterID)
+	_, err = cru.boardAccessChecker.CheckMutateAccess(ctx, fromColumn.BoardID, input.RequesterID)
 	if err != nil {
 		return nil, err
 	}

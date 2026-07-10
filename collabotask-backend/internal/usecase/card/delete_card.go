@@ -35,7 +35,7 @@ func (cru *CardUseCase) DeleteCard(ctx context.Context, input DeleteCardInput) e
 		return domain.ErrColumnNotInBoard
 	}
 
-	_, err = cru.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
+	_, err = cru.boardAccessChecker.CheckMutateAccess(ctx, column.BoardID, input.RequesterID)
 	if err != nil {
 		return err
 	}

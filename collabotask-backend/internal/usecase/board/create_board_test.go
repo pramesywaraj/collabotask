@@ -97,6 +97,36 @@ func TestCreateBoard(t *testing.T) {
 				assert.Equal(t, "#0079BF", out.Board.BackgroundColor)
 			},
 		},
+		{
+			name:  "success — defaults visibility to WORKSPACE when omitted",
+			input: validInput,
+			setupMocks: func(d boardTestDeps) {
+				d.wsMbrRepo.EXPECT().IsUserExists(mock.Anything, workspaceID, requesterID).Return(true, nil)
+				d.boardRepo.EXPECT().CreateWithOwner(mock.Anything, mock.MatchedBy(func(b *entity.Board) bool {
+					return b.Visibility == entity.BoardVisibilityWorkspace
+				}), requesterID).Run(func(_ context.Context, b *entity.Board, _ uuid.UUID) {
+					b.ID = boardID
+				}).Return(nil)
+			},
+			checkOut: func(t *testing.T, out *board.CreateBoardOutput) {
+				assert.Equal(t, entity.BoardVisibilityWorkspace, out.Board.Visibility)
+			},
+		},
+		{
+			name:  "success — honors explicit PRIVATE visibility",
+			input: board.CreateBoardInput{WorkspaceID: workspaceID, Title: "My Board", RequesterID: requesterID, Visibility: strPtr("PRIVATE")},
+			setupMocks: func(d boardTestDeps) {
+				d.wsMbrRepo.EXPECT().IsUserExists(mock.Anything, workspaceID, requesterID).Return(true, nil)
+				d.boardRepo.EXPECT().CreateWithOwner(mock.Anything, mock.MatchedBy(func(b *entity.Board) bool {
+					return b.Visibility == entity.BoardVisibilityPrivate
+				}), requesterID).Run(func(_ context.Context, b *entity.Board, _ uuid.UUID) {
+					b.ID = boardID
+				}).Return(nil)
+			},
+			checkOut: func(t *testing.T, out *board.CreateBoardOutput) {
+				assert.Equal(t, entity.BoardVisibilityPrivate, out.Board.Visibility)
+			},
+		},
 	}
 
 	for _, tt := range tests {

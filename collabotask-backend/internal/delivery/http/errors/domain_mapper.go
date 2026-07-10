@@ -10,11 +10,18 @@ func MapDomainError(err error) *AppError {
 	switch {
 	case errors.Is(err, domain.ErrInvalidCredentials):
 		return NewAppError(http.StatusUnauthorized, ErrCodeUnauthorized, err.Error())
+	case errors.Is(err, domain.ErrBoardJoinRequired):
+		// Break-glass on a PRIVATE board: the non-joined admin can see it exists
+		// (it's in their list), so we reveal it and prompt them to Join.
+		return NewAppError(http.StatusForbidden, ErrCodeBoardJoinRequired, err.Error())
 	case errors.Is(err, domain.ErrUserNotInWorkspace),
 		errors.Is(err, domain.ErrBoardAccessDenied),
 		errors.Is(err, domain.ErrBoardPermissionDenied),
 		errors.Is(err, domain.ErrBoardOwnerCannotLeave),
+		errors.Is(err, domain.ErrBoardCannotJoin),
 		errors.Is(err, domain.ErrNotWorkspaceAdmin):
+		// ErrBoardCannotJoin is 403 (not 409): after self-join's idempotency
+		// check it only ever means "ineligible to join", not a conflict.
 		return NewAppError(http.StatusForbidden, ErrCodeForbidden, err.Error())
 	case errors.Is(err, domain.ErrUserNotFound),
 		errors.Is(err, domain.ErrMemberNotFound),
@@ -35,7 +42,6 @@ func MapDomainError(err error) *AppError {
 	case errors.Is(err, domain.ErrEmailAlreadyExists),
 		errors.Is(err, domain.ErrAlreadyMember),
 		errors.Is(err, domain.ErrBoardAlreadyMember),
-		errors.Is(err, domain.ErrBoardCannotJoin),
 		errors.Is(err, domain.ErrInconsistentState):
 		return NewAppError(http.StatusConflict, ErrCodeConflict, err.Error())
 	default:

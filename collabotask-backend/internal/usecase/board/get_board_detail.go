@@ -15,13 +15,42 @@ func (bu *BoardUseCase) GetBoardDetail(ctx context.Context, input GetBoardDetail
 		return nil, fmt.Errorf("failed to validate board detail input: %w", err)
 	}
 
-	access, err := bu.boardAccessChecker.Resolve(ctx, input.BoardID, input.RequesterID)
+	access, err := bu.boardAccessChecker.CheckMetadataAccess(ctx, input.BoardID, input.RequesterID)
 	if err != nil {
 		return nil, err
 	}
 
 	board := access.Board
-	boardMembership := access.BoardMember
+	joined := access.IsBoardMember()
+
+	// board_members is the sole source of role/access truth (created_by is a
+	// stored trace only): a joined requester carries their row's role; anyone
+	// else can only ever join (CAN_JOIN). The only non-joined actor that reaches
+	// here on a PRIVATE board is a workspace admin — plain members get 404 from
+	// the checker.
+	var userRole *entity.BoardRole
+	accessStatus := entity.BoardJoined
+	if joined {
+		role := access.BoardMember.Role
+		userRole = &role
+	} else {
+		accessStatus = entity.BoardCanJoin
+	}
+
+	// Thin metadata pre-join: hide the roster (member emails) on a PRIVATE board
+	// the requester hasn't joined. This only ever affects the non-joined admin;
+	// they must Join (break-glass) to see who's on the board. Joined viewers, and
+	// everyone on WORKSPACE boards, get the full roster.
+	if board.Visibility == entity.BoardVisibilityPrivate && !joined {
+		return &GetBoardDetailOutput{
+			Board: BoardDetail{
+				Board:        board,
+				UserRole:     userRole,
+				AccessStatus: accessStatus,
+				Members:      []BoardMember{},
+			},
+		}, nil
+	}
 
 	members, err := bu.boardMemberRepo.GetMembersByBoard(ctx, input.BoardID)
 	if err != nil {
@@ -52,22 +81,6 @@ func (bu *BoardUseCase) GetBoardDetail(ctx context.Context, input GetBoardDetail
 			Role:      member.Role,
 			JoinedAt:  member.JoinedAt,
 		})
-	}
-
-	var userRole *entity.BoardRole
-	accessStatus := entity.BoardJoined
-	// The membership row is the source of truth for the role, so it is checked
-	// first. A creator is always seeded as BoardRoleOwner at creation time, so
-	// when both conditions hold the two branches agree — the ordering only ever
-	// matters as a fallback for a creator who has no membership row yet.
-	if boardMembership != nil && !boardMembership.IsEmpty() {
-		role := boardMembership.Role
-		userRole = &role
-	} else if board.CreatedBy == input.RequesterID {
-		r := entity.BoardRoleOwner
-		userRole = &r
-	} else {
-		accessStatus = entity.BoardCanJoin
 	}
 
 	return &GetBoardDetailOutput{

@@ -13,6 +13,7 @@ import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/column"
+	"collabotask/internal/usecase/common"
 )
 
 func TestUpdateColumnPosition(t *testing.T) {
@@ -75,7 +76,7 @@ func TestUpdateColumnPosition(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(existingColumn, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
 			},
 			wantErr: domain.ErrBoardAccessDenied,
 		},
@@ -84,7 +85,7 @@ func TestUpdateColumnPosition(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(existingColumn, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(1500)).Return(float64(0), errors.New("db error"))
 			},
 			wantErrMsg: "db error",
@@ -97,7 +98,7 @@ func TestUpdateColumnPosition(t *testing.T) {
 				// pointer, so sharing a single struct across parallel tests is a data race.
 				col := &entity.Column{ID: columnID, BoardID: boardID, Position: 2000}
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(1500)).Return(float64(1500), nil)
 			},
 			checkOut: func(t *testing.T, out *column.UpdateColumnPositionOutput) {
@@ -116,7 +117,7 @@ func TestUpdateColumnPosition(t *testing.T) {
 			setupMocks: func(d columnTestDeps) {
 				col := &entity.Column{ID: columnID, BoardID: boardID, Position: 2000}
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				// Requested 1500, but a rebalance rewrote this column to 2000.
 				d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(1500)).Return(float64(2000), nil)
 			},
@@ -136,7 +137,7 @@ func TestUpdateColumnPosition(t *testing.T) {
 			setupMocks: func(d columnTestDeps) {
 				col := &entity.Column{ID: columnID, BoardID: boardID, Position: 2000}
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(-1000)).Return(float64(-1000), nil)
 			},
 			checkOut: func(t *testing.T, out *column.UpdateColumnPositionOutput) {
@@ -157,7 +158,7 @@ func TestUpdateColumnPosition(t *testing.T) {
 			setupMocks: func(d columnTestDeps) {
 				col := &entity.Column{ID: columnID, BoardID: boardID, Position: 2000}
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(0)).Return(float64(0), nil)
 			},
 			checkOut: func(t *testing.T, out *column.UpdateColumnPositionOutput) {

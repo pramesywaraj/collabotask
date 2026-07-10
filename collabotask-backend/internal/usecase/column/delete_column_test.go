@@ -12,6 +12,7 @@ import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/column"
+	"collabotask/internal/usecase/common"
 )
 
 func TestDeleteColumn(t *testing.T) {
@@ -71,7 +72,7 @@ func TestDeleteColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(existingColumn, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
 			},
 			wantErr: domain.ErrBoardAccessDenied,
 		},
@@ -80,7 +81,7 @@ func TestDeleteColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(existingColumn, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(&entity.Board{ID: boardID}, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: &entity.Board{ID: boardID}}, nil)
 				d.columnRepo.EXPECT().Delete(mock.Anything, columnID).Return(errors.New("db error"))
 			},
 			wantErrMsg: "db error",
@@ -90,7 +91,7 @@ func TestDeleteColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(existingColumn, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(&entity.Board{ID: boardID}, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: &entity.Board{ID: boardID}}, nil)
 				d.columnRepo.EXPECT().Delete(mock.Anything, columnID).Return(nil)
 			},
 		},

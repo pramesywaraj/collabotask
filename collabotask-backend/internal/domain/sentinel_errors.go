@@ -24,6 +24,7 @@ var (
 	ErrBoardAccessDenied      = errors.New("board access denied")
 	ErrBoardPermissionDenied  = errors.New("board permission denied")
 	ErrBoardCannotJoin        = errors.New("cannot join board, permission denied")
+	ErrBoardJoinRequired      = errors.New("join the board before accessing its content")
 	ErrBoardNoMembersToInvite = errors.New("no members were added to the board")
 
 	// Column

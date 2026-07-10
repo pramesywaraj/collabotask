@@ -145,6 +145,23 @@ func TestUpdateBoard(t *testing.T) {
 			},
 		},
 		{
+			name:  "success — admin flips visibility to PRIVATE (visibility alone satisfies at-least-one)",
+			input: board.UpdateBoardInput{RequesterID: requesterID, BoardID: boardID, Visibility: strPtr("PRIVATE")},
+			setupMocks: func(d boardTestDeps) {
+				b := *existingBoard
+				b.Visibility = entity.BoardVisibilityWorkspace
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(&b, nil)
+				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
+				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
+				d.boardRepo.EXPECT().Update(mock.Anything, mock.MatchedBy(func(b *entity.Board) bool {
+					return b.Visibility == entity.BoardVisibilityPrivate
+				})).Return(nil)
+			},
+			checkOut: func(t *testing.T, out *board.UpdateBoardOutput) {
+				assert.Equal(t, entity.BoardVisibilityPrivate, out.Board.Visibility)
+			},
+		},
+		{
 			name: "success — description cleared (DescriptionPresent=true, Description=nil)",
 			input: board.UpdateBoardInput{
 				RequesterID:        requesterID,

@@ -13,6 +13,7 @@ import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/board"
+	"collabotask/internal/usecase/common"
 )
 
 func TestGetBoardKanban(t *testing.T) {
@@ -46,7 +47,7 @@ func TestGetBoardKanban(t *testing.T) {
 			name:  "boardAccessChecker.Check fails → error propagated",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardNotFound)
+				d.checker.EXPECT().CheckViewAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardNotFound)
 			},
 			wantErr: domain.ErrBoardNotFound,
 		},
@@ -54,7 +55,7 @@ func TestGetBoardKanban(t *testing.T) {
 			name:  "columnRepo.GetColumnsByBoard fails → wrapped error",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(existingBoard, nil)
+				d.checker.EXPECT().CheckViewAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
 				d.columnRepo.EXPECT().GetColumnsByBoard(mock.Anything, boardID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to fetch list of columns",
@@ -64,7 +65,7 @@ func TestGetBoardKanban(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				col := &entity.Column{ID: columnID, BoardID: boardID, Title: "To Do"}
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(existingBoard, nil)
+				d.checker.EXPECT().CheckViewAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
 				d.columnRepo.EXPECT().GetColumnsByBoard(mock.Anything, boardID).Return([]*entity.Column{col}, nil)
 				d.cardRepo.EXPECT().GetCardsByColumn(mock.Anything, columnID).Return(nil, errors.New("db error"))
 			},
@@ -76,7 +77,7 @@ func TestGetBoardKanban(t *testing.T) {
 			setupMocks: func(d boardTestDeps) {
 				col := &entity.Column{ID: columnID, BoardID: boardID, Title: "To Do"}
 				card := &entity.Card{ID: uuid.New(), ColumnID: columnID, Title: "Card", AssignedTo: &assigneeID}
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(existingBoard, nil)
+				d.checker.EXPECT().CheckViewAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
 				d.columnRepo.EXPECT().GetColumnsByBoard(mock.Anything, boardID).Return([]*entity.Column{col}, nil)
 				d.cardRepo.EXPECT().GetCardsByColumn(mock.Anything, columnID).Return([]*entity.Card{card}, nil)
 				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(nil, errors.New("db error"))
@@ -87,7 +88,7 @@ func TestGetBoardKanban(t *testing.T) {
 			name:  "success — empty board (no columns)",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(existingBoard, nil)
+				d.checker.EXPECT().CheckViewAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
 				d.columnRepo.EXPECT().GetColumnsByBoard(mock.Anything, boardID).Return([]*entity.Column{}, nil)
 				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(map[uuid.UUID]*entity.User{}, nil)
 			},
@@ -104,7 +105,7 @@ func TestGetBoardKanban(t *testing.T) {
 				card2 := &entity.Card{ID: uuid.New(), ColumnID: columnID, Title: "Card 2", AssignedTo: &assigneeID}
 				assignee := &entity.User{ID: assigneeID, Name: "Alice"}
 
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(existingBoard, nil)
+				d.checker.EXPECT().CheckViewAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
 				d.columnRepo.EXPECT().GetColumnsByBoard(mock.Anything, boardID).Return([]*entity.Column{col}, nil)
 				d.cardRepo.EXPECT().GetCardsByColumn(mock.Anything, columnID).Return([]*entity.Card{card1, card2}, nil)
 				// assigneeID appears twice but GetByIds must be called with it only once

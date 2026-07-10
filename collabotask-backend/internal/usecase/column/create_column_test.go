@@ -13,6 +13,7 @@ import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/column"
+	"collabotask/internal/usecase/common"
 )
 
 func TestCreateColumn(t *testing.T) {
@@ -44,7 +45,7 @@ func TestCreateColumn(t *testing.T) {
 			name:  "boardAccessChecker.Check fails → error propagated",
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardNotFound)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardNotFound)
 			},
 			wantErr: domain.ErrBoardNotFound,
 		},
@@ -52,7 +53,7 @@ func TestCreateColumn(t *testing.T) {
 			name:  "columnRepo.GetMaxPosition fails → wrapped error",
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(0, errors.New("db error"))
 			},
 			wantErrMsg: "failed to get max position",
@@ -61,7 +62,7 @@ func TestCreateColumn(t *testing.T) {
 			name:  "columnRepo.Create fails → error",
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(2000), nil)
 				d.columnRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
 					return c.Position == 3000
@@ -73,7 +74,7 @@ func TestCreateColumn(t *testing.T) {
 			name:  "success — first column in empty board (maxPos=0 → position=1000)",
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(0), nil)
 				d.columnRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
 					return c.BoardID == boardID && c.Title == "My Column" && c.Position == 1000
@@ -89,7 +90,7 @@ func TestCreateColumn(t *testing.T) {
 			name:  "success — appends after existing column (maxPos=4000 → position=5000)",
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(4000), nil)
 				d.columnRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
 					return c.BoardID == boardID && c.Title == "My Column" && c.Position == 5000

@@ -14,7 +14,7 @@ func (bu *BoardUseCase) GetBoardKanban(ctx context.Context, input GetBoardKanban
 		return nil, fmt.Errorf("failed to validate board kanban input: %w", err)
 	}
 
-	if _, err := bu.boardAccessChecker.Check(ctx, input.BoardID, input.RequesterID); err != nil {
+	if _, err := bu.boardAccessChecker.CheckViewAccess(ctx, input.BoardID, input.RequesterID); err != nil {
 		return nil, err
 	}
 

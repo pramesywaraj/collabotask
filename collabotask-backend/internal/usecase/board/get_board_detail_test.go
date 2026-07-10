@@ -21,10 +21,17 @@ func TestGetBoardDetail(t *testing.T) {
 	requesterID := uuid.New()
 	memberUserID := uuid.New()
 
-	existingBoard := &entity.Board{
-		ID:        boardID,
-		Title:     "My Board",
-		CreatedBy: uuid.New(),
+	workspaceBoard := &entity.Board{
+		ID:         boardID,
+		Title:      "My Board",
+		CreatedBy:  uuid.New(),
+		Visibility: entity.BoardVisibilityWorkspace,
+	}
+	privateBoard := &entity.Board{
+		ID:         boardID,
+		Title:      "My Board",
+		CreatedBy:  uuid.New(),
+		Visibility: entity.BoardVisibilityPrivate,
 	}
 
 	validInput := board.GetBoardDetailInput{
@@ -47,10 +54,10 @@ func TestGetBoardDetail(t *testing.T) {
 			wantErrMsg: "validation",
 		},
 		{
-			name:  "boardAccessChecker.Resolve fails → error propagated",
+			name:  "checker denies (plain member on PRIVATE) → ErrBoardNotFound propagated",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.checker.EXPECT().Resolve(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardNotFound)
+				d.checker.EXPECT().CheckMetadataAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardNotFound)
 			},
 			wantErr: domain.ErrBoardNotFound,
 		},
@@ -58,7 +65,7 @@ func TestGetBoardDetail(t *testing.T) {
 			name:  "boardMemberRepo.GetMembersByBoard fails → wrapped error",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.checker.EXPECT().Resolve(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
+				d.checker.EXPECT().CheckMetadataAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: workspaceBoard}, nil)
 				d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, boardID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to fetch board members",
@@ -68,7 +75,7 @@ func TestGetBoardDetail(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				member := &entity.BoardMember{BoardID: boardID, UserID: memberUserID, Role: entity.BoardRoleMember}
-				d.checker.EXPECT().Resolve(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
+				d.checker.EXPECT().CheckMetadataAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: workspaceBoard}, nil)
 				d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, boardID).Return([]*entity.BoardMember{member}, nil)
 				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(nil, errors.New("db error"))
 			},
@@ -79,19 +86,19 @@ func TestGetBoardDetail(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				member := &entity.BoardMember{BoardID: boardID, UserID: memberUserID, Role: entity.BoardRoleMember}
-				d.checker.EXPECT().Resolve(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: existingBoard}, nil)
+				d.checker.EXPECT().CheckMetadataAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: workspaceBoard}, nil)
 				d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, boardID).Return([]*entity.BoardMember{member}, nil)
 				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(map[uuid.UUID]*entity.User{}, nil)
 			},
 			wantErr: domain.ErrUserNotFound,
 		},
 		{
-			name:  "success — requester is board member (accessStatus=JOINED, role set)",
+			name:  "success — requester is board member (accessStatus=JOINED, role set, full roster)",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				bm := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleMember}
-				access := &common.BoardAccess{Board: existingBoard, BoardMember: bm}
-				d.checker.EXPECT().Resolve(mock.Anything, boardID, requesterID).Return(access, nil)
+				access := &common.BoardAccess{Board: privateBoard, BoardMember: bm}
+				d.checker.EXPECT().CheckMetadataAccess(mock.Anything, boardID, requesterID).Return(access, nil)
 				d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, boardID).Return([]*entity.BoardMember{bm}, nil)
 				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(map[uuid.UUID]*entity.User{
 					requesterID: {ID: requesterID, Email: "r@example.com", Name: "Requester"},
@@ -101,14 +108,15 @@ func TestGetBoardDetail(t *testing.T) {
 				assert.Equal(t, entity.BoardJoined, out.Board.AccessStatus)
 				require.NotNil(t, out.Board.UserRole)
 				assert.Equal(t, entity.BoardRoleMember, *out.Board.UserRole)
+				assert.Len(t, out.Board.Members, 1)
 			},
 		},
 		{
-			name:  "success — workspace admin without board entry (accessStatus=CAN_JOIN)",
+			name:  "success — non-joined admin on WORKSPACE board (CAN_JOIN, nil role, roster shown)",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				access := &common.BoardAccess{Board: existingBoard, BoardMember: nil}
-				d.checker.EXPECT().Resolve(mock.Anything, boardID, requesterID).Return(access, nil)
+				access := &common.BoardAccess{Board: workspaceBoard, BoardMember: nil}
+				d.checker.EXPECT().CheckMetadataAccess(mock.Anything, boardID, requesterID).Return(access, nil)
 				d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, boardID).Return([]*entity.BoardMember{}, nil)
 				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(map[uuid.UUID]*entity.User{}, nil)
 			},
@@ -118,18 +126,17 @@ func TestGetBoardDetail(t *testing.T) {
 			},
 		},
 		{
-			name:  "success — board creator without board member record",
-			input: board.GetBoardDetailInput{RequesterID: existingBoard.CreatedBy, BoardID: boardID},
+			name:  "success — non-joined admin on PRIVATE board (thin roster: Members empty, no roster fetch)",
+			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				access := &common.BoardAccess{Board: existingBoard, BoardMember: nil}
-				d.checker.EXPECT().Resolve(mock.Anything, boardID, existingBoard.CreatedBy).Return(access, nil)
-				d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, boardID).Return([]*entity.BoardMember{}, nil)
-				d.userRepo.EXPECT().GetByIds(mock.Anything, mock.Anything).Return(map[uuid.UUID]*entity.User{}, nil)
+				access := &common.BoardAccess{Board: privateBoard, BoardMember: nil}
+				d.checker.EXPECT().CheckMetadataAccess(mock.Anything, boardID, requesterID).Return(access, nil)
+				// GetMembersByBoard / GetByIds must NOT be called — roster is hidden.
 			},
 			checkOut: func(t *testing.T, out *board.GetBoardDetailOutput) {
-				assert.Equal(t, entity.BoardJoined, out.Board.AccessStatus)
-				require.NotNil(t, out.Board.UserRole)
-				assert.Equal(t, entity.BoardRoleOwner, *out.Board.UserRole)
+				assert.Equal(t, entity.BoardCanJoin, out.Board.AccessStatus)
+				assert.Nil(t, out.Board.UserRole)
+				assert.Empty(t, out.Board.Members)
 			},
 		},
 	}

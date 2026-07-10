@@ -24,7 +24,7 @@ func (cu *ColumnUseCase) DeleteColumn(ctx context.Context, input DeleteColumnInp
 		return domain.ErrColumnNotInBoard
 	}
 
-	_, err = cu.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
+	_, err = cu.boardAccessChecker.CheckMutateAccess(ctx, column.BoardID, input.RequesterID)
 	if err != nil {
 		return err
 	}

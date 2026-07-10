@@ -39,36 +39,45 @@ func (_m *MockBoardMemberRepository) EXPECT() *MockBoardMemberRepository_Expecte
 	return &MockBoardMemberRepository_Expecter{mock: &_m.Mock}
 }
 
-// Create provides a mock function for the type MockBoardMemberRepository
-func (_mock *MockBoardMemberRepository) Create(ctx context.Context, boardMember *entity.BoardMember) error {
+// CreateIfAbsent provides a mock function for the type MockBoardMemberRepository
+func (_mock *MockBoardMemberRepository) CreateIfAbsent(ctx context.Context, boardMember *entity.BoardMember) (bool, error) {
 	ret := _mock.Called(ctx, boardMember)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Create")
+		panic("no return value specified for CreateIfAbsent")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *entity.BoardMember) error); ok {
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entity.BoardMember) (bool, error)); ok {
+		return returnFunc(ctx, boardMember)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entity.BoardMember) bool); ok {
 		r0 = returnFunc(ctx, boardMember)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(bool)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *entity.BoardMember) error); ok {
+		r1 = returnFunc(ctx, boardMember)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
-// MockBoardMemberRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
-type MockBoardMemberRepository_Create_Call struct {
+// MockBoardMemberRepository_CreateIfAbsent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateIfAbsent'
+type MockBoardMemberRepository_CreateIfAbsent_Call struct {
 	*mock.Call
 }
 
-// Create is a helper method to define mock.On call
+// CreateIfAbsent is a helper method to define mock.On call
 //   - ctx context.Context
 //   - boardMember *entity.BoardMember
-func (_e *MockBoardMemberRepository_Expecter) Create(ctx any, boardMember any) *MockBoardMemberRepository_Create_Call {
-	return &MockBoardMemberRepository_Create_Call{Call: _e.mock.On("Create", ctx, boardMember)}
+func (_e *MockBoardMemberRepository_Expecter) CreateIfAbsent(ctx any, boardMember any) *MockBoardMemberRepository_CreateIfAbsent_Call {
+	return &MockBoardMemberRepository_CreateIfAbsent_Call{Call: _e.mock.On("CreateIfAbsent", ctx, boardMember)}
 }
 
-func (_c *MockBoardMemberRepository_Create_Call) Run(run func(ctx context.Context, boardMember *entity.BoardMember)) *MockBoardMemberRepository_Create_Call {
+func (_c *MockBoardMemberRepository_CreateIfAbsent_Call) Run(run func(ctx context.Context, boardMember *entity.BoardMember)) *MockBoardMemberRepository_CreateIfAbsent_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -86,12 +95,12 @@ func (_c *MockBoardMemberRepository_Create_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *MockBoardMemberRepository_Create_Call) Return(err error) *MockBoardMemberRepository_Create_Call {
-	_c.Call.Return(err)
+func (_c *MockBoardMemberRepository_CreateIfAbsent_Call) Return(b bool, err error) *MockBoardMemberRepository_CreateIfAbsent_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *MockBoardMemberRepository_Create_Call) RunAndReturn(run func(ctx context.Context, boardMember *entity.BoardMember) error) *MockBoardMemberRepository_Create_Call {
+func (_c *MockBoardMemberRepository_CreateIfAbsent_Call) RunAndReturn(run func(ctx context.Context, boardMember *entity.BoardMember) (bool, error)) *MockBoardMemberRepository_CreateIfAbsent_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -35,12 +35,19 @@ func (bu *BoardUseCase) CreateBoard(ctx context.Context, input CreateBoardInput)
 		backgroundColor = *input.BackgroundColor
 	}
 
+	// Boards default to WORKSPACE visibility when the caller omits it.
+	visibility := entity.BoardVisibilityWorkspace
+	if input.Visibility != nil && *input.Visibility != "" {
+		visibility = entity.BoardVisibility(*input.Visibility)
+	}
+
 	board := &entity.Board{
 		WorkspaceID:     input.WorkspaceID,
 		Title:           input.Title,
 		Description:     description,
 		CreatedBy:       input.RequesterID,
 		BackgroundColor: backgroundColor,
+		Visibility:      visibility,
 	}
 
 	err = bu.boardRepo.CreateWithOwner(ctx, board, input.RequesterID)

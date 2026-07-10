@@ -13,6 +13,7 @@ import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/card"
+	"collabotask/internal/usecase/common"
 )
 
 func TestCreateCard(t *testing.T) {
@@ -83,7 +84,7 @@ func TestCreateCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
 			},
 			wantErr: domain.ErrBoardAccessDenied,
 		},
@@ -92,7 +93,7 @@ func TestCreateCard(t *testing.T) {
 			input: card.CreateCardInput{BoardID: boardID, ColumnID: columnID, Title: "My Card", RequesterID: requesterID, AssignedTo: ptr(uuid.Nil)},
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 			},
 			wantErr: domain.ErrInvalidAssigneeID,
 		},
@@ -101,7 +102,7 @@ func TestCreateCard(t *testing.T) {
 			input: assigneeInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to fetch assignee",
@@ -111,7 +112,7 @@ func TestCreateCard(t *testing.T) {
 			input: assigneeInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(nil, nil)
 			},
 			wantErr: domain.ErrUserNotFound,
@@ -121,7 +122,7 @@ func TestCreateCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(0, errors.New("db error"))
 			},
 			wantErrMsg: "failed to get cards max position",
@@ -131,7 +132,7 @@ func TestCreateCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(float64(3000), nil)
 				d.cardRepo.EXPECT().Create(mock.Anything, mock.Anything).Return(errors.New("db error"))
 			},
@@ -142,7 +143,7 @@ func TestCreateCard(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.cardRepo.EXPECT().GetMaxPosition(mock.Anything, columnID).Return(float64(4000), nil)
 				d.cardRepo.EXPECT().Create(mock.Anything, mock.MatchedBy(func(c *entity.Card) bool {
 					return c.ColumnID == columnID && c.Title == "My Card" && c.Position == 5000 &&
@@ -161,7 +162,7 @@ func TestCreateCard(t *testing.T) {
 			input: assigneeInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(
 					&entity.User{ID: assigneeID, Name: "Assignee"}, nil,
 				)

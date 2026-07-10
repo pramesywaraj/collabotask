@@ -13,6 +13,7 @@ import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/column"
+	"collabotask/internal/usecase/common"
 )
 
 func TestUpdateColumn(t *testing.T) {
@@ -79,7 +80,7 @@ func TestUpdateColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
 			},
 			wantErr: domain.ErrBoardAccessDenied,
 		},
@@ -88,7 +89,7 @@ func TestUpdateColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(&entity.Board{ID: boardID}, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: &entity.Board{ID: boardID}}, nil)
 				d.columnRepo.EXPECT().Update(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
 					return c.Title == "New Title"
 				})).Return(errors.New("db error"))
@@ -100,7 +101,7 @@ func TestUpdateColumn(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d columnTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(&entity.Board{ID: boardID}, nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: &entity.Board{ID: boardID}}, nil)
 				d.columnRepo.EXPECT().Update(mock.Anything, mock.MatchedBy(func(c *entity.Column) bool {
 					return c.Title == "New Title"
 				})).Return(nil)

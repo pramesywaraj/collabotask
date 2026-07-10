@@ -13,6 +13,7 @@ import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/card"
+	"collabotask/internal/usecase/common"
 )
 
 func TestMoveCard(t *testing.T) {
@@ -47,7 +48,7 @@ func TestMoveCard(t *testing.T) {
 		d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, fromColumnID).Return(fromColumn, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, toColumnID).Return(toColumn, nil)
-		d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(board, nil)
+		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
 	}
 
 	tests := []struct {
@@ -158,7 +159,7 @@ func TestMoveCard(t *testing.T) {
 				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 				d.columnRepo.EXPECT().GetByID(mock.Anything, fromColumnID).Return(fromColumn, nil)
 				d.columnRepo.EXPECT().GetByID(mock.Anything, toColumnID).Return(toColumn, nil)
-				d.checker.EXPECT().Check(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardAccessDenied)
 			},
 			wantErr: domain.ErrBoardAccessDenied,
 		},

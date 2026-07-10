@@ -24,7 +24,7 @@ func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateC
 		return nil, domain.ErrColumnNotInBoard
 	}
 
-	_, err = cu.boardAccessChecker.Check(ctx, column.BoardID, input.RequesterID)
+	_, err = cu.boardAccessChecker.CheckMutateAccess(ctx, column.BoardID, input.RequesterID)
 	if err != nil {
 		return nil, err
 	}

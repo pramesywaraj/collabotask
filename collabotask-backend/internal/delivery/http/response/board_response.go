@@ -9,15 +9,16 @@ import (
 )
 
 type BoardResponse struct {
-	ID              uuid.UUID `json:"id"`
-	WorkspaceID     uuid.UUID `json:"workspace_id"`
-	Title           string    `json:"title"`
-	Description     *string   `json:"description"`
-	CreatedBy       uuid.UUID `json:"created_by"`
-	IsArchived      bool      `json:"is_archived"`
-	BackgroundColor string    `json:"background_color"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              uuid.UUID              `json:"id"`
+	WorkspaceID     uuid.UUID              `json:"workspace_id"`
+	Title           string                 `json:"title"`
+	Description     *string                `json:"description"`
+	CreatedBy       uuid.UUID              `json:"created_by"`
+	IsArchived      bool                   `json:"is_archived"`
+	BackgroundColor string                 `json:"background_color"`
+	Visibility      entity.BoardVisibility `json:"visibility"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
 type BoardWithMetaResponse struct {
@@ -26,6 +27,12 @@ type BoardWithMetaResponse struct {
 	UserRole     *entity.BoardRole        `json:"user_role"`
 	AccessStatus entity.BoardAccessStatus `json:"access_status"`
 	MemberCount  uint                     `json:"member_count"`
+	CardCount    uint                     `json:"card_count"`
+}
+
+type BoardSelfJoinResponse struct {
+	Joined  bool   `json:"joined"`
+	Message string `json:"message,omitempty"`
 }
 
 type BoardMemberResponse struct {
@@ -71,6 +78,7 @@ func BoardToResponse(b *entity.Board) BoardResponse {
 		BackgroundColor: b.BackgroundColor,
 		CreatedBy:       b.CreatedBy,
 		IsArchived:      b.IsArchived,
+		Visibility:      b.Visibility,
 		CreatedAt:       b.CreatedAt,
 		UpdatedAt:       b.UpdatedAt,
 	}
@@ -82,6 +90,7 @@ func BoardWithMetaToResponse(b board.BoardWithMeta) BoardWithMetaResponse {
 		UserRole:      b.UserRole,
 		AccessStatus:  b.AccessStatus,
 		MemberCount:   b.MemberCount,
+		CardCount:     b.CardCount,
 	}
 }
 

@@ -45,6 +45,7 @@ func (br *boardRepository) CreateWithOwner(ctx context.Context, board *entity.Bo
 		description,
 		board.CreatedBy,
 		board.BackgroundColor,
+		board.Visibility,
 	).Scan(
 		&board.ID,
 		&board.WorkspaceID,
@@ -53,6 +54,7 @@ func (br *boardRepository) CreateWithOwner(ctx context.Context, board *entity.Bo
 		&board.CreatedBy,
 		&board.IsArchived,
 		&board.BackgroundColor,
+		&board.Visibility,
 		&board.CreatedAt,
 		&board.UpdatedAt,
 	)
@@ -117,6 +119,11 @@ func (br *boardRepository) Update(ctx context.Context, board *entity.Board) erro
 		backgroundColor = &board.BackgroundColor
 	}
 
+	var visibility *entity.BoardVisibility
+	if board.Visibility != "" {
+		visibility = &board.Visibility
+	}
+
 	updatedAt := time.Now()
 
 	err := br.db.QueryRow(
@@ -125,6 +132,7 @@ func (br *boardRepository) Update(ctx context.Context, board *entity.Board) erro
 		title,
 		board.Description,
 		backgroundColor,
+		visibility,
 		updatedAt,
 		board.ID,
 	).Scan(
@@ -135,6 +143,7 @@ func (br *boardRepository) Update(ctx context.Context, board *entity.Board) erro
 		&board.CreatedBy,
 		&board.IsArchived,
 		&board.BackgroundColor,
+		&board.Visibility,
 		&board.CreatedAt,
 		&board.UpdatedAt,
 	)
@@ -164,6 +173,7 @@ func (br *boardRepository) GetByID(ctx context.Context, boardID uuid.UUID) (*ent
 		&board.CreatedBy,
 		&board.IsArchived,
 		&board.BackgroundColor,
+		&board.Visibility,
 		&board.CreatedAt,
 		&board.UpdatedAt,
 	)
@@ -198,6 +208,7 @@ func (br *boardRepository) GetUserBoardsInWorkspace(ctx context.Context, workspa
 		var accessStatus *string
 		var role *string
 		var memberCount int64
+		var cardCount int64
 
 		err := rows.Scan(
 			&board.ID,
@@ -207,11 +218,13 @@ func (br *boardRepository) GetUserBoardsInWorkspace(ctx context.Context, workspa
 			&board.CreatedBy,
 			&board.IsArchived,
 			&board.BackgroundColor,
+			&board.Visibility,
 			&board.CreatedAt,
 			&board.UpdatedAt,
 			&role,
 			&accessStatus,
 			&memberCount,
+			&cardCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan board: %w", err)
@@ -225,6 +238,7 @@ func (br *boardRepository) GetUserBoardsInWorkspace(ctx context.Context, workspa
 			board.UserRole = entity.BoardRole(*role)
 		}
 		board.MemberCount = uint(memberCount)
+		board.CardCount = uint(cardCount)
 
 		boards = append(boards, board)
 	}

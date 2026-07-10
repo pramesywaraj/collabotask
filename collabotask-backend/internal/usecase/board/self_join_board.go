@@ -9,43 +9,52 @@ import (
 	"fmt"
 )
 
-func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardInput) error {
+func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardInput) (*SelfJoinBoardOutput, error) {
 	if err := validator.Struct(input); err != nil {
-		return fmt.Errorf("failed to validate self join board input: %w", err)
+		return nil, fmt.Errorf("failed to validate self join board input: %w", err)
 	}
 
 	board, err := bu.boardRepo.GetByID(ctx, input.BoardID)
 	if err != nil {
 		if errors.Is(err, domain.ErrBoardNotFound) {
-			return domain.ErrBoardNotFound
+			return nil, domain.ErrBoardNotFound
 		}
-		return fmt.Errorf("failed to verify board existence: %w", err)
+		return nil, fmt.Errorf("failed to verify board existence: %w", err)
 	}
 	if board == nil || board.IsEmpty() || board.IsArchived || board.WorkspaceID != input.WorkspaceID {
-		return domain.ErrBoardNotFound
+		return nil, domain.ErrBoardNotFound
 	}
 
 	workspaceMember, err := bu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, input.WorkspaceID, input.RequesterID)
 	if err != nil {
 		if errors.Is(err, domain.ErrMemberNotFound) {
-			return domain.ErrUserNotInWorkspace
+			return nil, domain.ErrUserNotInWorkspace
 		}
-		return fmt.Errorf("failed to fetch workspace membership for requester: %w", err)
+		return nil, fmt.Errorf("failed to fetch workspace membership for requester: %w", err)
 	}
 	if workspaceMember == nil || workspaceMember.IsEmpty() {
-		return domain.ErrUserNotInWorkspace
+		return nil, domain.ErrUserNotInWorkspace
 	}
 
 	boardMember, err := bu.boardMemberRepo.GetMemberByBoardAndUser(ctx, input.BoardID, input.RequesterID)
 	if err != nil {
 		if !errors.Is(err, domain.ErrBoardMemberNotFound) {
-			return fmt.Errorf("error occurred when fetching board membership: %w", err)
+			return nil, fmt.Errorf("error occurred when fetching board membership: %w", err)
 		}
 	}
 
-	canJoin := workspaceMember.IsAdmin() && (boardMember == nil || boardMember.IsEmpty())
-	if !canJoin {
-		return domain.ErrBoardCannotJoin
+	// Already a member → idempotent no-op. This is checked before the
+	// eligibility gate so an existing member of a board later flipped to PRIVATE
+	// still gets a clean 200, not a 404.
+	if boardMember != nil && !boardMember.IsEmpty() {
+		return &SelfJoinBoardOutput{Joined: false}, nil
+	}
+
+	// Eligibility (ADR-005): an admin may join any board; a plain member may
+	// only join a WORKSPACE-visible one. A plain member on a PRIVATE board must
+	// not even learn it exists, so it is hidden (404) rather than refused (403).
+	if !workspaceMember.IsAdmin() && board.Visibility != entity.BoardVisibilityWorkspace {
+		return nil, domain.ErrBoardNotFound
 	}
 
 	newBoardMember := &entity.BoardMember{
@@ -54,9 +63,13 @@ func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardIn
 		Role:    entity.BoardRoleMember,
 	}
 
-	if err := bu.boardMemberRepo.Create(ctx, newBoardMember); err != nil {
-		return fmt.Errorf("failed join to the board: %w", err)
+	// ON CONFLICT DO NOTHING RETURNING: guards the race where a concurrent join
+	// slipped in between the check above and here. A no-op insert reports
+	// Joined=false so the (future) activity log / broadcast stays silent.
+	inserted, err := bu.boardMemberRepo.CreateIfAbsent(ctx, newBoardMember)
+	if err != nil {
+		return nil, fmt.Errorf("failed join to the board: %w", err)
 	}
 
-	return nil
+	return &SelfJoinBoardOutput{Joined: inserted}, nil
 }

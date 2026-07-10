@@ -214,9 +214,9 @@ type BoardInviteesListSuccessDoc struct {
 
 type BoardSelfJoinSuccessDoc struct {
 	successDocBase
-	StatusCode int         `json:"status_code" example:"200"`
-	Message    string      `json:"message" example:"Successfully joined the board"`
-	Data       interface{} `json:"data"`
+	StatusCode int                   `json:"status_code" example:"200"`
+	Message    string                `json:"message" example:"Successfully joined the board"`
+	Data       BoardSelfJoinResponse `json:"data"`
 }
 
 type BoardLeaveSuccessDoc struct {
