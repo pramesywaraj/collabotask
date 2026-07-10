@@ -12,6 +12,7 @@ import (
 
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/domain/repository"
 	"collabotask/internal/mocks"
 	"collabotask/internal/usecase/workspace"
 )
@@ -60,6 +61,14 @@ func TestRemoveMember(t *testing.T) {
 			wantErr: domain.ErrNotWorkspaceAdmin,
 		},
 		{
+			name:  "requester lookup fails with DB error → wrapped error (not 403)",
+			input: validInput,
+			setupMocks: func(wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
+				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(nil, errors.New("db connection lost"))
+			},
+			wantErrMsg: "failed to get requester",
+		},
+		{
 			name: "RequesterID == UserID (requester IS admin) → ErrCannotRemoveYourself",
 			input: workspace.RemoveMemberInput{
 				RequesterID: requesterID,
@@ -76,25 +85,25 @@ func TestRemoveMember(t *testing.T) {
 			input: validInput,
 			setupMocks: func(wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
-				wsMemberRepo.EXPECT().Delete(mock.Anything, workspaceID, targetID).Return(domain.ErrMemberNotFound)
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(nil, domain.ErrMemberNotFound)
 			},
 			wantErr: domain.ErrMemberNotFound,
 		},
 		{
-			name:  "Delete fails with unexpected error → wrapped error",
+			name:  "cascade fails with unexpected error → wrapped error",
 			input: validInput,
 			setupMocks: func(wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
-				wsMemberRepo.EXPECT().Delete(mock.Anything, workspaceID, targetID).Return(errors.New("db error"))
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to remove member from the workspace",
 		},
 		{
-			name:  "success",
+			name:  "success — cascade invoked, existing guards still hold",
 			input: validInput,
 			setupMocks: func(wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
-				wsMemberRepo.EXPECT().Delete(mock.Anything, workspaceID, targetID).Return(nil)
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return([]repository.AffectedCard{}, nil)
 			},
 		},
 	}

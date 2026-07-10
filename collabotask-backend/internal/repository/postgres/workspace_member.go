@@ -137,3 +137,75 @@ func (wm *workspaceMemberRepository) IsUserExists(ctx context.Context, workspace
 
 	return exists, nil
 }
+
+func (wm *workspaceMemberRepository) UpdateRole(ctx context.Context, workspaceID, userID uuid.UUID, role entity.WorkspaceRole) (*entity.WorkspaceMember, error) {
+	member := &entity.WorkspaceMember{}
+	err := wm.db.QueryRow(ctx, updateWorkspaceMemberRoleQuery, workspaceID, userID, role).Scan(
+		&member.WorkspaceID,
+		&member.UserID,
+		&member.Role,
+		&member.JoinedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrMemberNotFound
+		}
+		return nil, fmt.Errorf("failed to update member role: %w", err)
+	}
+
+	return member, nil
+}
+
+func (wm *workspaceMemberRepository) CountAdmins(ctx context.Context, workspaceID uuid.UUID) (int, error) {
+	var count int
+	err := wm.db.QueryRow(ctx, countWorkspaceAdminsQuery, workspaceID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count workspace admins: %w", err)
+	}
+
+	return count, nil
+}
+
+func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.Context, workspaceID, userID uuid.UUID) ([]repository.AffectedCard, error) {
+	tx, err := wm.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	result, err := tx.Exec(ctx, deleteWorkspaceMemberQuery, workspaceID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove workspace member: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return nil, domain.ErrMemberNotFound
+	}
+
+	if _, err = tx.Exec(ctx, deleteBoardMembershipsForUserQuery, workspaceID, userID); err != nil {
+		return nil, fmt.Errorf("failed to remove board memberships: %w", err)
+	}
+
+	rows, err := tx.Query(ctx, unassignCardsForUserQuery, workspaceID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unassign cards: %w", err)
+	}
+	defer rows.Close()
+
+	var affected []repository.AffectedCard
+	for rows.Next() {
+		var card repository.AffectedCard
+		if err := rows.Scan(&card.CardID, &card.ColumnID); err != nil {
+			return nil, fmt.Errorf("failed to scan affected card: %w", err)
+		}
+		affected = append(affected, card)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating affected cards: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit cascade transaction: %w", err)
+	}
+
+	return affected, nil
+}

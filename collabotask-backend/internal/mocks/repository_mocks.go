@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/domain/repository"
 	"context"
 
 	"github.com/google/uuid"
@@ -2375,6 +2376,72 @@ func (_m *MockWorkspaceMemberRepository) EXPECT() *MockWorkspaceMemberRepository
 	return &MockWorkspaceMemberRepository_Expecter{mock: &_m.Mock}
 }
 
+// CountAdmins provides a mock function for the type MockWorkspaceMemberRepository
+func (_mock *MockWorkspaceMemberRepository) CountAdmins(ctx context.Context, workspaceID uuid.UUID) (int, error) {
+	ret := _mock.Called(ctx, workspaceID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountAdmins")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int, error)); ok {
+		return returnFunc(ctx, workspaceID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) int); ok {
+		r0 = returnFunc(ctx, workspaceID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, workspaceID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockWorkspaceMemberRepository_CountAdmins_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountAdmins'
+type MockWorkspaceMemberRepository_CountAdmins_Call struct {
+	*mock.Call
+}
+
+// CountAdmins is a helper method to define mock.On call
+//   - ctx context.Context
+//   - workspaceID uuid.UUID
+func (_e *MockWorkspaceMemberRepository_Expecter) CountAdmins(ctx any, workspaceID any) *MockWorkspaceMemberRepository_CountAdmins_Call {
+	return &MockWorkspaceMemberRepository_CountAdmins_Call{Call: _e.mock.On("CountAdmins", ctx, workspaceID)}
+}
+
+func (_c *MockWorkspaceMemberRepository_CountAdmins_Call) Run(run func(ctx context.Context, workspaceID uuid.UUID)) *MockWorkspaceMemberRepository_CountAdmins_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockWorkspaceMemberRepository_CountAdmins_Call) Return(n int, err error) *MockWorkspaceMemberRepository_CountAdmins_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockWorkspaceMemberRepository_CountAdmins_Call) RunAndReturn(run func(ctx context.Context, workspaceID uuid.UUID) (int, error)) *MockWorkspaceMemberRepository_CountAdmins_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function for the type MockWorkspaceMemberRepository
 func (_mock *MockWorkspaceMemberRepository) Create(ctx context.Context, member *entity.WorkspaceMember) error {
 	ret := _mock.Called(ctx, member)
@@ -2705,6 +2772,160 @@ func (_c *MockWorkspaceMemberRepository_IsUserExists_Call) Return(b bool, err er
 }
 
 func (_c *MockWorkspaceMemberRepository_IsUserExists_Call) RunAndReturn(run func(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID) (bool, error)) *MockWorkspaceMemberRepository_IsUserExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveWithParticipationCascade provides a mock function for the type MockWorkspaceMemberRepository
+func (_mock *MockWorkspaceMemberRepository) RemoveWithParticipationCascade(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID) ([]repository.AffectedCard, error) {
+	ret := _mock.Called(ctx, workspaceID, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveWithParticipationCascade")
+	}
+
+	var r0 []repository.AffectedCard
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) ([]repository.AffectedCard, error)); ok {
+		return returnFunc(ctx, workspaceID, userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) []repository.AffectedCard); ok {
+		r0 = returnFunc(ctx, workspaceID, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.AffectedCard)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, workspaceID, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveWithParticipationCascade'
+type MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call struct {
+	*mock.Call
+}
+
+// RemoveWithParticipationCascade is a helper method to define mock.On call
+//   - ctx context.Context
+//   - workspaceID uuid.UUID
+//   - userID uuid.UUID
+func (_e *MockWorkspaceMemberRepository_Expecter) RemoveWithParticipationCascade(ctx any, workspaceID any, userID any) *MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call {
+	return &MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call{Call: _e.mock.On("RemoveWithParticipationCascade", ctx, workspaceID, userID)}
+}
+
+func (_c *MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call) Run(run func(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID)) *MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call) Return(affectedCards []repository.AffectedCard, err error) *MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call {
+	_c.Call.Return(affectedCards, err)
+	return _c
+}
+
+func (_c *MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call) RunAndReturn(run func(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID) ([]repository.AffectedCard, error)) *MockWorkspaceMemberRepository_RemoveWithParticipationCascade_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateRole provides a mock function for the type MockWorkspaceMemberRepository
+func (_mock *MockWorkspaceMemberRepository) UpdateRole(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID, role entity.WorkspaceRole) (*entity.WorkspaceMember, error) {
+	ret := _mock.Called(ctx, workspaceID, userID, role)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateRole")
+	}
+
+	var r0 *entity.WorkspaceMember
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, entity.WorkspaceRole) (*entity.WorkspaceMember, error)); ok {
+		return returnFunc(ctx, workspaceID, userID, role)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, entity.WorkspaceRole) *entity.WorkspaceMember); ok {
+		r0 = returnFunc(ctx, workspaceID, userID, role)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entity.WorkspaceMember)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID, entity.WorkspaceRole) error); ok {
+		r1 = returnFunc(ctx, workspaceID, userID, role)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockWorkspaceMemberRepository_UpdateRole_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateRole'
+type MockWorkspaceMemberRepository_UpdateRole_Call struct {
+	*mock.Call
+}
+
+// UpdateRole is a helper method to define mock.On call
+//   - ctx context.Context
+//   - workspaceID uuid.UUID
+//   - userID uuid.UUID
+//   - role entity.WorkspaceRole
+func (_e *MockWorkspaceMemberRepository_Expecter) UpdateRole(ctx any, workspaceID any, userID any, role any) *MockWorkspaceMemberRepository_UpdateRole_Call {
+	return &MockWorkspaceMemberRepository_UpdateRole_Call{Call: _e.mock.On("UpdateRole", ctx, workspaceID, userID, role)}
+}
+
+func (_c *MockWorkspaceMemberRepository_UpdateRole_Call) Run(run func(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID, role entity.WorkspaceRole)) *MockWorkspaceMemberRepository_UpdateRole_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 entity.WorkspaceRole
+		if args[3] != nil {
+			arg3 = args[3].(entity.WorkspaceRole)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockWorkspaceMemberRepository_UpdateRole_Call) Return(workspaceMember *entity.WorkspaceMember, err error) *MockWorkspaceMemberRepository_UpdateRole_Call {
+	_c.Call.Return(workspaceMember, err)
+	return _c
+}
+
+func (_c *MockWorkspaceMemberRepository_UpdateRole_Call) RunAndReturn(run func(ctx context.Context, workspaceID uuid.UUID, userID uuid.UUID, role entity.WorkspaceRole) (*entity.WorkspaceMember, error)) *MockWorkspaceMemberRepository_UpdateRole_Call {
 	_c.Call.Return(run)
 	return _c
 }

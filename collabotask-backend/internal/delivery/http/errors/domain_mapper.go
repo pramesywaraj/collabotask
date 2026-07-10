@@ -19,7 +19,10 @@ func MapDomainError(err error) *AppError {
 		errors.Is(err, domain.ErrBoardPermissionDenied),
 		errors.Is(err, domain.ErrBoardOwnerCannotLeave),
 		errors.Is(err, domain.ErrBoardCannotJoin),
-		errors.Is(err, domain.ErrNotWorkspaceAdmin):
+		errors.Is(err, domain.ErrNotWorkspaceAdmin),
+		errors.Is(err, domain.ErrNotWorkspaceOwner),
+		errors.Is(err, domain.ErrWorkspaceOwnerCannotLeave),
+		errors.Is(err, domain.ErrCannotDemoteOwner):
 		// ErrBoardCannotJoin is 403 (not 409): after self-join's idempotency
 		// check it only ever means "ineligible to join", not a conflict.
 		return NewAppError(http.StatusForbidden, ErrCodeForbidden, err.Error())
@@ -42,7 +45,9 @@ func MapDomainError(err error) *AppError {
 	case errors.Is(err, domain.ErrEmailAlreadyExists),
 		errors.Is(err, domain.ErrAlreadyMember),
 		errors.Is(err, domain.ErrBoardAlreadyMember),
-		errors.Is(err, domain.ErrInconsistentState):
+		errors.Is(err, domain.ErrInconsistentState),
+		errors.Is(err, domain.ErrCannotDemoteLastAdmin),
+		errors.Is(err, domain.ErrLastAdminCannotLeave):
 		return NewAppError(http.StatusConflict, ErrCodeConflict, err.Error())
 	default:
 		return NewAppError(http.StatusInternalServerError, ErrCodeInternal, err.Error())
