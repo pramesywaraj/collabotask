@@ -314,20 +314,36 @@ COMMIT;
 
 #### UC-06b: Promote / Demote Workspace Member — **NEW (Phase 1)**
 - **API:** `PATCH /api/v1/workspace/:workspace_id/member/:user_id/role` · Auth · **Workspace ADMIN**
-- **Request:** `{ "role": "ADMIN" | "MEMBER" }`
-- **Rationale:** the layered model relies on "admin as fallback"; we need a way to create more admins. Guard: cannot demote the **last** admin / the workspace owner below ADMIN.
+- **Request:** `{ "role": "ADMIN" | "MEMBER" }` (validate `oneof=ADMIN MEMBER`)
+- **Response 200:** updated member with new role.
+- **Rationale:** the layered model relies on "admin as fallback"; we need a way to create more admins.
+- **Guards (demote — only when new role = MEMBER and target currently ADMIN):**
+  - Requester is not workspace admin → **403** `FORBIDDEN`.
+  - Target is not a member → **404** `NOT_FOUND`.
+  - Target is the workspace **owner** → **403** `FORBIDDEN` (`ErrCannotDemoteOwner`).
+  - Target is the **last** admin → **409** `CONFLICT` (`ErrCannotDemoteLastAdmin`; resolvable: promote another first).
+- **Self-demotion is ALLOWED** — an admin may demote themselves, gated by the same two guards above.
+- **Idempotent:** setting a role the member already has → 200 no-op, returns the member.
 ```sql
+SELECT COUNT(*) FROM workspace_members WHERE workspace_id=$1 AND role='ADMIN';  -- last-admin guard
 UPDATE workspace_members SET role=$3 WHERE workspace_id=$1 AND user_id=$2 RETURNING *;
 ```
 
 #### UC-06c: Leave Workspace — **NEW (Phase 1)**
 - **API:** `POST /api/v1/workspace/:workspace_id/leave` · Auth · member
-- **Guard:** workspace owner cannot leave (must transfer/delete first); last admin cannot leave.
-- **Flow:** same cascade as UC-06 for the leaving user — remove `board_members` across the workspace **and clear their card assignments on every board in this workspace** (§2.8), one transaction; broadcast `MEMBER_REMOVED` + `CARD_UPDATED` per cleared card after commit.
+- **Response 200:** `null` data.
+- **Guards:**
+  - Requester is not a member → **404** `NOT_FOUND`.
+  - Requester is the workspace **owner** → **403** `FORBIDDEN` (`ErrWorkspaceOwnerCannotLeave`; must transfer or delete).
+  - Requester is the **last** admin → **409** `CONFLICT` (`ErrLastAdminCannotLeave`; promote another first).
+- **Flow:** same cascade as UC-06 for the leaving user — remove `workspace_members`, cascade-remove from all `board_members` in this workspace, and **clear card assignments on every board in this workspace** (§2.8), one transaction. If the leaver was a `BOARD_OWNER`, the board becomes owner-less-but-safe (§2.6).
+- **WS (step ④):** `MEMBER_REMOVED` + `CARD_UPDATED` per cleared card after commit.
 
 #### UC-06d: Delete Workspace — **NEW (Phase 1)**
 - **API:** `DELETE /api/v1/workspace/:workspace_id` · Auth · **owner only**
-- **Behavior:** hard delete; cascades to boards/columns/cards/members. UI confirmation required.
+- **Response 200:** `null` data.
+- **Guard:** requester is not the workspace owner → **403** `FORBIDDEN` (`ErrNotWorkspaceOwner`).
+- **Behavior:** hard delete; DB cascades to boards/columns/cards/members. UI confirmation is a frontend concern — backend exposes plain `DELETE`.
 
 ### 4.3 Board Management
 
@@ -594,7 +610,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **✅ FIXED (P0) — `cards.created_by` constraint bug:** was `NOT NULL … ON DELETE SET NULL` (contradictory). Resolved by **migration `000005_make_cards_created_by_nullable`** (`ALTER … DROP NOT NULL`) — original `000004` left intact since migrations are immutable once applied.
 
-**🟡 P1 — Missing Phase-1 features (need to be built):** ~~board `visibility` column + logic~~ **✅ DONE** (ADR-005, migration 000007 — three-method checker, break-glass, thin roster, idempotent self-join); ownership transfer (UC-12e); promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
+**🟡 P1 — Missing Phase-1 features (need to be built):** ~~board `visibility` column + logic~~ **✅ DONE** (ADR-005, migration 000007 — three-method checker, break-glass, thin roster, idempotent self-join); ~~promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d)~~ **✅ DONE** (workspace-scoped participation cascade included — board-scoped deferred); ownership transfer (UC-12e); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
 
 **✅ FIXED (P1) — Positioning migrated off INTEGER-shift:** card move and column reorder now use fractional NUMERIC coordinates with repository-layer rebalancing (**ADR-004**, migration **000006_fractional_positioning**). One UPDATE per move; the integer-shift methods (`IncrementPositionsFrom`, `DecrementPositionsAfter`, `ReorderPositions`, `DeleteWithReorder`) and the `max+1` clamp are removed. See §3.2 for the contract + accepted limitations. *Repository-layer rebalance tests deferred — no DB-backed test harness exists yet.*
 
@@ -614,9 +630,9 @@ Correctness/security first, then features. (Story IDs reference [001-user-storie
 2. ~~**Fractional positioning:** migrate card-move and column-reorder off integer-shift to NUMERIC (§3.2).~~ **✅ DONE** (ADR-004, migration 000006). Repository-layer rebalance tests deferred (no DB harness yet).
 3. **REST features — complete the Phase 1 surface before realtime.** Build order within this step: visibility first (cross-cutting), then workspace ops, then board ops, then assignee validation + cascade, then activities.
    - ~~Board `visibility` column + access logic (UC-07, UC-08, UC-09, UC-12).~~ **✅ DONE** (ADR-005, migration 000007). Three-method access checker (metadata/view/mutate) + PRIVATE break-glass, 404-hide vs 403-reveal, idempotent self-join (`joined` flag), thin roster, `created_by` removed from access/role logic. SQL filter + `card_count` tested at the usecase layer only (repo-layer deferred to post-Phase-1 integration pass).
-   - Promote/demote workspace member (UC-06b), leave workspace (UC-06c), delete workspace (UC-06d).
+   - ~~Promote/demote workspace member (UC-06b), leave workspace (UC-06c), delete workspace (UC-06d).~~ **✅ DONE.** **Deviation from original plan:** the **workspace-scoped** participation cascade (remove from all `board_members` + clear card assignments across the workspace) was built in this sub-step alongside UC-06c and UC-06 retrofit, rather than deferring to the cascade sub-step below. The cascade has no WebSocket dependency; only the *broadcast* waits for step ④. Board-scoped cascade (UC-10, UC-12d) still lands with board leave/remove work.
    - Ownership transfer (UC-12e).
-   - Assignee = board member validation (UC-14/UC-16) + unassign-on-lost-participation data correction (UC-06, UC-06c, UC-10, UC-12d). The cascade is a plain `UPDATE cards SET assigned_to = NULL` — no WebSocket dependency. Only the *broadcast* waits for step ④.
+   - Assignee = board member validation (UC-14/UC-16) + unassign-on-lost-participation data correction (UC-10, UC-12d — board-scoped). The cascade is a plain `UPDATE cards SET assigned_to = NULL` — no WebSocket dependency. Only the *broadcast* waits for step ④.
    - `activities` table migration + write an activity row on every mutation. Writing happens here so step ④ only wires broadcast calls and never revisits mutation code just to add a log write.
 4. **WebSocket layer + participation broadcast:** full realtime layer (UC-18/19); wire broadcast calls (`CARD_UPDATED`, `CARD_MOVED`, `COLUMN_MOVED`, etc.) onto the already-correct mutations; add the `CARD_UPDATED` broadcast for the unassign cascade completed in step ③.
 
@@ -632,11 +648,12 @@ Which use cases an audit item touches, and the story that asserts the fixed beha
 | Self-join eligibility validation ✅ | P2 | UC-09 | US-09 |
 | Missing: board `visibility` ✅ (ADR-005, mig. 000007) | P1 | UC-07, UC-08, UC-12 | US-07, US-08, US-12 |
 | Missing: ownership transfer | P1 | UC-12e | US-12e |
-| Missing: promote/demote, leave, delete workspace | P1 | UC-06b, UC-06c, UC-06d | US-06b, US-06c, US-06d |
+| ~~Missing: promote/demote, leave, delete workspace~~ ✅ | P1 | UC-06b, UC-06c, UC-06d | US-06b, US-06c, US-06d |
 | Missing: WebSocket layer + `activities` | P1 | UC-18, UC-19 | US-18, US-19 |
 | Positioning is INTEGER-shift | P1 | UC-13d, UC-15 | US-13d, US-15 |
 | Assignee must be a board member (§2.8) | P1 | UC-14, UC-16 | US-14, US-16 |
-| Unassign on lost participation (member removal/leave) | P1 | UC-06, UC-06c, UC-10, UC-12d | US-06, US-06c, US-10, US-12d |
+| ~~Unassign on lost participation (workspace: UC-06, UC-06c)~~ ✅ | P1 | UC-06, UC-06c | US-06, US-06c |
+| Unassign on lost participation (board-scoped: UC-10, UC-12d) | P1 | UC-10, UC-12d | US-10, US-12d |
 | Two sources of truth for board ownership | P2 | UC-12e | US-12e |
 | Transaction boundaries (create workspace/board) | P2 | UC-03, UC-07 | US-03, US-07 |
 

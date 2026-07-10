@@ -174,3 +174,33 @@ panics, raise it before reshaping the path — don't silently deviate from the s
 - `go build ./... && go vet ./...`
 - `go test ./internal/usecase/... ./internal/delivery/...`
 - Router boot check (catches the Gin wildcard risk): `go test ./internal/delivery/http/...` or run the server.
+
+---
+
+## Review Findings (post-implementation `/code-review` — fix before committing)
+
+Implementation is complete. A two-axis review (Standards + Spec) found the following. **Fix all hard items; smells are judgement calls.**
+
+### Hard — fix these
+
+**[Standards] `workspace_response.go` — delete the unnecessary DTO type**
+`WorkspaceMemberRoleResponse` is a 1:1 copy of `entity.WorkspaceMember`'s four fields with no transformation. The architecture convention says "copies the entity 1:1 → return the entity." Delete `WorkspaceMemberRoleResponse` and `WorkspaceMemberEntityToResponse`; have the handler pass `*entity.WorkspaceMember` directly.
+
+**[Standards + Spec] `set_member_role.go:18` — don't swallow DB errors as 403**
+`if err != nil || requester == nil || !requester.IsAdmin()` collapses an unexpected infra error from `GetByWorkspaceAndUser` into `ErrNotWorkspaceAdmin` → 403 instead of 500. Split it: `errors.Is(err, domain.ErrMemberNotFound)` → `ErrNotWorkspaceAdmin`; any other non-nil error → `fmt.Errorf("failed to get requester: %w", err)`. Matches how every other usecase in this diff handles the same pattern.
+
+### Soft — judgement calls
+
+**[Standards] `set_member_role.go` + `leave_workspace.go` — duplicated last-admin guard**
+The `CountAdmins → count <= 1 → guard error` block appears verbatim in both files. A private helper `wu.ensureNotLastAdmin(ctx, workspaceID) error` would deduplicate. Not urgent, but two callers already share it.
+
+**[Standards] `workspace_member_queries.go` — step-numbered query names hide intent**
+`removeWorkspaceMemberCascadeStep1/2/3` are named by execution order. Consider `deleteWorkspaceMemberQuery`, `deleteBoardMembershipsForUserQuery`, `unassignCardsForUserQuery`.
+
+### Doc gaps — close these
+
+**[Spec] `collabotask-backend/temp_unit-test-checklist.md` not updated**
+The handoff §Tests says: *"add a note to `temp_unit-test-checklist.md`"* for the deferred repo-layer cascade tests (`CountAdmins` SQL, cross-workspace `board_members` delete, `cards` unassign). Add entries under the workspace ops section.
+
+**[Spec] SRS `§9.2` audit rows + `§9` P1 list — verify they were flipped to ✅**
+The handoff §Docs (after code) requires flipping the promote/demote, leave, delete entries in both places. Confirm this was done in `001-software-specifications.md`.
