@@ -11,8 +11,9 @@ The frontend (Next.js) is planned as a separate effort.
 Phase 1 · CRUD done: auth, workspace, board, column, card
 - **Unit-test coverage complete ✅** (275/275 cases; `collabotask-backend/temp_unit-test-checklist.md`). Deferred test cases noted in checklist for when `visibility` column lands (step ③).
 - **Fractional NUMERIC positioning complete ✅** (build-order step ②, spec §3.2, ADR-004, migration 000006). Single UPDATE per move; repository-layer rebalance; `domain.PositionStep`/`PositionRebalanceThreshold` as single source of truth. Repo-layer rebalance tests deferred (no DB harness yet).
-- **Building → REST feature completion** (build-order step ③ per spec §9.1): board `visibility` (cross-cutting, do first) → workspace ops (promote/demote UC-06b, leave UC-06c, delete UC-06d) → board ownership transfer (UC-12e) → assignee board-member validation + unassign cascade (UC-14/UC-16, data correction only) → activities table + writes.
-- **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ← *here* → ④ WebSocket + participation broadcast.
+- **Board `visibility` complete ✅** (build-order step ③ first sub-step; spec §2.2–2.4, ADR-005, migration 000007). Three-method access checker (metadata/view/mutate) + break-glass, 404-hide vs 403-reveal, idempotent self-join, thin roster, `created_by` removed from access logic. SQL filter/`card_count` tested at usecase layer only (repo-layer deferred to post-Phase-1 integration pass).
+- **Building → REST feature completion** (build-order step ③ per spec §9.1): board `visibility` ✅ → workspace ops (promote/demote UC-06b, leave UC-06c, delete UC-06d) ← *next* → board ownership transfer (UC-12e) → assignee board-member validation + unassign cascade (UC-14/UC-16, data correction only) → activities table + writes.
+- **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ← *here (visibility done)* → ④ WebSocket + participation broadcast.
 - **Don't touch:** Phase-2 deferrals (comments, labels, attachments, public boards, refresh tokens, account deletion) and the planned Next.js frontend.
 
 ## Core Concepts

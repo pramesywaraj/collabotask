@@ -105,12 +105,17 @@ Keep sensitive fields (e.g. password hash) out of result types and responses.
 
 ### Shared board access
 
-Use `usecase/common.BoardAccessChecker` for board access checks:
+Use `usecase/common.BoardAccessChecker` for board access checks. It exposes
+three intent methods over a shared `resolve()` (board + workspace/board
+membership + visibility), each enforcing the ADR-005 permission matrix and
+returning a `*BoardAccess` (board + membership context):
 
-- `Check()` — returns the board after validating access
-- `Resolve()` — returns board + membership context (for detail views)
+- `CheckMetadataAccess()` — board detail (thin-roster on PRIVATE + not-joined)
+- `CheckViewAccess()` — kanban view (PRIVATE break-glass for non-joined admins)
+- `CheckMutateAccess()` — card/column mutations (break-glass + member 403/404)
 
-Do not duplicate access logic in individual use cases.
+Pick the method that matches the caller's intent. Do not duplicate access logic
+in individual use cases.
 
 ### HTTP errors
 

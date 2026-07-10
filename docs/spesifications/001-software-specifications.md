@@ -351,24 +351,25 @@ COMMIT;
 #### UC-08: List Boards in Workspace
 - **API:** `GET /api/v1/workspace/:workspace_id/board` · Auth · workspace member
 - **Response 200:** for each board: details + `user_role` + `access_status` (`JOINED` | `CAN_JOIN`) + `member_count` + `card_count`.
-- **Visibility rule:** admins see all boards; members see WORKSPACE-visible boards + PRIVATE boards they belong to.
+- **Visibility rule:** admins see all boards; members see WORKSPACE-visible boards + PRIVATE boards they belong to. `access_status` is `CAN_JOIN` for a non-member who may still join (admin on any board, member on a WORKSPACE board); `created_by` is **not** consulted — `board_members` is the sole source of role/access truth (ADR-005).
 ```sql
 -- conceptually: WHERE b.workspace_id=$ws AND b.is_archived=FALSE AND (
---   wm.role='ADMIN' OR b.visibility='WORKSPACE'
---   OR b.created_by=$user OR bm.user_id IS NOT NULL )
+--   wm.role='ADMIN' OR b.visibility='WORKSPACE' OR bm.user_id IS NOT NULL )
+-- card_count via LEFT JOIN columns → cards, COUNT(DISTINCT c.id)
 ```
 
 #### UC-09: Admin Joins Board (self-service / break-glass)
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/join` · Auth
 - **Who:** workspace admin joining any board, or any workspace member joining a WORKSPACE-visible board.
-- **Flow:** validate eligibility → insert `board_members(role=BOARD_MEMBER)` (idempotent) → **log activity** → broadcast `USER_JOINED`.
+- **Flow:** validate eligibility → insert `board_members(role=BOARD_MEMBER)` (idempotent) → *(deferred: log activity → broadcast `USER_JOINED`)*.
+- **Response 200 (idempotent):** `{ "joined": true }` when newly added, or `{ "joined": false, "message": "You are already a member of this board" }` when already a member. A returned row from `ON CONFLICT … DO NOTHING RETURNING` means newly joined; no row means already a member (which also suppresses the future activity/broadcast).
+- **Errors:** ineligible → **403** (`ErrBoardCannotJoin`, remapped from 409); a **plain member on a PRIVATE board** → **404** `BOARD_NOT_FOUND` (existence hidden, matching UC-08's filter — not a 403, to avoid leaking existence).
 ```sql
 INSERT INTO board_members (board_id, user_id, role) VALUES ($1,$2,'BOARD_MEMBER')
 ON CONFLICT (board_id, user_id) DO NOTHING RETURNING *;
-INSERT INTO activities (board_id,user_id,action_type,entity_type,entity_id,metadata)
-VALUES ($1,$2,'MEMBER_ADDED','MEMBER',$2, jsonb_build_object('self_joined',true));
+-- (activities insert + USER_JOINED broadcast deferred to the activities/WebSocket sub-steps)
 ```
-- **WS:** `USER_JOINED`.
+- **WS (deferred):** `USER_JOINED`. Self-join is intentionally silent until step ④.
 
 #### UC-10: Leave Board
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/leave` · Auth · board member
@@ -390,23 +391,26 @@ VALUES ($1,$2,'MEMBER_ADDED','MEMBER',$2, jsonb_build_object('self_joined',true)
 #### UC-12: View Board (Open / Kanban)
 - **API (detail):** `GET /api/v1/workspace/:workspace_id/board/:board_id` · Auth
 - **API (kanban):** `GET /api/v1/workspace/:workspace_id/board/:board_id/kanban` · Auth — nested columns+cards.
-- **Access:** layered model (§2.3). For PRIVATE boards a non-member admin must have Joined.
+- **Access:** three-method checker (ADR-005) over a shared `resolve()`: `CheckMetadataAccess` (detail), `CheckViewAccess` (kanban), `CheckMutateAccess` (card/column). `created_by` is **not** consulted; `board_members` + workspace-admin status are the sole authority.
+- **Break-glass (PRIVATE only, covers view *and* mutate):** a non-joined workspace admin gets **403** `BOARD_JOIN_REQUIRED` on kanban and on any card/column mutation — they must Join first. On WORKSPACE boards admins act with no join.
+- **Denied responses (404 hide vs 403 reveal):** an ineligible **plain member** on a **PRIVATE** board gets **404** everywhere (existence hidden, matches the UC-08 list). A plain member denied *mutation* on a **WORKSPACE** board gets **403** (they legitimately see the board). The non-joined admin's PRIVATE denial is **403** `BOARD_JOIN_REQUIRED` (they can already see it in their list).
+- **Detail thin roster:** `GET …/:board_id` returns board fields + `access_status`, but **omits the `members` roster** when the board is **PRIVATE and the requester is not joined** (the only such actor is the non-joined admin — plain members 404 here). Joined viewers and everyone on WORKSPACE boards get the full roster.
 - **Then:** client opens WS, sends `JOIN_BOARD`, receives `ACTIVE_USERS`.
 ```sql
--- access check (layered):
+-- access check (layered; created_by NOT used):
 SELECT 1 FROM boards b
 INNER JOIN workspace_members wm ON b.workspace_id=wm.workspace_id AND wm.user_id=$user
 LEFT JOIN board_members bm ON b.id=bm.board_id AND bm.user_id=$user
 WHERE b.id=$board AND (
-  wm.role='ADMIN' OR b.visibility='WORKSPACE'
-  OR b.created_by=$user OR bm.user_id IS NOT NULL);
+  wm.role='ADMIN' OR b.visibility='WORKSPACE' OR bm.user_id IS NOT NULL);
 -- then fetch board + columns + cards ORDER BY col.position, c.position
 ```
 
 #### UC-12b: Update Board Settings
 - **API:** `PATCH /api/v1/workspace/:workspace_id/board/:board_id` · Auth · **can_administer_board**
-- **Request:** `{ "title"?, "description"?, "background_color"?, "visibility"? }`
-- **WS:** `BOARD_UPDATED`.
+- **Request:** `{ "title"?, "description"?, "background_color"?, "visibility"? }` (`visibility ∈ {PRIVATE, WORKSPACE}`).
+- **Visibility flip has no data cascade:** members stay and assignments already require membership. `WORKSPACE→PRIVATE` only affects *future* access.
+- **WS (deferred):** `BOARD_UPDATED`.
 
 #### UC-12c: Archive / Unarchive Board (Phase 1 — already in code)
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/archive` · Auth · **can_administer_board**
@@ -526,7 +530,8 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 | **User** | `id, email, name, avatar_url, system_role` |
 | **AuthResult** | `user{…}, token` |
 | **Workspace** | `id, name, description, owner_id, role, member_count, board_count, created_at, updated_at` |
-| **Board** | `id, workspace_id, title, description, created_by, is_archived, background_color, visibility, user_role, access_status, member_count, created_at, updated_at` *(visibility = NEW)* |
+| **Board** | `id, workspace_id, title, description, created_by, is_archived, background_color, visibility, user_role, access_status, member_count, card_count, created_at, updated_at` *(visibility, card_count = NEW; list view omits `members`, and detail omits `members` when PRIVATE + not-joined)* |
+| **Self-join result** | `joined` (bool), `message?` (present only when already a member) |
 | **Column** | `id, board_id, title, position, created_at, updated_at` |
 | **Card** | `id, column_id, title, description, position, assigned_to{id,name,avatar_url}, due_date, created_by, created_at, updated_at` |
 
@@ -589,7 +594,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **✅ FIXED (P0) — `cards.created_by` constraint bug:** was `NOT NULL … ON DELETE SET NULL` (contradictory). Resolved by **migration `000005_make_cards_created_by_nullable`** (`ALTER … DROP NOT NULL`) — original `000004` left intact since migrations are immutable once applied.
 
-**🟡 P1 — Missing Phase-1 features (need to be built):** board `visibility` column + logic; ownership transfer (UC-12e); promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
+**🟡 P1 — Missing Phase-1 features (need to be built):** ~~board `visibility` column + logic~~ **✅ DONE** (ADR-005, migration 000007 — three-method checker, break-glass, thin roster, idempotent self-join); ownership transfer (UC-12e); promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
 
 **✅ FIXED (P1) — Positioning migrated off INTEGER-shift:** card move and column reorder now use fractional NUMERIC coordinates with repository-layer rebalancing (**ADR-004**, migration **000006_fractional_positioning**). One UPDATE per move; the integer-shift methods (`IncrementPositionsFrom`, `DecrementPositionsAfter`, `ReorderPositions`, `DeleteWithReorder`) and the `max+1` clamp are removed. See §3.2 for the contract + accepted limitations. *Repository-layer rebalance tests deferred — no DB-backed test harness exists yet.*
 
@@ -608,7 +613,7 @@ Correctness/security first, then features. (Story IDs reference [001-user-storie
 1. ~~**P0 fixes:** layered permission for board management + `cards.created_by` NULLABLE bug.~~ **✅ DONE** (`canAdministerBoard` helper across update/archive/invite/remove; migration 000005). Tests pending — approach TBD.
 2. ~~**Fractional positioning:** migrate card-move and column-reorder off integer-shift to NUMERIC (§3.2).~~ **✅ DONE** (ADR-004, migration 000006). Repository-layer rebalance tests deferred (no DB harness yet).
 3. **REST features — complete the Phase 1 surface before realtime.** Build order within this step: visibility first (cross-cutting), then workspace ops, then board ops, then assignee validation + cascade, then activities.
-   - Board `visibility` column + access logic (UC-07, UC-08, UC-09, UC-12) — do first; affects create-board, list-boards, self-join gate, and the board access checker used everywhere.
+   - ~~Board `visibility` column + access logic (UC-07, UC-08, UC-09, UC-12).~~ **✅ DONE** (ADR-005, migration 000007). Three-method access checker (metadata/view/mutate) + PRIVATE break-glass, 404-hide vs 403-reveal, idempotent self-join (`joined` flag), thin roster, `created_by` removed from access/role logic. SQL filter + `card_count` tested at the usecase layer only (repo-layer deferred to post-Phase-1 integration pass).
    - Promote/demote workspace member (UC-06b), leave workspace (UC-06c), delete workspace (UC-06d).
    - Ownership transfer (UC-12e).
    - Assignee = board member validation (UC-14/UC-16) + unassign-on-lost-participation data correction (UC-06, UC-06c, UC-10, UC-12d). The cascade is a plain `UPDATE cards SET assigned_to = NULL` — no WebSocket dependency. Only the *broadcast* waits for step ④.
@@ -624,8 +629,8 @@ Which use cases an audit item touches, and the story that asserts the fixed beha
 | --- | --- | --- | --- |
 | Layered permission for board management | P0 | UC-11, UC-12b (and archive/transfer/remove) | US-11, US-12b |
 | `cards.created_by` constraint bug | P0 | UC-17 (card delete path) | US-17 |
-| Self-join eligibility validation | P2 | UC-09 | US-09 |
-| Missing: board `visibility` | P1 | UC-07, UC-08, UC-12 | US-07, US-08, US-12 |
+| Self-join eligibility validation ✅ | P2 | UC-09 | US-09 |
+| Missing: board `visibility` ✅ (ADR-005, mig. 000007) | P1 | UC-07, UC-08, UC-12 | US-07, US-08, US-12 |
 | Missing: ownership transfer | P1 | UC-12e | US-12e |
 | Missing: promote/demote, leave, delete workspace | P1 | UC-06b, UC-06c, UC-06d | US-06b, US-06c, US-06d |
 | Missing: WebSocket layer + `activities` | P1 | UC-18, UC-19 | US-18, US-19 |
