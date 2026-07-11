@@ -81,3 +81,24 @@ type RemoveMemberInput struct {
 	WorkspaceID uuid.UUID `validate:"required"`
 	UserID      uuid.UUID `validate:"required"`
 }
+
+type SetMemberRoleInput struct {
+	RequesterID uuid.UUID            `validate:"required"`
+	WorkspaceID uuid.UUID            `validate:"required"`
+	UserID      uuid.UUID            `validate:"required"`
+	Role        entity.WorkspaceRole `validate:"required,oneof=ADMIN MEMBER"`
+}
+
+type SetMemberRoleOutput struct {
+	Member *entity.WorkspaceMember
+}
+
+type LeaveWorkspaceInput struct {
+	RequesterID uuid.UUID `validate:"required"`
+	WorkspaceID uuid.UUID `validate:"required"`
+}
+
+type DeleteWorkspaceInput struct {
+	RequesterID uuid.UUID `validate:"required"`
+	WorkspaceID uuid.UUID `validate:"required"`
+}

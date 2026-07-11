@@ -8,3 +8,7 @@ type CreateWorkspaceRequest struct {
 type InviteMemberRequest struct {
 	Emails []string `json:"emails" binding:"required,min=1,dive,email"`
 }
+
+type SetMemberRoleRequest struct {
+	Role string `json:"role" binding:"required,oneof=ADMIN MEMBER"`
+}

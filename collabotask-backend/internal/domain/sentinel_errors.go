@@ -9,13 +9,18 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 
 	// Workspace
-	ErrMemberNotFound        = errors.New("member not found")
-	ErrUserNotInWorkspace    = errors.New("user not in workspace")
-	ErrAlreadyMember         = errors.New("user already in workspace")
-	ErrNotWorkspaceAdmin     = errors.New("requester is not workspace admin")
-	ErrWorkspaceNotFound     = errors.New("workspace not found")
-	ErrCannotRemoveYourself  = errors.New("cannot remove yourself")
-	ErrBoardOwnerCannotLeave = errors.New("board owner cannot leave without transferring ownership")
+	ErrMemberNotFound              = errors.New("member not found")
+	ErrUserNotInWorkspace          = errors.New("user not in workspace")
+	ErrAlreadyMember               = errors.New("user already in workspace")
+	ErrNotWorkspaceAdmin           = errors.New("requester is not workspace admin")
+	ErrNotWorkspaceOwner           = errors.New("requester is not workspace owner")
+	ErrWorkspaceNotFound           = errors.New("workspace not found")
+	ErrCannotRemoveYourself        = errors.New("cannot remove yourself")
+	ErrBoardOwnerCannotLeave       = errors.New("board owner cannot leave without transferring ownership")
+	ErrWorkspaceOwnerCannotLeave   = errors.New("workspace owner cannot leave; transfer ownership or delete the workspace")
+	ErrCannotDemoteOwner           = errors.New("cannot demote workspace owner below admin")
+	ErrCannotDemoteLastAdmin       = errors.New("cannot demote the last admin; promote another member first")
+	ErrLastAdminCannotLeave        = errors.New("last admin cannot leave; promote another member first")
 
 	// Board
 	ErrBoardNotFound          = errors.New("board not found")

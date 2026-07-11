@@ -14,14 +14,20 @@ func (wu *WorkspaceUseCase) RemoveMember(ctx context.Context, input RemoveMember
 	}
 
 	requesterMember, err := wu.workspaceMemberRepo.GetByWorkspaceAndUser(ctx, input.WorkspaceID, input.RequesterID)
-	if err != nil || requesterMember == nil || !requesterMember.IsAdmin() {
+	if err != nil {
+		if errors.Is(err, domain.ErrMemberNotFound) {
+			return domain.ErrNotWorkspaceAdmin
+		}
+		return fmt.Errorf("failed to get requester: %w", err)
+	}
+	if !requesterMember.IsAdmin() {
 		return domain.ErrNotWorkspaceAdmin
 	}
 	if input.RequesterID == input.UserID {
 		return domain.ErrCannotRemoveYourself
 	}
 
-	err = wu.workspaceMemberRepo.Delete(ctx, input.WorkspaceID, input.UserID)
+	_, err = wu.workspaceMemberRepo.RemoveWithParticipationCascade(ctx, input.WorkspaceID, input.UserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrMemberNotFound) {
 			return domain.ErrMemberNotFound

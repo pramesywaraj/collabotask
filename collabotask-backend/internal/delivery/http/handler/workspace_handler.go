@@ -8,6 +8,7 @@ import (
 	"collabotask/internal/delivery/http/helper"
 	"collabotask/internal/delivery/http/request"
 	"collabotask/internal/delivery/http/response"
+	"collabotask/internal/domain/entity"
 	"collabotask/internal/usecase/workspace"
 	"net/http"
 
@@ -202,6 +203,139 @@ func (wh *WorkspaceHandler) RemoveMember(ctx *gin.Context) {
 	}
 
 	response.GenerateSuccessResponse(ctx, "Member removed successfully", nil)
+}
+
+// SetMemberRole godoc
+// @Summary Promote or demote a workspace member's role
+// @Description Requires workspace ADMIN. Idempotent: setting the existing role returns 200. Cannot demote owner or last admin.
+// @Tags workspace
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param user_id path string true "Target member user UUID"
+// @Param body body request.SetMemberRoleRequest true "New role"
+// @Success 200 {object} response.WorkspaceSetMemberRoleSuccessDoc "OK — updated member"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Not admin, demoting owner, or insufficient authority"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Target member not found"
+// @Failure 409 {object} response.Failure409ConflictDoc "Last admin guard triggered"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/member/{user_id}/role [patch]
+func (wh *WorkspaceHandler) SetMemberRole(ctx *gin.Context) {
+	requesterID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	workspaceID, ok := helper.ParseUUIDParams(ctx, "workspace_id")
+	if !ok {
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, "Invalid workspace id"))
+		return
+	}
+
+	memberUserID, ok := helper.ParseUUIDParams(ctx, "user_id")
+	if !ok {
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, "Invalid user id"))
+		return
+	}
+
+	var req request.SetMemberRoleRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.HandleValidationError(ctx, err)
+		return
+	}
+
+	out, err := wh.workspaceUseCase.SetMemberRole(ctx.Request.Context(), workspace.SetMemberRoleInput{
+		RequesterID: requesterID,
+		WorkspaceID: workspaceID,
+		UserID:      memberUserID,
+		Role:        entity.WorkspaceRole(req.Role),
+	})
+	if err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(ctx, "Member role updated successfully", out.Member)
+}
+
+// LeaveWorkspace godoc
+// @Summary Leave a workspace
+// @Description Authenticated user leaves the workspace. Owner cannot leave; last admin cannot leave.
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Success 200 {object} response.SuccessNullDataDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Owner cannot leave"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not a member"
+// @Failure 409 {object} response.Failure409ConflictDoc "Last admin guard"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/leave [post]
+func (wh *WorkspaceHandler) LeaveWorkspace(ctx *gin.Context) {
+	requesterID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	workspaceID, ok := helper.ParseUUIDParams(ctx, "workspace_id")
+	if !ok {
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, "Invalid workspace id"))
+		return
+	}
+
+	err := wh.workspaceUseCase.LeaveWorkspace(ctx.Request.Context(), workspace.LeaveWorkspaceInput{
+		RequesterID: requesterID,
+		WorkspaceID: workspaceID,
+	})
+	if err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(ctx, "Left workspace successfully", nil)
+}
+
+// DeleteWorkspace godoc
+// @Summary Delete a workspace
+// @Description Hard delete; only the workspace owner may call this. DB cascades boards/columns/cards/members.
+// @Tags workspace
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Success 200 {object} response.SuccessNullDataDoc "OK"
+// @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Not the workspace owner"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Workspace not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id} [delete]
+func (wh *WorkspaceHandler) DeleteWorkspace(ctx *gin.Context) {
+	requesterID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	workspaceID, ok := helper.ParseUUIDParams(ctx, "workspace_id")
+	if !ok {
+		response.GenerateErrorResponse(ctx, apperrors.NewAppError(http.StatusBadRequest, apperrors.ErrCodeValidation, "Invalid workspace id"))
+		return
+	}
+
+	err := wh.workspaceUseCase.DeleteWorkspace(ctx.Request.Context(), workspace.DeleteWorkspaceInput{
+		RequesterID: requesterID,
+		WorkspaceID: workspaceID,
+	})
+	if err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(ctx, "Workspace deleted successfully", nil)
 }
 
 // GetWorkspaceDetail godoc
