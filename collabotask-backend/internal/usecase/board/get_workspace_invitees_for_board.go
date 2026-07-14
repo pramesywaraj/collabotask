@@ -39,7 +39,7 @@ func (bu *BoardUseCase) GetWorkspaceInviteesForBoard(ctx context.Context, input 
 		return nil, fmt.Errorf("failed to check requester permission: %w", err)
 	}
 
-	canManage := canAdministerBoard(board.CreatedBy, input.RequesterID, boardMember, workspaceMember)
+	canManage := canAdministerBoard(boardMember, workspaceMember)
 	if !canManage {
 		return nil, domain.ErrBoardPermissionDenied
 	}

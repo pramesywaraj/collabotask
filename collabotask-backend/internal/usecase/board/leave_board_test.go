@@ -24,6 +24,7 @@ func TestLeaveBoard(t *testing.T) {
 		CreatedBy: ownerID,
 	}
 	boardMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleMember}
+	ownerBoardMember := &entity.BoardMember{BoardID: boardID, UserID: ownerID, Role: entity.BoardRoleOwner}
 
 	validInput := board.LeaveBoardInput{
 		RequesterID: requesterID,
@@ -78,12 +79,26 @@ func TestLeaveBoard(t *testing.T) {
 			wantErr: domain.ErrBoardNotFound,
 		},
 		{
-			name:  "board creator tries to leave → ErrBoardOwnerCannotLeave",
+			// Regression (UC-12e proxy removal): guard is now role-based, not created_by-based.
+			name:  "BOARD_OWNER tries to leave → ErrBoardOwnerCannotLeave",
 			input: board.LeaveBoardInput{RequesterID: ownerID, BoardID: boardID},
 			setupMocks: func(d boardTestDeps) {
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, ownerID).Return(ownerBoardMember, nil)
 			},
 			wantErr: domain.ErrBoardOwnerCannotLeave,
+		},
+		{
+			// Regression (UC-12e proxy removal): a BOARD_MEMBER who happens to match
+			// created_by must be allowed to leave — the guard is role-based, not creator-based.
+			name:  "BOARD_MEMBER who matches created_by → allowed to leave",
+			input: board.LeaveBoardInput{RequesterID: ownerID, BoardID: boardID},
+			setupMocks: func(d boardTestDeps) {
+				creatorAsMember := &entity.BoardMember{BoardID: boardID, UserID: ownerID, Role: entity.BoardRoleMember}
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, ownerID).Return(creatorAsMember, nil)
+				d.boardMbrRepo.EXPECT().Delete(mock.Anything, boardID, ownerID).Return(nil)
+			},
 		},
 		{
 			name:  "requester not a board member → ErrBoardMemberNotFound",

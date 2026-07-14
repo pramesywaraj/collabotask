@@ -38,7 +38,7 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 		return fmt.Errorf("failed to check requester permission: %w", err)
 	}
 
-	canManage := canAdministerBoard(board.CreatedBy, input.RequesterID, boardMember, workspaceMember)
+	canManage := canAdministerBoard(boardMember, workspaceMember)
 	if !canManage {
 		return domain.ErrBoardPermissionDenied
 	}
