@@ -160,3 +160,10 @@ type GetBoardKanbanInput struct {
 type GetBoardKanbanOutput struct {
 	Columns []ColumnWithCards
 }
+
+type TransferOwnershipInput struct {
+	RequesterID uuid.UUID `validate:"required"`
+	WorkspaceID uuid.UUID `validate:"required"`
+	BoardID     uuid.UUID `validate:"required"`
+	ToUserID    uuid.UUID `validate:"required"`
+}

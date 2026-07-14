@@ -30,7 +30,8 @@ var (
 	ErrBoardPermissionDenied  = errors.New("board permission denied")
 	ErrBoardCannotJoin        = errors.New("cannot join board, permission denied")
 	ErrBoardJoinRequired      = errors.New("join the board before accessing its content")
-	ErrBoardNoMembersToInvite = errors.New("no members were added to the board")
+	ErrBoardNoMembersToInvite        = errors.New("no members were added to the board")
+	ErrTransferTargetNotBoardMember  = errors.New("transfer target must be a board member")
 
 	// Column
 	ErrColumnNotFound   = errors.New("column not found")

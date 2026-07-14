@@ -226,6 +226,13 @@ type BoardLeaveSuccessDoc struct {
 	Data       interface{} `json:"data"`
 }
 
+type BoardTransferOwnershipSuccessDoc struct {
+	successDocBase
+	StatusCode int         `json:"status_code" example:"200"`
+	Message    string      `json:"message" example:"Board ownership transferred"`
+	Data       interface{} `json:"data"`
+}
+
 // COLUMN
 type ColumnCreateSuccessDoc struct {
 	successDocBase

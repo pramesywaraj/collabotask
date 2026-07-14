@@ -72,6 +72,7 @@ func New(cfg Config) *gin.Engine {
 			boards.GET("/:board_id/invitees", cfg.BoardHandler.GetWorkspaceInviteesForBoard)
 			boards.POST("/:board_id/join", cfg.BoardHandler.SelfJoinToBoard)
 			boards.POST("/:board_id/leave", cfg.BoardHandler.LeaveBoard)
+			boards.POST("/:board_id/transfer-ownership", cfg.BoardHandler.TransferOwnership)
 		}
 
 		columns := boards.Group("/:board_id/columns")
