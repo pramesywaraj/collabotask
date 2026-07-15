@@ -37,4 +37,16 @@ const (
 		FROM board_members
 		WHERE board_id = $1 AND user_id = $2
 	`
+	// demoteCurrentOwnerQuery demotes the current owner by role and returns their
+	// user_id. Returns 0 rows (pgx.ErrNoRows) when the board has no owner (orphan).
+	demoteCurrentOwnerQuery = `
+		UPDATE board_members SET role = 'BOARD_MEMBER'
+		WHERE board_id = $1 AND role = 'BOARD_OWNER'
+		RETURNING user_id
+	`
+	// promoteNewOwnerQuery promotes the target member to BOARD_OWNER by user id.
+	promoteNewOwnerQuery = `
+		UPDATE board_members SET role = 'BOARD_OWNER'
+		WHERE board_id = $1 AND user_id = $2
+	`
 )

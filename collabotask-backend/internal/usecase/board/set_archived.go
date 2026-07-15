@@ -34,7 +34,7 @@ func (bu *BoardUseCase) SetArchived(ctx context.Context, input SetArchivedInput)
 		return nil, fmt.Errorf("failed to fetch board membership: %w", err)
 	}
 
-	if !canAdministerBoard(board.CreatedBy, input.RequesterID, boardMember, workspaceMember) {
+	if !canAdministerBoard(boardMember, workspaceMember) {
 		return nil, domain.ErrBoardPermissionDenied
 	}
 

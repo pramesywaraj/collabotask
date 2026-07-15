@@ -27,3 +27,7 @@ type RemoveMemberBoardRequest struct {
 type SetArchivedBoardRequest struct {
 	IsArchived *bool `json:"is_archived" binding:"required"`
 }
+
+type TransferOwnershipRequest struct {
+	ToUserID uuid.UUID `json:"to_user_id" binding:"required"`
+}

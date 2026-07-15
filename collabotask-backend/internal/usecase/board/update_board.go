@@ -41,7 +41,7 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 		return nil, fmt.Errorf("failed to fetch board membership: %w", err)
 	}
 
-	if !canAdministerBoard(board.CreatedBy, input.RequesterID, boardMember, workspaceMember) {
+	if !canAdministerBoard(boardMember, workspaceMember) {
 		return nil, domain.ErrBoardPermissionDenied
 	}
 

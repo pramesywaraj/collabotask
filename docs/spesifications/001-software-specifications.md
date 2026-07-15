@@ -439,11 +439,29 @@ WHERE b.id=$board AND (
 - **Flow (1 transaction):** delete the `board_members` row → **clear the removed user's card assignments on this board** (§2.8), capturing affected card ids.
 - **WS:** after commit, `MEMBER_REMOVED` + `CARD_UPDATED` (`assigned_to: null`) per cleared card.
 
-#### UC-12e: Transfer Board Ownership — **NEW (Phase 1)**
-- **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/transfer-ownership` · Auth · **current BOARD_OWNER or workspace ADMIN**
+#### UC-12e: Transfer Board Ownership — **NEW (Phase 1)** — *(see ADR-006)*
+- **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/transfer-ownership` · Auth · **can_administer_board** (current BOARD_OWNER **or** workspace ADMIN)
 - **Request:** `{ "to_user_id": "uuid" }` — target must already be a board member.
-- **Effect:** demote current owner to `BOARD_MEMBER`, promote target to `BOARD_OWNER` (single owner invariant), in one transaction. Log activity.
-- **WS:** `OWNERSHIP_TRANSFERRED`.
+- **Effect (one operation = "set sole owner"):** demote whoever currently holds `BOARD_OWNER` → `BOARD_MEMBER`, promote the target → `BOARD_OWNER`, in **one transaction**. Preserves the single-owner invariant (§2.5). **Also covers orphan-board appointment (§2.6):** on an owner-less board the demote step matches **0 rows** and the target is simply promoted — no separate "appoint" endpoint. The demote targets the owner **by role**, so the operation is identical whether the requester is the outgoing owner, an admin transferring between two others, or an admin appointing an owner to an orphan board.
+- **Ownership source of truth:** `board_members.role` is authoritative for the *current* owner; `created_by` is a historical trace only and is **not** consulted (closes §9 P2; completes the ADR-005 cleanup). This UC also removes the last two `created_by`-as-owner proxies — the `canAdministerBoard()` clause and the `leave_board` owner guard — both switch to the `BOARD_OWNER` board-member row.
+- **Break-glass (PRIVATE only):** a non-joined workspace admin gets **403** `BOARD_JOIN_REQUIRED` — they must **Join** first (which also gives them the roster to choose a target). The owner path and WORKSPACE-visible boards need no join (ADR-006; consistent with §2.3, ADR-005).
+- **Errors:**
+  - Requester cannot administer the board → **403** `ErrBoardPermissionDenied` (plain member who can see the board); a plain member on a **PRIVATE** board they're not on → **404** (existence hidden, per UC-12).
+  - Non-joined admin on a **PRIVATE** board → **403** `BOARD_JOIN_REQUIRED`.
+  - Target is **not a board member** → **400** `ErrTransferTargetNotBoardMember` (new; mirrors the assignee-must-be-a-board-member rule, §2.8 — "add/join them first").
+  - Board archived / not found / workspace mismatch → **404** `ErrBoardNotFound` (same as the membership-mutation family).
+  - Missing / malformed `to_user_id` → **400** `VALIDATION_ERROR`.
+- **Idempotent:** target already holds `BOARD_OWNER` → **200** no-op (mirrors UC-06b), returns success without touching the repo.
+```sql
+BEGIN;
+-- demote current owner by ROLE (0 rows on an orphan board — appointment case):
+UPDATE board_members SET role='BOARD_MEMBER' WHERE board_id=$1 AND role='BOARD_OWNER';
+-- promote target by id (asserted to affect exactly 1 row — else target vanished):
+UPDATE board_members SET role='BOARD_OWNER'  WHERE board_id=$1 AND user_id=$2;
+COMMIT;
+```
+- **Log activity** *(deferred to the `activities` sub-step of step ③ — silent until then).*
+- **WS (deferred to step ④):** `OWNERSHIP_TRANSFERRED` `{ board_id, from_user_id, to_user_id }` (`from_user_id` is the demoted owner, which may differ from the requester; null on an orphan appointment).
 
 ### 4.4 Column & Card Management
 
@@ -610,13 +628,13 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **✅ FIXED (P0) — `cards.created_by` constraint bug:** was `NOT NULL … ON DELETE SET NULL` (contradictory). Resolved by **migration `000005_make_cards_created_by_nullable`** (`ALTER … DROP NOT NULL`) — original `000004` left intact since migrations are immutable once applied.
 
-**🟡 P1 — Missing Phase-1 features (need to be built):** ~~board `visibility` column + logic~~ **✅ DONE** (ADR-005, migration 000007 — three-method checker, break-glass, thin roster, idempotent self-join); ~~promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d)~~ **✅ DONE** (workspace-scoped participation cascade included — board-scoped deferred); ownership transfer (UC-12e); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
+**🟡 P1 — Missing Phase-1 features (need to be built):** ~~board `visibility` column + logic~~ **✅ DONE** (ADR-005, migration 000007 — three-method checker, break-glass, thin roster, idempotent self-join); ~~promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d)~~ **✅ DONE** (workspace-scoped participation cascade included — board-scoped deferred); ~~ownership transfer (UC-12e)~~ **✅ DONE** (ADR-006 — `created_by` proxy removed, atomic demote+promote repo method, break-glass, idempotent no-op, `ErrTransferTargetNotBoardMember`); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
 
 **✅ FIXED (P1) — Positioning migrated off INTEGER-shift:** card move and column reorder now use fractional NUMERIC coordinates with repository-layer rebalancing (**ADR-004**, migration **000006_fractional_positioning**). One UPDATE per move; the integer-shift methods (`IncrementPositionsFrom`, `DecrementPositionsAfter`, `ReorderPositions`, `DeleteWithReorder`) and the `max+1` clamp are removed. See §3.2 for the contract + accepted limitations. *Repository-layer rebalance tests deferred — no DB-backed test harness exists yet.*
 
 **🟡 P1 — Assignee not validated as a board member:** `create_card.go:40`, `update_card.go:83` check the user exists but not that they are a **board member** of the card's board (assignment = participation, §2.8). Add the board-membership check (UC-14/UC-16). *(Supersedes the earlier "validate against workspace" framing — board membership is the stricter, correct rule.)*
 
-**🔵 P2 — Two sources of truth for board ownership:** owner is implied by both `boards.created_by` and a `board_members(BOARD_OWNER)` row. Treat `board_members.role` as authoritative for *current* owner; `created_by` is only the historical creator. Document/enforce this so transfer logic is unambiguous.
+**✅ RESOLVED (P2) — Two sources of truth for board ownership:** ~~owner is implied by both `boards.created_by` and a `board_members(BOARD_OWNER)` row~~ — `board_members.role` is now the **sole** ownership authority (ADR-006). `created_by` is a historical-creator trace only; the `canAdministerBoard()` proxy check and the `leave_board` creator guard have been replaced with role-based checks as part of UC-12e.
 
 **🔵 P2 — Transaction boundaries:** ensure create-board and create-workspace wrap their multi-insert in a single transaction (avoid orphaned rows on partial failure).
 
@@ -631,7 +649,7 @@ Correctness/security first, then features. (Story IDs reference [001-user-storie
 3. **REST features — complete the Phase 1 surface before realtime.** Build order within this step: visibility first (cross-cutting), then workspace ops, then board ops, then assignee validation + cascade, then activities.
    - ~~Board `visibility` column + access logic (UC-07, UC-08, UC-09, UC-12).~~ **✅ DONE** (ADR-005, migration 000007). Three-method access checker (metadata/view/mutate) + PRIVATE break-glass, 404-hide vs 403-reveal, idempotent self-join (`joined` flag), thin roster, `created_by` removed from access/role logic. SQL filter + `card_count` tested at the usecase layer only (repo-layer deferred to post-Phase-1 integration pass).
    - ~~Promote/demote workspace member (UC-06b), leave workspace (UC-06c), delete workspace (UC-06d).~~ **✅ DONE.** **Deviation from original plan:** the **workspace-scoped** participation cascade (remove from all `board_members` + clear card assignments across the workspace) was built in this sub-step alongside UC-06c and UC-06 retrofit, rather than deferring to the cascade sub-step below. The cascade has no WebSocket dependency; only the *broadcast* waits for step ④. Board-scoped cascade (UC-10, UC-12d) still lands with board leave/remove work.
-   - Ownership transfer (UC-12e).
+   - ~~Ownership transfer (UC-12e)~~ **✅ DONE** (ADR-006). `created_by` proxy removed from `canAdministerBoard()` + `leave_board`; atomic demote-by-role + promote-by-id in one TX; break-glass via `CheckMutateAccess` ∘ `canAdministerBoard`; `ErrTransferTargetNotBoardMember` (400); idempotent no-op when target already owns; orphan-safe. Activity write + `OWNERSHIP_TRANSFERRED` broadcast **deferred** (activities sub-step / step ④).
    - Assignee = board member validation (UC-14/UC-16) + unassign-on-lost-participation data correction (UC-10, UC-12d — board-scoped). The cascade is a plain `UPDATE cards SET assigned_to = NULL` — no WebSocket dependency. Only the *broadcast* waits for step ④.
    - `activities` table migration + write an activity row on every mutation. Writing happens here so step ④ only wires broadcast calls and never revisits mutation code just to add a log write.
 4. **WebSocket layer + participation broadcast:** full realtime layer (UC-18/19); wire broadcast calls (`CARD_UPDATED`, `CARD_MOVED`, `COLUMN_MOVED`, etc.) onto the already-correct mutations; add the `CARD_UPDATED` broadcast for the unassign cascade completed in step ③.
@@ -647,14 +665,14 @@ Which use cases an audit item touches, and the story that asserts the fixed beha
 | `cards.created_by` constraint bug | P0 | UC-17 (card delete path) | US-17 |
 | Self-join eligibility validation ✅ | P2 | UC-09 | US-09 |
 | Missing: board `visibility` ✅ (ADR-005, mig. 000007) | P1 | UC-07, UC-08, UC-12 | US-07, US-08, US-12 |
-| Missing: ownership transfer | P1 | UC-12e | US-12e |
+| ~~Missing: ownership transfer~~ ✅ (ADR-006) | P1 | UC-12e | US-12e |
 | ~~Missing: promote/demote, leave, delete workspace~~ ✅ | P1 | UC-06b, UC-06c, UC-06d | US-06b, US-06c, US-06d |
 | Missing: WebSocket layer + `activities` | P1 | UC-18, UC-19 | US-18, US-19 |
 | Positioning is INTEGER-shift | P1 | UC-13d, UC-15 | US-13d, US-15 |
 | Assignee must be a board member (§2.8) | P1 | UC-14, UC-16 | US-14, US-16 |
 | ~~Unassign on lost participation (workspace: UC-06, UC-06c)~~ ✅ | P1 | UC-06, UC-06c | US-06, US-06c |
 | Unassign on lost participation (board-scoped: UC-10, UC-12d) | P1 | UC-10, UC-12d | US-10, US-12d |
-| Two sources of truth for board ownership | P2 | UC-12e | US-12e |
+| ~~Two sources of truth for board ownership~~ ✅ (ADR-006) | P2 | UC-12e | US-12e |
 | Transaction boundaries (create workspace/board) | P2 | UC-03, UC-07 | US-03, US-07 |
 
 ---

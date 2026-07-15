@@ -97,6 +97,19 @@ func TestSetArchived(t *testing.T) {
 			wantErr: domain.ErrBoardPermissionDenied,
 		},
 		{
+			// Regression (UC-12e proxy removal): old board creator demoted to BOARD_MEMBER
+			// (simulating post-transfer state) must be denied — authority no longer leaks via created_by.
+			name:  "old creator with BOARD_MEMBER role (post-transfer) → ErrBoardPermissionDenied",
+			input: validInput,
+			setupMocks: func(d boardTestDeps) {
+				demotedCreator := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleMember}
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil) // existingBoard.CreatedBy == requesterID
+				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
+				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(demotedCreator, nil)
+			},
+			wantErr: domain.ErrBoardPermissionDenied,
+		},
+		{
 			name:  "boardRepo.SetArchived fails → wrapped error",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {

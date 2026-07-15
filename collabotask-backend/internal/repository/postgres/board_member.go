@@ -161,3 +161,35 @@ func (bmr *boardMemberRepository) IsUserExists(ctx context.Context, boardID, use
 
 	return isExists, nil
 }
+
+func (bmr *boardMemberRepository) TransferOwnership(ctx context.Context, boardID, newOwnerID uuid.UUID) (*uuid.UUID, error) {
+	tx, err := bmr.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var fromUserID uuid.UUID
+	err = tx.QueryRow(ctx, demoteCurrentOwnerQuery, boardID).Scan(&fromUserID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to demote current owner: %w", err)
+	}
+	var fromPtr *uuid.UUID
+	if err == nil {
+		fromPtr = &fromUserID
+	}
+
+	result, err := tx.Exec(ctx, promoteNewOwnerQuery, boardID, newOwnerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to promote new owner: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return nil, domain.ErrBoardMemberNotFound
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit ownership transfer: %w", err)
+	}
+
+	return fromPtr, nil
+}

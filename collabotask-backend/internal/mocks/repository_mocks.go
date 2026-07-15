@@ -440,6 +440,80 @@ func (_c *MockBoardMemberRepository_IsUserExists_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// TransferOwnership provides a mock function for the type MockBoardMemberRepository
+func (_mock *MockBoardMemberRepository) TransferOwnership(ctx context.Context, boardID uuid.UUID, newOwnerID uuid.UUID) (*uuid.UUID, error) {
+	ret := _mock.Called(ctx, boardID, newOwnerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TransferOwnership")
+	}
+
+	var r0 *uuid.UUID
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (*uuid.UUID, error)); ok {
+		return returnFunc(ctx, boardID, newOwnerID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) *uuid.UUID); ok {
+		r0 = returnFunc(ctx, boardID, newOwnerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*uuid.UUID)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, boardID, newOwnerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBoardMemberRepository_TransferOwnership_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TransferOwnership'
+type MockBoardMemberRepository_TransferOwnership_Call struct {
+	*mock.Call
+}
+
+// TransferOwnership is a helper method to define mock.On call
+//   - ctx context.Context
+//   - boardID uuid.UUID
+//   - newOwnerID uuid.UUID
+func (_e *MockBoardMemberRepository_Expecter) TransferOwnership(ctx any, boardID any, newOwnerID any) *MockBoardMemberRepository_TransferOwnership_Call {
+	return &MockBoardMemberRepository_TransferOwnership_Call{Call: _e.mock.On("TransferOwnership", ctx, boardID, newOwnerID)}
+}
+
+func (_c *MockBoardMemberRepository_TransferOwnership_Call) Run(run func(ctx context.Context, boardID uuid.UUID, newOwnerID uuid.UUID)) *MockBoardMemberRepository_TransferOwnership_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBoardMemberRepository_TransferOwnership_Call) Return(fromUserID *uuid.UUID, err error) *MockBoardMemberRepository_TransferOwnership_Call {
+	_c.Call.Return(fromUserID, err)
+	return _c
+}
+
+func (_c *MockBoardMemberRepository_TransferOwnership_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID, newOwnerID uuid.UUID) (*uuid.UUID, error)) *MockBoardMemberRepository_TransferOwnership_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockBoardRepository creates a new instance of MockBoardRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockBoardRepository(t interface {

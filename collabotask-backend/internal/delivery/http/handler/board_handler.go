@@ -568,6 +568,54 @@ func (bh *BoardHandler) LeaveBoard(ctx *gin.Context) {
 	)
 }
 
+// TransferBoardOwnership godoc
+// @Summary Transfer board ownership to another board member
+// @Tags board
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param workspace_id path string true "Workspace UUID"
+// @Param board_id path string true "Board UUID"
+// @Param body body request.TransferOwnershipRequest true "Target user id"
+// @Success 200 {object} response.BoardTransferOwnershipSuccessDoc "OK"
+// @Failure 400 {object} response.Failure400ValidationDoc "Validation error or target not a board member"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized"
+// @Failure 403 {object} response.Failure403ForbiddenDoc "Forbidden"
+// @Failure 404 {object} response.Failure404NotFoundDoc "Not found"
+// @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
+// @Router /workspace/{workspace_id}/board/{board_id}/transfer-ownership [post]
+func (bh *BoardHandler) TransferOwnership(ctx *gin.Context) {
+	userID, ok := helper.GetAndCheckUserID(ctx)
+	if !ok {
+		return
+	}
+
+	workspaceID, boardID, ok := parseBoardPathParams(ctx)
+	if !ok {
+		return
+	}
+
+	var req request.TransferOwnershipRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.HandleValidationError(ctx, err)
+		return
+	}
+
+	input := board.TransferOwnershipInput{
+		RequesterID: userID,
+		WorkspaceID: workspaceID,
+		BoardID:     boardID,
+		ToUserID:    req.ToUserID,
+	}
+
+	if err := bh.boardUseCase.TransferOwnership(ctx.Request.Context(), input); err != nil {
+		helper.HandleUseCaseError(ctx, err)
+		return
+	}
+
+	response.GenerateSuccessResponse(ctx, "Board ownership transferred", nil)
+}
+
 // FetchBoardKanban godoc
 // @Summary Get board kanban (columns and cards)
 // @Tags board
