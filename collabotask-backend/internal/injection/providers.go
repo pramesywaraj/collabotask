@@ -94,8 +94,9 @@ func ProvideCardUseCase(
 	columnRepo repository.ColumnRepository,
 	userRepo repository.UserRepository,
 	boardAccessChecker common.BoardAccessChecker,
+	boardMemberRepo repository.BoardMemberRepository,
 ) *card.CardUseCase {
-	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker)
+	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker, boardMemberRepo)
 }
 
 // Common use cases

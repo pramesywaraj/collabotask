@@ -37,6 +37,9 @@ func (cru *CardUseCase) CreateCard(ctx context.Context, input CreateCardInput) (
 		if *input.AssignedTo == uuid.Nil {
 			return nil, domain.ErrInvalidAssigneeID
 		}
+		if err := cru.requireBoardMember(ctx, input.BoardID, *input.AssignedTo); err != nil {
+			return nil, err
+		}
 		user, err := cru.userRepo.GetById(ctx, *input.AssignedTo)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch assignee: %w", err)

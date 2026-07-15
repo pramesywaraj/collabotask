@@ -32,6 +32,7 @@ var (
 	ErrBoardJoinRequired      = errors.New("join the board before accessing its content")
 	ErrBoardNoMembersToInvite        = errors.New("no members were added to the board")
 	ErrTransferTargetNotBoardMember  = errors.New("transfer target must be a board member")
+	ErrAssigneeNotBoardMember        = errors.New("assignee must be a board member")
 
 	// Column
 	ErrColumnNotFound   = errors.New("column not found")

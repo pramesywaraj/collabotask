@@ -139,6 +139,75 @@ func TestUpdateCard(t *testing.T) {
 			},
 			wantErr: domain.ErrBoardAccessDenied,
 		},
+		// UC-14/UC-16 — assignee board-membership gate (newly-set assignee only, Decision B)
+		{
+			name:  "new assignee IsUserExists fails → wrapped error (no card write)",
+			input: assignInput,
+			setupMocks: func(d cardTestDeps) {
+				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(newCard(), nil)
+				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(false, errors.New("db error"))
+			},
+			wantErrMsg: "failed to verify assignee board membership",
+		},
+		{
+			name:  "new assignee not a board member → ErrAssigneeNotBoardMember (no card write, Decision C)",
+			input: assignInput,
+			setupMocks: func(d cardTestDeps) {
+				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(newCard(), nil)
+				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(false, nil)
+			},
+			wantErr: domain.ErrAssigneeNotBoardMember,
+		},
+		{
+			// Decision B: the gate fires only on AssignedToPresent && != nil.
+			// Editing title on a card whose current assignee has since left the board
+			// must succeed — IsUserExists is NOT called.
+			name: "Decision B: edit title only on card with stale non-member assignee → success, IsUserExists not called",
+			input: func() card.UpdateCardInput {
+				in := base()
+				in.Title = ptr("New Title")
+				return in
+			}(),
+			setupMocks: func(d cardTestDeps) {
+				staleAssignee := uuid.New()
+				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(
+					&entity.Card{ID: cardID, ColumnID: columnID, Title: "Old Title", AssignedTo: &staleAssignee}, nil,
+				)
+				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.userRepo.EXPECT().GetById(mock.Anything, staleAssignee).Return(
+					&entity.User{ID: staleAssignee, Name: "Stale"}, nil,
+				)
+				d.cardRepo.EXPECT().Update(mock.Anything, mock.MatchedBy(func(c *entity.Card) bool {
+					return c.Title == "New Title"
+				})).Return(nil)
+			},
+			checkOut: func(t *testing.T, out *card.UpdateCardOutput) {
+				assert.Equal(t, "New Title", out.Card.Title)
+			},
+		},
+		{
+			// Decision B: set a new non-member assignee while also editing the title → 400
+			name: "set new non-member assignee alongside title change → ErrAssigneeNotBoardMember",
+			input: func() card.UpdateCardInput {
+				in := base()
+				in.Title = ptr("New Title")
+				in.AssignedTo = ptr(assigneeID)
+				in.AssignedToPresent = true
+				return in
+			}(),
+			setupMocks: func(d cardTestDeps) {
+				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(newCard(), nil)
+				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(false, nil)
+			},
+			wantErr: domain.ErrAssigneeNotBoardMember,
+		},
 		{
 			name:  "cardRepo.Update fails → error",
 			input: titleInput,
@@ -161,6 +230,7 @@ func TestUpdateCard(t *testing.T) {
 				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(newCard(), nil)
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(true, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to fetch assignee",
@@ -172,6 +242,7 @@ func TestUpdateCard(t *testing.T) {
 				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(newCard(), nil)
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(true, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(&entity.User{}, nil)
 			},
 			wantErr: domain.ErrUserNotFound,
@@ -260,7 +331,8 @@ func TestUpdateCard(t *testing.T) {
 			},
 		},
 		{
-			name: "success — clears assignee (AssignedToPresent=true, AssignedTo=nil) → output has no assignee",
+			// Decision B: clearing assignee (null) must NOT trigger IsUserExists.
+			name: "success — clear assignee (AssignedToPresent=true, AssignedTo=nil) → IsUserExists not called",
 			input: func() card.UpdateCardInput {
 				in := base()
 				in.AssignedToPresent = true
@@ -268,7 +340,7 @@ func TestUpdateCard(t *testing.T) {
 				return in
 			}(),
 			setupMocks: func(d cardTestDeps) {
-				// Card starts assigned; clearing must drop it and skip the assignee fetch.
+				// Card starts assigned; clearing must drop it and skip the member check.
 				existing := uuid.New()
 				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(
 					&entity.Card{ID: cardID, ColumnID: columnID, Title: "Old", AssignedTo: &existing}, nil,
@@ -285,12 +357,13 @@ func TestUpdateCard(t *testing.T) {
 			},
 		},
 		{
-			name:  "success — with assignee",
+			name:  "success — with assignee (board member)",
 			input: assignInput,
 			setupMocks: func(d cardTestDeps) {
 				d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(newCard(), nil)
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(true, nil)
 				d.cardRepo.EXPECT().Update(mock.Anything, mock.MatchedBy(func(c *entity.Card) bool {
 					return c.AssignedTo != nil && *c.AssignedTo == assigneeID
 				})).Return(nil)
