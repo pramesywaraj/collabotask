@@ -49,4 +49,16 @@ const (
 		UPDATE board_members SET role = 'BOARD_OWNER'
 		WHERE board_id = $1 AND user_id = $2
 	`
+	// deleteBoardMemberForCascadeQuery removes a board_members row; 0 rows → ErrBoardMemberNotFound.
+	deleteBoardMemberForCascadeQuery = `
+		DELETE FROM board_members WHERE board_id = $1 AND user_id = $2
+	`
+	// unassignBoardCardsForUserQuery clears card assignments for a user leaving a board.
+	// Uses columns.board_id so no board join is needed on the cards table.
+	unassignBoardCardsForUserQuery = `
+		UPDATE cards c SET assigned_to = NULL
+		FROM columns col
+		WHERE c.column_id = col.id AND col.board_id = $1 AND c.assigned_to = $2
+		RETURNING c.id, c.column_id
+	`
 )

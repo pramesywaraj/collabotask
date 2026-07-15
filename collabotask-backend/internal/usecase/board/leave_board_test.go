@@ -80,7 +80,7 @@ func TestLeaveBoard(t *testing.T) {
 		},
 		{
 			// Regression (UC-12e proxy removal): guard is now role-based, not created_by-based.
-			name:  "BOARD_OWNER tries to leave → ErrBoardOwnerCannotLeave",
+			name:  "BOARD_OWNER tries to leave → ErrBoardOwnerCannotLeave (cascade not called)",
 			input: board.LeaveBoardInput{RequesterID: ownerID, BoardID: boardID},
 			setupMocks: func(d boardTestDeps) {
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
@@ -91,13 +91,13 @@ func TestLeaveBoard(t *testing.T) {
 		{
 			// Regression (UC-12e proxy removal): a BOARD_MEMBER who happens to match
 			// created_by must be allowed to leave — the guard is role-based, not creator-based.
-			name:  "BOARD_MEMBER who matches created_by → allowed to leave",
+			name:  "BOARD_MEMBER who matches created_by → cascade called, success",
 			input: board.LeaveBoardInput{RequesterID: ownerID, BoardID: boardID},
 			setupMocks: func(d boardTestDeps) {
 				creatorAsMember := &entity.BoardMember{BoardID: boardID, UserID: ownerID, Role: entity.BoardRoleMember}
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, ownerID).Return(creatorAsMember, nil)
-				d.boardMbrRepo.EXPECT().Delete(mock.Anything, boardID, ownerID).Return(nil)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, ownerID).Return(nil, nil)
 			},
 		},
 		{
@@ -119,22 +119,34 @@ func TestLeaveBoard(t *testing.T) {
 			wantErrMsg: "failed to check requester membership in board",
 		},
 		{
-			name:  "boardMemberRepo.Delete fails → wrapped error",
+			// UC-10/UC-12d: cascade is called instead of Delete; ErrBoardMemberNotFound preserved.
+			name:  "cascade returns ErrBoardMemberNotFound → propagated",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
-				d.boardMbrRepo.EXPECT().Delete(mock.Anything, boardID, requesterID).Return(errors.New("db error"))
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
+			},
+			wantErr: domain.ErrBoardMemberNotFound,
+		},
+		{
+			name:  "cascade fails with unexpected error → wrapped error",
+			input: validInput,
+			setupMocks: func(d boardTestDeps) {
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to remove member from board",
 		},
 		{
-			name:  "success",
+			// UC-10/UC-12d: RemoveWithParticipationCascade is called (not Delete).
+			name:  "success — cascade called, returned slice discarded",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
-				d.boardMbrRepo.EXPECT().Delete(mock.Anything, boardID, requesterID).Return(nil)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).Return(nil, nil)
 			},
 		},
 	}
@@ -150,6 +162,10 @@ func TestLeaveBoard(t *testing.T) {
 
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
+				// Owner-cannot-leave guard fires before the cascade — verify explicitly.
+				if tt.wantErr == domain.ErrBoardOwnerCannotLeave {
+					d.boardMbrRepo.AssertNotCalled(t, "RemoveWithParticipationCascade")
+				}
 				return
 			}
 			if tt.wantErrMsg != "" {

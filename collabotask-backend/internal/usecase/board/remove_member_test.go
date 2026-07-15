@@ -128,35 +128,38 @@ func TestRemoveMemberBoard(t *testing.T) {
 			wantErr: domain.ErrBoardPermissionDenied,
 		},
 		{
-			name:  "target member not found → ErrBoardMemberNotFound",
+			// UC-10/UC-12d: cascade returns ErrBoardMemberNotFound — sentinel preserved.
+			name:  "target member not found → ErrBoardMemberNotFound (cascade preserves sentinel)",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
-				d.boardMbrRepo.EXPECT().Delete(mock.Anything, boardID, targetID).Return(domain.ErrBoardMemberNotFound)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).Return(nil, domain.ErrBoardMemberNotFound)
 			},
 			wantErr: domain.ErrBoardMemberNotFound,
 		},
 		{
-			name:  "Delete fails with unexpected error → wrapped error",
+			name:  "cascade fails with unexpected error → wrapped error",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
-				d.boardMbrRepo.EXPECT().Delete(mock.Anything, boardID, targetID).Return(errors.New("db error"))
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to remove member from board",
 		},
 		{
-			name:  "success",
+			// UC-10/UC-12d: RemoveWithParticipationCascade is called (not Delete).
+			// An owner can still be removed (orphan-safe, §2.6); cascade unassigns whoever is removed.
+			name:  "success — cascade called, returned slice discarded",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
-				d.boardMbrRepo.EXPECT().Delete(mock.Anything, boardID, targetID).Return(nil)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).Return(nil, nil)
 			},
 		},
 	}

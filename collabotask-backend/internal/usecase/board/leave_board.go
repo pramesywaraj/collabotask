@@ -39,7 +39,8 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 		return domain.ErrBoardOwnerCannotLeave
 	}
 
-	err = bu.boardMemberRepo.Delete(ctx, input.BoardID, input.RequesterID)
+	// TODO(ws, step ④): broadcast CARD_UPDATED for the returned affected cards.
+	_, err = bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.RequesterID)
 	if err != nil {
 		if errors.Is(err, domain.ErrBoardMemberNotFound) {
 			return domain.ErrBoardMemberNotFound
