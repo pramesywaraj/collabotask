@@ -189,3 +189,34 @@ That single migration would: (1) make assignee-validity a **DB guarantee** on ev
 - `go generate ./internal/injection/...` (Wire) — and the mockery step for mocks
 - `go build ./... && go vet ./...`
 - `go test ./internal/usecase/... ./internal/delivery/...`
+
+---
+
+## 📋 Code-review findings (2026-07-15, post-implementation)
+
+A two-axis `/code-review` (Standards + Spec) ran against the working-tree diff vs `HEAD` (7d7c5ca). **Verdict: clean, on-spec, no correctness defects and no scope creep.** All four grilled decisions (A–D), the single-tx cascade, `ErrBoardMemberNotFound` preservation, the owner-guard ordering, and the `// TODO(ws, step ④)` markers are all implemented correctly. The 7 validation + 5 cascade test cases all map to the diff.
+
+The items below are **the only things worth adjusting** — all are minor/optional; nothing blocks shipping.
+
+### Actionable (do this one)
+1. **Duplicated Code — extract the membership gate.** The identical 6-line block appears in both `internal/usecase/card/create_card.go` and `internal/usecase/card/update_card.go`:
+   ```go
+   isMember, err := cru.boardMemberRepo.IsUserExists(ctx, input.BoardID, *input.AssignedTo)
+   if err != nil {
+       return nil, fmt.Errorf("failed to verify assignee board membership: %w", err)
+   }
+   if !isMember {
+       return nil, domain.ErrAssigneeNotBoardMember
+   }
+   ```
+   Pull it into a private `CardUseCase` helper, e.g. `func (cru *CardUseCase) requireBoardMember(ctx context.Context, boardID, userID uuid.UUID) error`, and call it from both sites. Keep create's separate `uuid.Nil` guard where it is — only the membership predicate is shared. Judgement call, but worth doing.
+
+### Optional (nice-to-know, no action required)
+2. **Weak assertion in cascade test #9** (`leave_board_test.go`, "owner leaves → cascade not called"). It currently proves the negative only indirectly via mockery strict-mock (an unexpected call would fail `NewMock...(t)`). That's acceptable, but an explicit `AssertNotCalled(t, "RemoveWithParticipationCascade", ...)` would make the intent obvious to a future reader. Optional.
+3. **Cosmetic rollback-style divergence.** The new `internal/repository/postgres/board_member.go` cascade uses `defer func() { _ = tx.Rollback(ctx) }()`, whereas the sibling it mirrors (`workspace_member.go`) uses bare `defer tx.Rollback(ctx)`. Both are correct; the new form is arguably cleaner. Only change it if the repo values uniformity with the sibling. No functional impact.
+
+### Not a code issue, but flag it
+4. **Broken doc pointer:** several places (root `CLAUDE.md`, this handoff line 176, the "add an endpoint" references) point at `collabotask-backend/CLAUDE.md`, but that file does **not** exist on disk — the actual backend standards live in `collabotask-backend/README.md` ("Conventions"), `TESTING.md`, and the ADRs. Not part of this sub-step, but worth correcting the pointer separately so future agents find the real standards.
+
+### Still recommended before commit
+- The review was **static** (read-only). Run `go build ./... && go test ./internal/usecase/... ./internal/delivery/...` to confirm the regenerated Wire + mocks actually compile and the new test cases pass.
