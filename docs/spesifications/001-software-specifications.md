@@ -377,7 +377,7 @@ COMMIT;
 #### UC-09: Admin Joins Board (self-service / break-glass)
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/join` · Auth
 - **Who:** workspace admin joining any board, or any workspace member joining a WORKSPACE-visible board.
-- **Flow:** validate eligibility → insert `board_members(role=BOARD_MEMBER)` (idempotent) → *(deferred: log activity → broadcast `USER_JOINED`)*.
+- **Flow:** validate eligibility → insert `board_members(role=BOARD_MEMBER)` (idempotent) → *(deferred: log activity `MEMBER/JOINED` with `break_glass?` flag per §4.6 → broadcast `USER_JOINED`)*. Logged only on a newly-joined row (idempotent no-op stays silent).
 - **Response 200 (idempotent):** `{ "joined": true }` when newly added, or `{ "joined": false, "message": "You are already a member of this board" }` when already a member. A returned row from `ON CONFLICT … DO NOTHING RETURNING` means newly joined; no row means already a member (which also suppresses the future activity/broadcast).
 - **Errors:** ineligible → **403** (`ErrBoardCannotJoin`, remapped from 409); a **plain member on a PRIVATE board** → **404** `BOARD_NOT_FOUND` (existence hidden, matching UC-08's filter — not a 403, to avoid leaking existence).
 ```sql
@@ -460,7 +460,7 @@ UPDATE board_members SET role='BOARD_MEMBER' WHERE board_id=$1 AND role='BOARD_O
 UPDATE board_members SET role='BOARD_OWNER'  WHERE board_id=$1 AND user_id=$2;
 COMMIT;
 ```
-- **Log activity** *(deferred to the `activities` sub-step of step ③ — silent until then).*
+- **Log activity** → `BOARD/OWNERSHIP_TRANSFERRED`, `entity_id = board_id`, `metadata {from_user_id (null if orphan), to_user_id}` (§4.6). *(Design settled — ADR-007; write lands in the `activities` sub-step of step ③, silent until then.)*
 - **WS (deferred to step ④):** `OWNERSHIP_TRANSFERRED` `{ board_id, from_user_id, to_user_id }` (`from_user_id` is the demoted owner, which may differ from the requester; null on an orphan appointment).
 
 ### 4.4 Column & Card Management
@@ -519,6 +519,51 @@ WHERE id=$card RETURNING *;
 
 #### UC-20: Optimistic UI
 - Client applies the change immediately, sends to server; on success other clients update, on rejection the originating client reverts and shows an error.
+
+### 4.6 Activity Logging (writes — Phase 1; UI = UC-22, Phase 2)
+
+Every board-scoped, state-changing mutation writes **one `activities` row** (SRS §7). This is the authoritative contract for those writes; the individual UCs above reference it rather than repeating it. **Full rationale + alternatives: [ADR-007](../architecture/adr/adr-007-activity-logging-writes.md).** The activity-log **reader** (UC-22 feed) is Phase 2 — this section governs **writes only**.
+
+**Write model (ADR-007, Option A):** best-effort, **synchronous**, **after the mutation commits**, orchestrated in the usecase layer. On write failure → log (zerolog) and **swallow** — a logging failure must never fail or roll back the user's action. It is **not atomic** with the mutation (the codebase has no shared transaction abstraction); true atomicity via a Unit-of-Work/Transactor is deferred to the post-Phase-1 integrity pass ⑤ (see §9 + [[activities-logging-best-effort-then-atomic]]). Accepts a rare, *logged* gap where a mutation commits but its activity row is lost.
+
+**Firing rule:** **log only on an actual state change.** No-op update/move/archive, an idempotent re-join (`joined:false`), and a no-op ownership transfer write **nothing** (and therefore fire no `break_glass`).
+
+**Vocabulary (app-enforced enum — no DB `CHECK`):**
+- `entity_type ∈ {BOARD, COLUMN, CARD, MEMBER}`
+- `action_type ∈ {CREATED, UPDATED, DELETED, MOVED, ARCHIVED, UNARCHIVED, JOINED, LEFT, ADDED, REMOVED, OWNERSHIP_TRANSFERRED}`
+- This is a **verb × entity split** (why §7 has two columns), kept deliberately separate from the §5.2 WebSocket event names.
+
+**`entity_id`** = the id of the named entity: `CARD`→card, `COLUMN`→column, `BOARD`→board, `MEMBER`→the **target** user (the actor is always `user_id`). Ownership transfer is a **`BOARD`** event (not `MEMBER`), with both users in metadata.
+
+**Metadata (snapshot principle):** snapshot the human-readable label of any entity that can be **deleted or renamed** in Phase 1 — i.e. `card_title` / `column_title` (`activities` has no FK to cards/columns, so a hard-deleted entity leaves a *dangling* `entity_id`; the snapshot also keeps the row audit-faithful to its moment). Users are **ids-only** (never deleted or renamed in Phase 1 → resolve at read). `UPDATE` stores `changed_fields` **names only**, not old→new diffs. Two audit-enrichment flags: `break_glass: true` on `MEMBER/JOINED` when a non-member workspace admin opens a **PRIVATE** board (UC-09, §2.3); `source ∈ {board, workspace}` on `MEMBER/LEFT|REMOVED` to separate a direct board action from a workspace-cascade departure.
+
+**Mutation → activity map:**
+
+| UC | Row(s) | `entity_type`/`action_type` | `entity_id` | metadata | Fires when |
+| --- | --- | --- | --- | --- | --- |
+| UC-14 | Create card | CARD/CREATED | card | `{card_title}` | always |
+| UC-15 | Move card | CARD/MOVED | card | `{card_title, from_column_id, from_column_title, to_column_id, to_column_title}` | column or position changed |
+| UC-16 | Update card | CARD/UPDATED | card | `{card_title, changed_fields}` | `changed_fields ≠ ∅` |
+| UC-17 | Delete card | CARD/DELETED | card | `{card_title}` | always |
+| UC-13 | Create column | COLUMN/CREATED | column | `{column_title}` | always |
+| UC-13b | Update column | COLUMN/UPDATED | column | `{column_title, changed_fields}` | changed |
+| UC-13c | Delete column | COLUMN/DELETED | column | `{column_title}` | always |
+| UC-13d | Reorder column | COLUMN/MOVED | column | `{column_title}` | position changed |
+| UC-12b | Update board | BOARD/UPDATED | board | `{changed_fields, visibility_from?, visibility_to?}` | changed |
+| UC-12c | Archive / unarchive | BOARD/ARCHIVED \| UNARCHIVED | board | `{}` | state changed |
+| UC-12e | Transfer ownership | BOARD/OWNERSHIP_TRANSFERRED | board | `{from_user_id (null if orphan), to_user_id}` | real transfer (not no-op) |
+| UC-09 | Join / break-glass | MEMBER/JOINED | joiner | `{role, break_glass?}` | newly joined only |
+| UC-11 | Invite to board | MEMBER/ADDED ×invitee | invitee | `{role}` | per newly-added |
+| UC-10 | Leave board | MEMBER/LEFT | leaver | `{source:"board"}` | always |
+| UC-12d | Remove board member | MEMBER/REMOVED | removed | `{source:"board"}` | always |
+| UC-06 | Remove workspace member | MEMBER/REMOVED **×affected board** | removed | `{source:"workspace"}` | per affected board |
+| UC-06c | Leave workspace | MEMBER/LEFT **×affected board** | leaver | `{source:"workspace"}` | per affected board |
+
+**Scope — board-scoped only.** Workspace-entity actions (UC-03/04/05/06b/06d) are **not** logged (`activities.board_id` is `NOT NULL` — they have no board). Their **board cascades** (UC-06/UC-06c) still emit one board-scoped row **per affected board**, which requires the workspace-cascade repo methods to also `RETURNING board_id`.
+
+**Not logged:** the **per-card unassigns** from any participation cascade (§2.8 — those are a step-④ `CARD_UPDATED` *broadcast*, never an activity row); no-op requests (firing rule); all workspace-entity actions.
+
+**Index:** `CREATE INDEX ... ON activities (board_id, created_at DESC)` ships in the write-phase migration (`000008`) — the Phase-2 read pattern (`WHERE board_id=$1 ORDER BY created_at DESC`) is fully known.
 
 ---
 
@@ -590,7 +635,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **cards**: `id uuid pk`, `column_id → columns cascade not null`, `title varchar(500) not null`, `description text null`, **[CHANGE]** `position NUMERIC not null` (was INTEGER), `assigned_to uuid null references users on delete SET NULL`, `due_date timestamp null`, `created_by uuid null references users on delete SET NULL` (NULLABLE — applied in migration 000005), `created_at`, `updated_at`.
 
-**activities** **[NEW — written in Phase 1, UI in Phase 2]**: `id uuid pk`, `board_id → boards cascade not null`, `user_id → users on delete SET NULL`, `action_type varchar not null`, `entity_type varchar not null`, `entity_id uuid not null`, `metadata jsonb default '{}'`, `created_at`.
+**activities** **[NEW — written in Phase 1, UI in Phase 2; migration `000008`]**: `id uuid pk`, `board_id → boards cascade not null`, `user_id → users on delete SET NULL`, `action_type varchar not null`, `entity_type varchar not null`, `entity_id uuid not null`, `metadata jsonb default '{}'`, `created_at`. Plus index `(board_id, created_at DESC)` for the Phase-2 feed. `action_type`/`entity_type` are an **app-enforced** verb×entity vocabulary (no DB `CHECK`); `metadata` is app-shaped jsonb governed by the **snapshot principle** (snapshot card/column titles; users ids-only). Full write contract in **§4.6**; rationale in **[ADR-007](../architecture/adr/adr-007-activity-logging-writes.md)**.
 
 **Phase-2 tables (create later, kept here for schema awareness):** `comments`, `labels`, `card_labels`, `attachments`.
 
@@ -629,13 +674,13 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **✅ FIXED (P0) — `cards.created_by` constraint bug:** was `NOT NULL … ON DELETE SET NULL` (contradictory). Resolved by **migration `000005_make_cards_created_by_nullable`** (`ALTER … DROP NOT NULL`) — original `000004` left intact since migrations are immutable once applied.
 
-**🟡 P1 — Missing Phase-1 features (need to be built):** ~~board `visibility` column + logic~~ **✅ DONE** (ADR-005, migration 000007 — three-method checker, break-glass, thin roster, idempotent self-join); ~~promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d)~~ **✅ DONE** (workspace-scoped participation cascade included — board-scoped deferred); ~~ownership transfer (UC-12e)~~ **✅ DONE** (ADR-006 — `created_by` proxy removed, atomic demote+promote repo method, break-glass, idempotent no-op, `ErrTransferTargetNotBoardMember`); **WebSocket layer entirely** (UC-18/19); `activities` table + writes.
+**🟡 P1 — Missing Phase-1 features (need to be built):** ~~board `visibility` column + logic~~ **✅ DONE** (ADR-005, migration 000007 — three-method checker, break-glass, thin roster, idempotent self-join); ~~promote/demote (UC-06b); leave workspace (UC-06c); delete workspace (UC-06d)~~ **✅ DONE** (workspace-scoped participation cascade included — board-scoped deferred); ~~ownership transfer (UC-12e)~~ **✅ DONE** (ADR-006 — `created_by` proxy removed, atomic demote+promote repo method, break-glass, idempotent no-op, `ErrTransferTargetNotBoardMember`); **WebSocket layer entirely** (UC-18/19); `activities` table + writes *(design settled — [ADR-007](../architecture/adr/adr-007-activity-logging-writes.md) + §4.6; build pending — the next step ③ sub-step)*.
 
 **✅ FIXED (P1) — Positioning migrated off INTEGER-shift:** card move and column reorder now use fractional NUMERIC coordinates with repository-layer rebalancing (**ADR-004**, migration **000006_fractional_positioning**). One UPDATE per move; the integer-shift methods (`IncrementPositionsFrom`, `DecrementPositionsAfter`, `ReorderPositions`, `DeleteWithReorder`) and the `max+1` clamp are removed. See §3.2 for the contract + accepted limitations. *Repository-layer rebalance tests deferred — no DB-backed test harness exists yet.*
 
 **✅ FIXED (P1) — Assignee not validated as a board member:** ~~`create_card.go`, `update_card.go` check the user exists but not that they are a **board member** of the card's board~~ — both now gate `assigned_to` through `boardMemberRepo.IsUserExists` and return **400 `ErrAssigneeNotBoardMember`** for a non-member (assignment = participation, §2.8). Collapses the old "user exists" 404 path into a single validation error (Decision C). **Decision B:** `update_card` validates only a *newly-set* assignee (`AssignedToPresent && != nil`); a stale existing assignee is re-resolved display-only and never blocks an unrelated edit — the board-scoped unassign cascade (UC-10/UC-12d) keeps assignees honest instead. TOCTOU window accepted for Phase 1 (§2.8 "safety net"); DB-level enforcement is the deferred composite-FK candidate (see integrity-pass note below). *(Superseded the earlier "validate against workspace" framing — board membership is the stricter, correct rule.)*
 
-**🔵 Deferred (integrity pass) — composite-FK assignee invariant (ADR-007 candidate):** the "assignee ∈ board members" rule is enforced at the **application layer** today (write-time `IsUserExists` check + explicit `RemoveWithParticipationCascade`). A stronger design enforces it in the **schema**: add `board_id` to `cards` (backfill, NOT NULL), then `cards(board_id, assigned_to) → board_members(board_id, user_id) ON DELETE SET NULL (assigned_to)` (PG16). That would make assignee-validity a DB guarantee on every write path (closing the TOCTOU race) and make the unassign-cascade automatic on *every* membership-loss path — subsuming both the workspace and board app-layer cascades. **Deferred out of Phase 1:** it's a schema/architecture change beyond "data-correction only", reopens shipped cascade code, still needs the explicit `RETURNING` list for the step-④ broadcast, and wants SQL-level tests the project has deferred to the post-Phase-1 integrity pass. Headline candidate for that pass; write up as `adr-007` **when adopted** (candidate, not a decision). See [[post-phase1-integration-tests]].
+**🔵 Deferred (integrity pass) — composite-FK assignee invariant (ADR-008 candidate):** the "assignee ∈ board members" rule is enforced at the **application layer** today (write-time `IsUserExists` check + explicit `RemoveWithParticipationCascade`). A stronger design enforces it in the **schema**: add `board_id` to `cards` (backfill, NOT NULL), then `cards(board_id, assigned_to) → board_members(board_id, user_id) ON DELETE SET NULL (assigned_to)` (PG16). That would make assignee-validity a DB guarantee on every write path (closing the TOCTOU race) and make the unassign-cascade automatic on *every* membership-loss path — subsuming both the workspace and board app-layer cascades. **Deferred out of Phase 1:** it's a schema/architecture change beyond "data-correction only", reopens shipped cascade code, still needs the explicit `RETURNING` list for the step-④ broadcast, and wants SQL-level tests the project has deferred to the post-Phase-1 integrity pass. Headline candidate for that pass; write up as `adr-008` **when adopted** (candidate, not a decision). *(Renumbered from the earlier `adr-007` reservation: ADR-007 is now **activity logging** — see `docs/architecture/adr/adr-007-activity-logging-writes.md`.)* See [[post-phase1-integration-tests]].
 
 **✅ RESOLVED (P2) — Two sources of truth for board ownership:** ~~owner is implied by both `boards.created_by` and a `board_members(BOARD_OWNER)` row~~ — `board_members.role` is now the **sole** ownership authority (ADR-006). `created_by` is a historical-creator trace only; the `canAdministerBoard()` proxy check and the `leave_board` creator guard have been replaced with role-based checks as part of UC-12e.
 
@@ -654,7 +699,7 @@ Correctness/security first, then features. (Story IDs reference [001-user-storie
    - ~~Promote/demote workspace member (UC-06b), leave workspace (UC-06c), delete workspace (UC-06d).~~ **✅ DONE.** **Deviation from original plan:** the **workspace-scoped** participation cascade (remove from all `board_members` + clear card assignments across the workspace) was built in this sub-step alongside UC-06c and UC-06 retrofit, rather than deferring to the cascade sub-step below. The cascade has no WebSocket dependency; only the *broadcast* waits for step ④. Board-scoped cascade (UC-10, UC-12d) still lands with board leave/remove work.
    - ~~Ownership transfer (UC-12e)~~ **✅ DONE** (ADR-006). `created_by` proxy removed from `canAdministerBoard()` + `leave_board`; atomic demote-by-role + promote-by-id in one TX; break-glass via `CheckMutateAccess` ∘ `canAdministerBoard`; `ErrTransferTargetNotBoardMember` (400); idempotent no-op when target already owns; orphan-safe. Activity write + `OWNERSHIP_TRANSFERRED` broadcast **deferred** (activities sub-step / step ④).
    - ~~Assignee = board member validation (UC-14/UC-16) + unassign-on-lost-participation data correction (UC-10, UC-12d — board-scoped).~~ **✅ DONE.** Write-time gate via `boardMemberRepo.IsUserExists` → `ErrAssigneeNotBoardMember` (400), newly-set assignee only (Decision B); atomic `RemoveWithParticipationCascade` on `BoardMemberRepository` (delete membership + `UPDATE cards SET assigned_to = NULL … RETURNING` in one TX), wired into `leave_board` + board `remove_member`. No WebSocket dependency — the `CARD_UPDATED` broadcast for the cleared cards waits for step ④ (cascade already returns `[]AffectedCard`).
-   - `activities` table migration + write an activity row on every mutation. Writing happens here so step ④ only wires broadcast calls and never revisits mutation code just to add a log write.
+   - `activities` table migration + write an activity row on every (board-scoped) mutation ← *next*. **Design settled** ([ADR-007](../architecture/adr/adr-007-activity-logging-writes.md); full contract in §4.6): best-effort synchronous after-commit write (Option A — atomicity via a Transactor deferred to ⑤), log-only-on-state-change, verb×entity vocabulary, snapshot-title metadata, board-scoped incl. per-affected-board rows on the workspace cascade. Writing happens here so step ④ only wires broadcast calls and never revisits mutation code just to add a log write. Handoff: `docs/handoff/handoff-activities-writes.md`.
 4. **WebSocket layer + participation broadcast:** full realtime layer (UC-18/19); wire broadcast calls (`CARD_UPDATED`, `CARD_MOVED`, `COLUMN_MOVED`, etc.) onto the already-correct mutations; add the `CARD_UPDATED` broadcast for the unassign cascade completed in step ③.
 
 > **Why ③ and ④ were arranged this way:** REST features first means the WebSocket layer wraps a complete, correct surface from day one — no retrofit pass. Activities writes belong in step ③ because they are plain DB inserts tied to each mutation; adding them alongside the feature avoids reopening those code paths in step ④. The participation *cascade* (data correction) goes in step ③ too — it has no WebSocket dependency; only its *broadcast* waits for step ④.
@@ -670,7 +715,7 @@ Which use cases an audit item touches, and the story that asserts the fixed beha
 | Missing: board `visibility` ✅ (ADR-005, mig. 000007) | P1 | UC-07, UC-08, UC-12 | US-07, US-08, US-12 |
 | ~~Missing: ownership transfer~~ ✅ (ADR-006) | P1 | UC-12e | US-12e |
 | ~~Missing: promote/demote, leave, delete workspace~~ ✅ | P1 | UC-06b, UC-06c, UC-06d | US-06b, US-06c, US-06d |
-| Missing: WebSocket layer + `activities` | P1 | UC-18, UC-19 | US-18, US-19 |
+| Missing: WebSocket layer + `activities` (activities design settled — ADR-007, §4.6) | P1 | UC-18, UC-19, §4.6 | US-18, US-19, US-09 |
 | Positioning is INTEGER-shift | P1 | UC-13d, UC-15 | US-13d, US-15 |
 | ~~Assignee must be a board member (§2.8)~~ ✅ | P1 | UC-14, UC-16 | US-14, US-16 |
 | ~~Unassign on lost participation (workspace: UC-06, UC-06c)~~ ✅ | P1 | UC-06, UC-06c | US-06, US-06c |
