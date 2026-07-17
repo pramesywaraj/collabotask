@@ -32,6 +32,7 @@ var (
 		ProvideBoardMemberRepository,
 		ProvideColumnRepository,
 		ProvideCardRepository,
+		ProvideActivityRepository,
 	)
 	UseCaseSet = wire.NewSet(
 		ProvideAuthUseCase,

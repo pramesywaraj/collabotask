@@ -57,6 +57,9 @@ func ProvideColumnRepository(db *database.DB) repository.ColumnRepository {
 func ProvideCardRepository(db *database.DB) repository.CardRepository {
 	return postgres.NewCardRepository(db.Pool)
 }
+func ProvideActivityRepository(db *database.DB) repository.ActivityRepository {
+	return postgres.NewActivityRepository(db.Pool)
+}
 
 // UseCase
 func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) *auth.AuthUseCase {
@@ -68,9 +71,9 @@ func ProvideWorkspaceUseCase(
 	workspaceRepo repository.WorkspaceRepository,
 	workspaceMemberRepo repository.WorkspaceMemberRepository,
 	userRepo repository.UserRepository,
-
+	activityRepo repository.ActivityRepository,
 ) *workspace.WorkspaceUseCase {
-	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo)
+	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo, activityRepo)
 }
 func ProvideBoardUseCase(
 	boardAccessChecker common.BoardAccessChecker,
@@ -80,14 +83,16 @@ func ProvideBoardUseCase(
 	userRepo repository.UserRepository,
 	columnRepo repository.ColumnRepository,
 	cardRepo repository.CardRepository,
+	activityRepo repository.ActivityRepository,
 ) *board.BoardUseCase {
-	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo)
+	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo, activityRepo)
 }
 func ProvideColumnUseCase(
 	columnRepo repository.ColumnRepository,
 	boardAccessChecker common.BoardAccessChecker,
+	activityRepo repository.ActivityRepository,
 ) *column.ColumnUseCase {
-	return column.NewColumnUseCase(columnRepo, boardAccessChecker)
+	return column.NewColumnUseCase(columnRepo, boardAccessChecker, activityRepo)
 }
 func ProvideCardUseCase(
 	cardRepo repository.CardRepository,
@@ -95,8 +100,9 @@ func ProvideCardUseCase(
 	userRepo repository.UserRepository,
 	boardAccessChecker common.BoardAccessChecker,
 	boardMemberRepo repository.BoardMemberRepository,
+	activityRepo repository.ActivityRepository,
 ) *card.CardUseCase {
-	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker, boardMemberRepo)
+	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker, boardMemberRepo, activityRepo)
 }
 
 // Common use cases

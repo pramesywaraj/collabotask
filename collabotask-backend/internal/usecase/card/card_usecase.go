@@ -16,6 +16,7 @@ type CardUseCase struct {
 	userRepo           repository.UserRepository
 	boardAccessChecker common.BoardAccessChecker
 	boardMemberRepo    repository.BoardMemberRepository
+	activityRepo       repository.ActivityRepository
 }
 
 func NewCardUseCase(
@@ -24,6 +25,7 @@ func NewCardUseCase(
 	userRepo repository.UserRepository,
 	boardAccessChecker common.BoardAccessChecker,
 	boardMemberRepo repository.BoardMemberRepository,
+	activityRepo repository.ActivityRepository,
 ) *CardUseCase {
 	return &CardUseCase{
 		cardRepo:           cardRepo,
@@ -31,6 +33,7 @@ func NewCardUseCase(
 		userRepo:           userRepo,
 		boardAccessChecker: boardAccessChecker,
 		boardMemberRepo:    boardMemberRepo,
+		activityRepo:       activityRepo,
 	}
 }
 
