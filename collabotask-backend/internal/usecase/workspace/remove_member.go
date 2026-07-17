@@ -2,6 +2,8 @@ package workspace
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -27,12 +29,25 @@ func (wu *WorkspaceUseCase) RemoveMember(ctx context.Context, input RemoveMember
 		return domain.ErrCannotRemoveYourself
 	}
 
-	_, err = wu.workspaceMemberRepo.RemoveWithParticipationCascade(ctx, input.WorkspaceID, input.UserID)
+	result, err := wu.workspaceMemberRepo.RemoveWithParticipationCascade(ctx, input.WorkspaceID, input.UserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrMemberNotFound) {
 			return domain.ErrMemberNotFound
 		}
 		return fmt.Errorf("failed to remove member from the workspace: %w", err)
+	}
+
+	requesterID := input.RequesterID
+	targetID := input.UserID
+	for _, boardID := range result.AffectedBoardIDs {
+		common.WriteActivity(ctx, wu.activityRepo, &entity.Activity{
+			BoardID:    boardID,
+			UserID:     &requesterID,
+			ActionType: entity.ActivityActionRemoved,
+			EntityType: entity.ActivityEntityMember,
+			EntityID:   targetID,
+			Metadata:   map[string]any{"source": "workspace"},
+		})
 	}
 
 	return nil

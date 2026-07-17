@@ -91,7 +91,7 @@ func TestLeaveWorkspace(t *testing.T) {
 			setupMocks: func(wsRepo *mocks.MockWorkspaceRepository, wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 				wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(wsOtherOwner, nil)
-				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, requesterID).Return([]repository.AffectedCard{}, nil)
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, requesterID).Return(repository.WorkspaceCascadeResult{}, nil)
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func TestLeaveWorkspace(t *testing.T) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(wsOtherOwner, nil)
 				wsMemberRepo.EXPECT().CountAdmins(mock.Anything, workspaceID).Return(2, nil)
-				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, requesterID).Return([]repository.AffectedCard{}, nil)
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, requesterID).Return(repository.WorkspaceCascadeResult{}, nil)
 			},
 		},
 		{
@@ -110,7 +110,7 @@ func TestLeaveWorkspace(t *testing.T) {
 			setupMocks: func(wsRepo *mocks.MockWorkspaceRepository, wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 				wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(wsOtherOwner, nil)
-				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, requesterID).Return(nil, errors.New("db error"))
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, requesterID).Return(repository.WorkspaceCascadeResult{}, errors.New("db error"))
 			},
 			wantErrMsg: "failed to leave workspace",
 		},
@@ -124,10 +124,12 @@ func TestLeaveWorkspace(t *testing.T) {
 			wsRepo := mocks.NewMockWorkspaceRepository(t)
 			wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
 			userRepo := mocks.NewMockUserRepository(t)
+			activityRepo := mocks.NewMockActivityRepository(t)
+			activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 
 			tt.setupMocks(wsRepo, wsMemberRepo)
 
-			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, userRepo)
+			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, userRepo, activityRepo)
 			err := uc.LeaveWorkspace(context.Background(), tt.input)
 
 			if tt.wantErr != nil {

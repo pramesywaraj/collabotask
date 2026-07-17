@@ -3,6 +3,7 @@ package workspace
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -41,9 +42,21 @@ func (wu *WorkspaceUseCase) LeaveWorkspace(ctx context.Context, input LeaveWorks
 		}
 	}
 
-	_, err = wu.workspaceMemberRepo.RemoveWithParticipationCascade(ctx, input.WorkspaceID, input.RequesterID)
+	result, err := wu.workspaceMemberRepo.RemoveWithParticipationCascade(ctx, input.WorkspaceID, input.RequesterID)
 	if err != nil {
 		return fmt.Errorf("failed to leave workspace: %w", err)
+	}
+
+	requesterID := input.RequesterID
+	for _, boardID := range result.AffectedBoardIDs {
+		common.WriteActivity(ctx, wu.activityRepo, &entity.Activity{
+			BoardID:    boardID,
+			UserID:     &requesterID,
+			ActionType: entity.ActivityActionLeft,
+			EntityType: entity.ActivityEntityMember,
+			EntityID:   input.RequesterID,
+			Metadata:   map[string]any{"source": "workspace"},
+		})
 	}
 
 	return nil
