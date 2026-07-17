@@ -52,7 +52,7 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 		)
 
 		activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			source, _ := a.Metadata["source"].(string)
+			source, _ := a.Metadata[entity.ActivityMetaSource].(string)
 			return a.BoardID == boardAID &&
 				a.ActionType == entity.ActivityActionLeft &&
 				a.EntityType == entity.ActivityEntityMember &&
@@ -61,7 +61,7 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 				source == "workspace"
 		})).Return(nil).Once()
 		activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			source, _ := a.Metadata["source"].(string)
+			source, _ := a.Metadata[entity.ActivityMetaSource].(string)
 			return a.BoardID == boardBID &&
 				a.ActionType == entity.ActivityActionLeft &&
 				a.EntityType == entity.ActivityEntityMember &&
@@ -148,7 +148,7 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 		)
 
 		activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			source, _ := a.Metadata["source"].(string)
+			source, _ := a.Metadata[entity.ActivityMetaSource].(string)
 			return a.BoardID == boardAID &&
 				a.ActionType == entity.ActivityActionRemoved &&
 				a.EntityType == entity.ActivityEntityMember &&

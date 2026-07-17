@@ -42,7 +42,7 @@ func TestCreateColumnActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilCreate(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			colTitle, _ := a.Metadata["column_title"].(string)
+			colTitle, _ := a.Metadata[entity.ActivityMetaColumnTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionCreated &&
 				a.EntityType == entity.ActivityEntityColumn &&
@@ -92,7 +92,7 @@ func TestDeleteColumnActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilDelete(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			colTitle, _ := a.Metadata["column_title"].(string)
+			colTitle, _ := a.Metadata[entity.ActivityMetaColumnTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionDeleted &&
 				a.EntityType == entity.ActivityEntityColumn &&
@@ -135,7 +135,7 @@ func TestUpdateColumnActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilUpdate(d, "Old Title", "New Title")
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			colTitle, _ := a.Metadata["column_title"].(string)
+			colTitle, _ := a.Metadata[entity.ActivityMetaColumnTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionUpdated &&
 				a.EntityType == entity.ActivityEntityColumn &&
@@ -206,7 +206,7 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 		d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(2000)).Return(float64(2000), nil)
 
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			colTitle, _ := a.Metadata["column_title"].(string)
+			colTitle, _ := a.Metadata[entity.ActivityMetaColumnTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionMoved &&
 				a.EntityType == entity.ActivityEntityColumn &&

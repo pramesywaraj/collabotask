@@ -37,8 +37,8 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			changedFields, _ := a.Metadata["changed_fields"].([]string)
-			boardTitle, _ := a.Metadata["board_title"].(string)
+			changedFields, _ := a.Metadata[entity.ActivityMetaChangedFields].([]string)
+			boardTitle, _ := a.Metadata[entity.ActivityMetaBoardTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionUpdated &&
 				a.EntityType == entity.ActivityEntityBoard &&
@@ -101,6 +101,35 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 			RequesterID: requesterID,
 			BoardID:     boardID,
 			Title:       strPtr("New Title"),
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("happy path — visibility flip logged with visibility_from and visibility_to", func(t *testing.T) {
+		d := newDeps(t)
+		visBoard := &entity.Board{ID: boardID, WorkspaceID: workspaceID, Title: "My Board", Visibility: entity.BoardVisibilityWorkspace}
+		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(visBoard, nil)
+		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
+		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
+		d.boardRepo.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
+
+		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
+			changedFields, _ := a.Metadata[entity.ActivityMetaChangedFields].([]string)
+			visFrom, _ := a.Metadata[entity.ActivityMetaVisibilityFrom].(string)
+			visTo, _ := a.Metadata[entity.ActivityMetaVisibilityTo].(string)
+			return a.BoardID == boardID &&
+				a.ActionType == entity.ActivityActionUpdated &&
+				a.EntityType == entity.ActivityEntityBoard &&
+				a.UserID != nil && *a.UserID == requesterID &&
+				len(changedFields) == 1 && changedFields[0] == "visibility" &&
+				visFrom == string(entity.BoardVisibilityWorkspace) &&
+				visTo == string(entity.BoardVisibilityPrivate)
+		})).Return(nil)
+
+		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
+			RequesterID: requesterID,
+			BoardID:     boardID,
+			Visibility:  strPtr(string(entity.BoardVisibilityPrivate)),
 		})
 		require.NoError(t, err)
 	})
@@ -229,8 +258,8 @@ func TestTransferOwnershipActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilTransfer(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			fromID, _ := a.Metadata["from_user_id"].(string)
-			toID, _ := a.Metadata["to_user_id"].(string)
+			fromID, _ := a.Metadata[entity.ActivityMetaFromUserID].(string)
+			toID, _ := a.Metadata[entity.ActivityMetaToUserID].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionOwnershipTransferred &&
 				a.EntityType == entity.ActivityEntityBoard &&
@@ -297,8 +326,8 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 		d.boardMbrRepo.EXPECT().CreateIfAbsent(mock.Anything, newMember).Return(true, nil)
 
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			breakGlass, _ := a.Metadata["break_glass"].(bool)
-			role, _ := a.Metadata["role"].(string)
+			breakGlass, _ := a.Metadata[entity.ActivityMetaBreakGlass].(bool)
+			role, _ := a.Metadata[entity.ActivityMetaRole].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionJoined &&
 				a.EntityType == entity.ActivityEntityMember &&
@@ -322,8 +351,8 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 		d.boardMbrRepo.EXPECT().CreateIfAbsent(mock.Anything, newMember).Return(true, nil)
 
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			breakGlass, _ := a.Metadata["break_glass"].(bool)
-			role, _ := a.Metadata["role"].(string)
+			breakGlass, _ := a.Metadata[entity.ActivityMetaBreakGlass].(bool)
+			role, _ := a.Metadata[entity.ActivityMetaRole].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionJoined &&
 				a.EntityType == entity.ActivityEntityMember &&
@@ -407,7 +436,7 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 		d.boardMbrRepo.EXPECT().CreateMany(mock.Anything, mock.Anything).Return(nil)
 
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			role, _ := a.Metadata["role"].(string)
+			role, _ := a.Metadata[entity.ActivityMetaRole].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionAdded &&
 				a.EntityType == entity.ActivityEntityMember &&
@@ -501,7 +530,7 @@ func TestLeaveBoardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			source, _ := a.Metadata["source"].(string)
+			source, _ := a.Metadata[entity.ActivityMetaSource].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionLeft &&
 				a.EntityType == entity.ActivityEntityMember &&
@@ -554,7 +583,7 @@ func TestBoardRemoveMemberActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			source, _ := a.Metadata["source"].(string)
+			source, _ := a.Metadata[entity.ActivityMetaSource].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionRemoved &&
 				a.EntityType == entity.ActivityEntityMember &&

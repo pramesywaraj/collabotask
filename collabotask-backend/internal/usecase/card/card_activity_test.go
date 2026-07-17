@@ -51,7 +51,7 @@ func TestCreateCardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilCreate(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			cardTitle, _ := a.Metadata["card_title"].(string)
+			cardTitle, _ := a.Metadata[entity.ActivityMetaCardTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionCreated &&
 				a.EntityType == entity.ActivityEntityCard &&
@@ -106,7 +106,7 @@ func TestDeleteCardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilDelete(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			cardTitle, _ := a.Metadata["card_title"].(string)
+			cardTitle, _ := a.Metadata[entity.ActivityMetaCardTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionDeleted &&
 				a.EntityType == entity.ActivityEntityCard &&
@@ -158,11 +158,11 @@ func TestMoveCardActivityLog(t *testing.T) {
 		d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(2000)).Return(movedCard, nil)
 
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			fromColID, _ := a.Metadata["from_column_id"].(string)
-			fromColTitle, _ := a.Metadata["from_column_title"].(string)
-			toColID, _ := a.Metadata["to_column_id"].(string)
-			toColTitle, _ := a.Metadata["to_column_title"].(string)
-			cardTitle, _ := a.Metadata["card_title"].(string)
+			fromColID, _ := a.Metadata[entity.ActivityMetaFromColumnID].(string)
+			fromColTitle, _ := a.Metadata[entity.ActivityMetaFromColumnTitle].(string)
+			toColID, _ := a.Metadata[entity.ActivityMetaToColumnID].(string)
+			toColTitle, _ := a.Metadata[entity.ActivityMetaToColumnTitle].(string)
+			cardTitle, _ := a.Metadata[entity.ActivityMetaCardTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionMoved &&
 				a.EntityType == entity.ActivityEntityCard &&
@@ -281,8 +281,8 @@ func TestUpdateCardActivityLog(t *testing.T) {
 		setupUntilUpdate(d, newCard())
 
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.MatchedBy(func(a *entity.Activity) bool {
-			changedFields, _ := a.Metadata["changed_fields"].([]string)
-			cardTitle, _ := a.Metadata["card_title"].(string)
+			changedFields, _ := a.Metadata[entity.ActivityMetaChangedFields].([]string)
+			cardTitle, _ := a.Metadata[entity.ActivityMetaCardTitle].(string)
 			return a.BoardID == boardID &&
 				a.ActionType == entity.ActivityActionUpdated &&
 				a.EntityType == entity.ActivityEntityCard &&
