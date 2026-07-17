@@ -65,8 +65,10 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 	if input.BackgroundColor != nil && *input.BackgroundColor != board.BackgroundColor {
 		changedFields = append(changedFields, "background_color")
 	}
+	var oldVisibility entity.BoardVisibility
 	if input.Visibility != nil && string(board.Visibility) != *input.Visibility {
 		changedFields = append(changedFields, "visibility")
+		oldVisibility = board.Visibility
 	}
 
 	if input.Title != nil {
@@ -97,14 +99,20 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 	}
 
 	if len(changedFields) > 0 {
-		requesterID := input.RequesterID
-		common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+		meta := map[string]any{
+			entity.ActivityMetaBoardTitle:    board.Title,
+			entity.ActivityMetaChangedFields: changedFields,
+		}
+		if oldVisibility != "" {
+			meta[entity.ActivityMetaVisibilityFrom] = string(oldVisibility)
+			meta[entity.ActivityMetaVisibilityTo] = string(board.Visibility)
+		}
+		common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
 			BoardID:    board.ID,
-			UserID:     &requesterID,
 			ActionType: entity.ActivityActionUpdated,
 			EntityType: entity.ActivityEntityBoard,
 			EntityID:   board.ID,
-			Metadata:   map[string]any{"board_title": board.Title, "changed_fields": changedFields},
+			Metadata:   meta,
 		})
 	}
 
