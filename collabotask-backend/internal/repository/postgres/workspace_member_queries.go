@@ -34,10 +34,13 @@ const (
 		WHERE workspace_id = $1 AND role = 'ADMIN'
 	`
 	// Participation cascade (step 1 reuses deleteWorkspaceMemberQuery above).
+	// RETURNING bm.board_id captures every board the user was a member of so the
+	// caller can write one MEMBER/REMOVED activity row per board (ADR-007, §4.6).
 	deleteBoardMembershipsForUserQuery = `
 		DELETE FROM board_members bm
 		USING boards b
 		WHERE bm.board_id = b.id AND b.workspace_id = $1 AND bm.user_id = $2
+		RETURNING bm.board_id
 	`
 	unassignCardsForUserQuery = `
 		UPDATE cards c SET assigned_to = NULL

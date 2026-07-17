@@ -7,6 +7,7 @@ packages:
     config:
       filename: repository_mocks.go
     interfaces:
+      ActivityRepository: {}
       BoardRepository: {}
       BoardMemberRepository: {}
       WorkspaceRepository: {}
