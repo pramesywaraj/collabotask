@@ -31,6 +31,26 @@ const (
 	ActivityActionOwnershipTransferred ActivityActionType = "OWNERSHIP_TRANSFERRED"
 )
 
+// ActivityMeta* are the canonical metadata keys for Activity.Metadata (SRS §4.6).
+// Using constants prevents key-name drift across call sites and tests.
+const (
+	ActivityMetaCardTitle       = "card_title"
+	ActivityMetaColumnTitle     = "column_title"
+	ActivityMetaBoardTitle      = "board_title"
+	ActivityMetaChangedFields   = "changed_fields"
+	ActivityMetaFromColumnID    = "from_column_id"
+	ActivityMetaFromColumnTitle = "from_column_title"
+	ActivityMetaToColumnID      = "to_column_id"
+	ActivityMetaToColumnTitle   = "to_column_title"
+	ActivityMetaBreakGlass      = "break_glass"
+	ActivityMetaRole            = "role"
+	ActivityMetaSource          = "source"
+	ActivityMetaFromUserID      = "from_user_id"
+	ActivityMetaToUserID        = "to_user_id"
+	ActivityMetaVisibilityFrom  = "visibility_from"
+	ActivityMetaVisibilityTo    = "visibility_to"
+)
+
 type Activity struct {
 	ID         uuid.UUID
 	BoardID    uuid.UUID
