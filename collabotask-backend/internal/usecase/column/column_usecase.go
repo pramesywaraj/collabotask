@@ -8,14 +8,17 @@ import (
 type ColumnUseCase struct {
 	columnRepo         repository.ColumnRepository
 	boardAccessChecker common.BoardAccessChecker
+	activityRepo       repository.ActivityRepository
 }
 
 func NewColumnUseCase(
 	columnRepo repository.ColumnRepository,
 	boardAccessChecker common.BoardAccessChecker,
+	activityRepo repository.ActivityRepository,
 ) *ColumnUseCase {
 	return &ColumnUseCase{
 		columnRepo:         columnRepo,
 		boardAccessChecker: boardAccessChecker,
+		activityRepo:       activityRepo,
 	}
 }

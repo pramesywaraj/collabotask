@@ -166,46 +166,65 @@ func (wm *workspaceMemberRepository) CountAdmins(ctx context.Context, workspaceI
 	return count, nil
 }
 
-func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.Context, workspaceID, userID uuid.UUID) ([]repository.AffectedCard, error) {
+func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.Context, workspaceID, userID uuid.UUID) (repository.WorkspaceCascadeResult, error) {
 	tx, err := wm.db.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	result, err := tx.Exec(ctx, deleteWorkspaceMemberQuery, workspaceID, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to remove workspace member: %w", err)
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to remove workspace member: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return nil, domain.ErrMemberNotFound
+		return repository.WorkspaceCascadeResult{}, domain.ErrMemberNotFound
 	}
 
-	if _, err = tx.Exec(ctx, deleteBoardMembershipsForUserQuery, workspaceID, userID); err != nil {
-		return nil, fmt.Errorf("failed to remove board memberships: %w", err)
-	}
-
-	rows, err := tx.Query(ctx, unassignCardsForUserQuery, workspaceID, userID)
+	// Capture the board IDs the user was a member of before deleting the rows.
+	boardRows, err := tx.Query(ctx, deleteBoardMembershipsForUserQuery, workspaceID, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unassign cards: %w", err)
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to remove board memberships: %w", err)
 	}
-	defer rows.Close()
+	defer boardRows.Close()
 
-	var affected []repository.AffectedCard
-	for rows.Next() {
-		var card repository.AffectedCard
-		if err := rows.Scan(&card.CardID, &card.ColumnID); err != nil {
-			return nil, fmt.Errorf("failed to scan affected card: %w", err)
+	var affectedBoardIDs []uuid.UUID
+	for boardRows.Next() {
+		var boardID uuid.UUID
+		if err := boardRows.Scan(&boardID); err != nil {
+			return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to scan affected board id: %w", err)
 		}
-		affected = append(affected, card)
+		affectedBoardIDs = append(affectedBoardIDs, boardID)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating affected cards: %w", err)
+	if err := boardRows.Err(); err != nil {
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("error iterating affected board ids: %w", err)
+	}
+	boardRows.Close()
+
+	cardRows, err := tx.Query(ctx, unassignCardsForUserQuery, workspaceID, userID)
+	if err != nil {
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to unassign cards: %w", err)
+	}
+	defer cardRows.Close()
+
+	var affectedCards []repository.AffectedCard
+	for cardRows.Next() {
+		var card repository.AffectedCard
+		if err := cardRows.Scan(&card.CardID, &card.ColumnID); err != nil {
+			return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to scan affected card: %w", err)
+		}
+		affectedCards = append(affectedCards, card)
+	}
+	if err := cardRows.Err(); err != nil {
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("error iterating affected cards: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit cascade transaction: %w", err)
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to commit cascade transaction: %w", err)
 	}
 
-	return affected, nil
+	return repository.WorkspaceCascadeResult{
+		AffectedCards:    affectedCards,
+		AffectedBoardIDs: affectedBoardIDs,
+	}, nil
 }

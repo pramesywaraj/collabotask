@@ -32,18 +32,19 @@ func InitializeApp() (*App, error) {
 	userHandler := ProvideUserHandler(authUseCase)
 	workspaceRepository := ProvideWorkspaceRepository(db)
 	workspaceMemberRepository := ProvideWorkspaceMemberRepository(db)
-	workspaceUseCase := ProvideWorkspaceUseCase(workspaceRepository, workspaceMemberRepository, userRepository)
+	activityRepository := ProvideActivityRepository(db)
+	workspaceUseCase := ProvideWorkspaceUseCase(workspaceRepository, workspaceMemberRepository, userRepository, activityRepository)
 	workspaceHandler := ProvideWorkspaceHandler(workspaceUseCase)
 	boardRepository := ProvideBoardRepository(db)
 	boardMemberRepository := ProvideBoardMemberRepository(db)
 	boardAccessChecker := ProvideBoardAccessChecker(boardRepository, boardMemberRepository, workspaceMemberRepository)
 	columnRepository := ProvideColumnRepository(db)
 	cardRepository := ProvideCardRepository(db)
-	boardUseCase := ProvideBoardUseCase(boardAccessChecker, boardRepository, boardMemberRepository, workspaceMemberRepository, userRepository, columnRepository, cardRepository)
+	boardUseCase := ProvideBoardUseCase(boardAccessChecker, boardRepository, boardMemberRepository, workspaceMemberRepository, userRepository, columnRepository, cardRepository, activityRepository)
 	boardHandler := ProvideBoardHandler(boardUseCase)
-	columnUseCase := ProvideColumnUseCase(columnRepository, boardAccessChecker)
+	columnUseCase := ProvideColumnUseCase(columnRepository, boardAccessChecker, activityRepository)
 	columnHandler := ProvideColumnHandler(columnUseCase)
-	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker, boardMemberRepository)
+	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker, boardMemberRepository, activityRepository)
 	cardHandler := ProvideCardHandler(cardUseCase)
 	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler, boardHandler, columnHandler, cardHandler)
 	server := ProvideServer(config, engine)
@@ -80,6 +81,7 @@ var (
 		ProvideBoardMemberRepository,
 		ProvideColumnRepository,
 		ProvideCardRepository,
+		ProvideActivityRepository,
 	)
 	UseCaseSet = wire.NewSet(
 		ProvideAuthUseCase,

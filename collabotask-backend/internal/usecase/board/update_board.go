@@ -3,6 +3,7 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -45,6 +46,31 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 		return nil, domain.ErrBoardPermissionDenied
 	}
 
+	var changedFields []string
+	if input.Title != nil && *input.Title != board.Title {
+		changedFields = append(changedFields, "title")
+	}
+	if input.DescriptionPresent {
+		var newDesc *string
+		if input.Description != nil && strings.TrimSpace(*input.Description) != "" {
+			s := strings.TrimSpace(*input.Description)
+			newDesc = &s
+		}
+		oldNil := board.Description == nil
+		newNil := newDesc == nil
+		if oldNil != newNil || (!oldNil && !newNil && *board.Description != *newDesc) {
+			changedFields = append(changedFields, "description")
+		}
+	}
+	if input.BackgroundColor != nil && *input.BackgroundColor != board.BackgroundColor {
+		changedFields = append(changedFields, "background_color")
+	}
+	var oldVisibility entity.BoardVisibility
+	if input.Visibility != nil && string(board.Visibility) != *input.Visibility {
+		changedFields = append(changedFields, "visibility")
+		oldVisibility = board.Visibility
+	}
+
 	if input.Title != nil {
 		board.Title = *input.Title
 	}
@@ -70,6 +96,24 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 	err = bu.boardRepo.Update(ctx, board)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update the board: %w", err)
+	}
+
+	if len(changedFields) > 0 {
+		meta := map[string]any{
+			entity.ActivityMetaBoardTitle:    board.Title,
+			entity.ActivityMetaChangedFields: changedFields,
+		}
+		if oldVisibility != "" {
+			meta[entity.ActivityMetaVisibilityFrom] = string(oldVisibility)
+			meta[entity.ActivityMetaVisibilityTo] = string(board.Visibility)
+		}
+		common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    board.ID,
+			ActionType: entity.ActivityActionUpdated,
+			EntityType: entity.ActivityEntityBoard,
+			EntityID:   board.ID,
+			Metadata:   meta,
+		})
 	}
 
 	return &UpdateBoardOutput{

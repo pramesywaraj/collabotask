@@ -2,6 +2,8 @@ package column
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -29,10 +31,17 @@ func (cu *ColumnUseCase) DeleteColumn(ctx context.Context, input DeleteColumnInp
 		return err
 	}
 
-	err = cu.columnRepo.Delete(ctx, column.ID)
-	if err != nil {
+	colTitle := column.Title
+	if err = cu.columnRepo.Delete(ctx, column.ID); err != nil {
 		return err
 	}
 
+	common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
+		BoardID:    column.BoardID,
+		ActionType: entity.ActivityActionDeleted,
+		EntityType: entity.ActivityEntityColumn,
+		EntityID:   column.ID,
+		Metadata:   map[string]any{entity.ActivityMetaColumnTitle: colTitle},
+	})
 	return nil
 }

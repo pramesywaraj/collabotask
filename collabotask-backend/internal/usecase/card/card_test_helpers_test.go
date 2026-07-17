@@ -13,6 +13,7 @@ type cardTestDeps struct {
 	columnRepo      *mocks.MockColumnRepository
 	userRepo        *mocks.MockUserRepository
 	boardMemberRepo *mocks.MockBoardMemberRepository
+	activityRepo    *mocks.MockActivityRepository
 	uc              *card.CardUseCase
 }
 
@@ -24,8 +25,9 @@ func newDeps(t *testing.T) cardTestDeps {
 		columnRepo:      mocks.NewMockColumnRepository(t),
 		userRepo:        mocks.NewMockUserRepository(t),
 		boardMemberRepo: mocks.NewMockBoardMemberRepository(t),
+		activityRepo:    mocks.NewMockActivityRepository(t),
 	}
-	d.uc = card.NewCardUseCase(d.cardRepo, d.columnRepo, d.userRepo, d.checker, d.boardMemberRepo)
+	d.uc = card.NewCardUseCase(d.cardRepo, d.columnRepo, d.userRepo, d.checker, d.boardMemberRepo, d.activityRepo)
 	return d
 }
 

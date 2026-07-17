@@ -2,6 +2,8 @@ package column
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -29,11 +31,22 @@ func (cu *ColumnUseCase) UpdateColumn(ctx context.Context, input UpdateColumnInp
 		return nil, err
 	}
 
+	titleChanged := column.Title != input.Title
 	column.Title = input.Title
 
 	err = cu.columnRepo.Update(ctx, column)
 	if err != nil {
 		return nil, err
+	}
+
+	if titleChanged {
+		common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    column.BoardID,
+			ActionType: entity.ActivityActionUpdated,
+			EntityType: entity.ActivityEntityColumn,
+			EntityID:   column.ID,
+			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
+		})
 	}
 
 	return &UpdateColumnOutput{

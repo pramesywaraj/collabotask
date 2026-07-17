@@ -95,10 +95,12 @@ func TestCreateWorkspace(t *testing.T) {
 			wsRepo := mocks.NewMockWorkspaceRepository(t)
 			wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
 			userRepo := mocks.NewMockUserRepository(t)
+			activityRepo := mocks.NewMockActivityRepository(t)
+			activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 
 			tt.setupMocks(wsRepo)
 
-			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, userRepo)
+			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, userRepo, activityRepo)
 			out, err := uc.CreateWorkspace(context.Background(), tt.input)
 
 			if tt.wantErrMsg != "" {

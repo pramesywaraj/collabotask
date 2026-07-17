@@ -14,6 +14,13 @@ type AffectedCard struct {
 	ColumnID uuid.UUID
 }
 
+// WorkspaceCascadeResult holds the entities affected by a workspace-member
+// participation cascade, returned now so step ④ is a pure wire-up (no repo change needed).
+type WorkspaceCascadeResult struct {
+	AffectedCards    []AffectedCard
+	AffectedBoardIDs []uuid.UUID
+}
+
 type WorkspaceMemberRepository interface {
 	Create(ctx context.Context, member *entity.WorkspaceMember) error
 	Delete(ctx context.Context, workspaceID, userID uuid.UUID) error
@@ -22,5 +29,9 @@ type WorkspaceMemberRepository interface {
 	IsUserExists(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error)
 	UpdateRole(ctx context.Context, workspaceID, userID uuid.UUID, role entity.WorkspaceRole) (*entity.WorkspaceMember, error)
 	CountAdmins(ctx context.Context, workspaceID uuid.UUID) (int, error)
-	RemoveWithParticipationCascade(ctx context.Context, workspaceID, userID uuid.UUID) ([]AffectedCard, error)
+	// RemoveWithParticipationCascade removes the user from the workspace and all its
+	// boards, clears card assignments, and returns the affected cards and board IDs.
+	// AffectedBoardIDs includes every board the user was a member of (even those with
+	// zero assigned cards) so the caller can write one MEMBER/REMOVED activity row per board.
+	RemoveWithParticipationCascade(ctx context.Context, workspaceID, userID uuid.UUID) (WorkspaceCascadeResult, error)
 }

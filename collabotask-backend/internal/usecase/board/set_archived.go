@@ -2,6 +2,8 @@ package board
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -38,12 +40,28 @@ func (bu *BoardUseCase) SetArchived(ctx context.Context, input SetArchivedInput)
 		return nil, domain.ErrBoardPermissionDenied
 	}
 
+	if board.IsArchived == *input.IsArchived {
+		return &SetArchivedOutput{Board: board}, nil
+	}
+
 	err = bu.boardRepo.SetArchived(ctx, input.BoardID, *input.IsArchived)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set archived status for board: %w", err)
 	}
 
 	board.IsArchived = *input.IsArchived
+
+	actionType := entity.ActivityActionArchived
+	if !board.IsArchived {
+		actionType = entity.ActivityActionUnarchived
+	}
+	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+		BoardID:    board.ID,
+		ActionType: actionType,
+		EntityType: entity.ActivityEntityBoard,
+		EntityID:   board.ID,
+		Metadata:   map[string]any{},
+	})
 
 	return &SetArchivedOutput{
 		Board: board,

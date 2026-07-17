@@ -85,7 +85,7 @@ func TestRemoveMember(t *testing.T) {
 			input: validInput,
 			setupMocks: func(wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
-				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(nil, domain.ErrMemberNotFound)
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(repository.WorkspaceCascadeResult{}, domain.ErrMemberNotFound)
 			},
 			wantErr: domain.ErrMemberNotFound,
 		},
@@ -94,7 +94,7 @@ func TestRemoveMember(t *testing.T) {
 			input: validInput,
 			setupMocks: func(wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
-				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(nil, errors.New("db error"))
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(repository.WorkspaceCascadeResult{}, errors.New("db error"))
 			},
 			wantErrMsg: "failed to remove member from the workspace",
 		},
@@ -103,7 +103,7 @@ func TestRemoveMember(t *testing.T) {
 			input: validInput,
 			setupMocks: func(wsMemberRepo *mocks.MockWorkspaceMemberRepository) {
 				wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
-				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return([]repository.AffectedCard{}, nil)
+				wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(repository.WorkspaceCascadeResult{}, nil)
 			},
 		},
 	}
@@ -116,10 +116,12 @@ func TestRemoveMember(t *testing.T) {
 			wsRepo := mocks.NewMockWorkspaceRepository(t)
 			wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
 			userRepo := mocks.NewMockUserRepository(t)
+			activityRepo := mocks.NewMockActivityRepository(t)
+			activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 
 			tt.setupMocks(wsMemberRepo)
 
-			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, userRepo)
+			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, userRepo, activityRepo)
 			err := uc.RemoveMember(context.Background(), tt.input)
 
 			if tt.wantErr != nil {

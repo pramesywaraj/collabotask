@@ -2,6 +2,8 @@ package column
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -29,6 +31,7 @@ func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateC
 		return nil, err
 	}
 
+	oldPosition := column.Position
 	newPos, err := cu.columnRepo.UpdatePosition(ctx, column.ID, input.Position)
 	if err != nil {
 		return nil, err
@@ -37,5 +40,16 @@ func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateC
 	// Use the repository's returned position, not input.Position: a rebalance may
 	// have rewritten this column to a different value within the same transaction.
 	column.Position = newPos
+
+	if newPos != oldPosition {
+		common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    column.BoardID,
+			ActionType: entity.ActivityActionMoved,
+			EntityType: entity.ActivityEntityColumn,
+			EntityID:   column.ID,
+			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
+		})
+	}
+
 	return &UpdateColumnPositionOutput{Column: column}, nil
 }
