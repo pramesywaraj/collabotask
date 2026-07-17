@@ -3,6 +3,7 @@ package card
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -54,6 +55,20 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 		return nil, err
 	}
 
+	var changedFields []string
+	if input.Title != nil && *input.Title != card.Title {
+		changedFields = append(changedFields, "title")
+	}
+	if input.DescriptionPresent {
+		changedFields = append(changedFields, "description")
+	}
+	if input.AssignedToPresent {
+		changedFields = append(changedFields, "assigned_to")
+	}
+	if input.DueDatePresent {
+		changedFields = append(changedFields, "due_date")
+	}
+
 	if input.Title != nil {
 		card.Title = *input.Title
 	}
@@ -97,6 +112,18 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 	err = cru.cardRepo.Update(ctx, card)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(changedFields) > 0 {
+		requesterID := input.RequesterID
+		common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+			BoardID:    column.BoardID,
+			UserID:     &requesterID,
+			ActionType: entity.ActivityActionUpdated,
+			EntityType: entity.ActivityEntityCard,
+			EntityID:   input.CardID,
+			Metadata:   map[string]any{"card_title": card.Title, "changed_fields": changedFields},
+		})
 	}
 
 	return &UpdateCardOutput{

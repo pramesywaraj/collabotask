@@ -3,6 +3,7 @@ package card
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -69,6 +70,16 @@ func (cru *CardUseCase) CreateCard(ctx context.Context, input CreateCardInput) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to create card: %w", err)
 	}
+
+	requesterID := input.RequesterID
+	common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+		BoardID:    column.BoardID,
+		UserID:     &requesterID,
+		ActionType: entity.ActivityActionCreated,
+		EntityType: entity.ActivityEntityCard,
+		EntityID:   card.ID,
+		Metadata:   map[string]any{"card_title": card.Title},
+	})
 
 	return &CreateCardOutput{
 		Card:     card,

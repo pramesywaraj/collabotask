@@ -2,6 +2,8 @@ package card
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -40,5 +42,19 @@ func (cru *CardUseCase) DeleteCard(ctx context.Context, input DeleteCardInput) e
 		return err
 	}
 
-	return cru.cardRepo.Delete(ctx, input.CardID)
+	cardTitle := card.Title
+	if err = cru.cardRepo.Delete(ctx, input.CardID); err != nil {
+		return err
+	}
+
+	requesterID := input.RequesterID
+	common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+		BoardID:    column.BoardID,
+		UserID:     &requesterID,
+		ActionType: entity.ActivityActionDeleted,
+		EntityType: entity.ActivityEntityCard,
+		EntityID:   input.CardID,
+		Metadata:   map[string]any{"card_title": cardTitle},
+	})
+	return nil
 }

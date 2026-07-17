@@ -3,6 +3,7 @@ package card
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -53,6 +54,9 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 		return nil, err
 	}
 
+	oldColumnID := card.ColumnID
+	oldPosition := card.Position
+
 	movedCard, err := cru.cardRepo.Move(ctx, input.CardID, input.FromColumnID, input.ToColumnID, input.ToPosition)
 	if err != nil {
 		return nil, err
@@ -69,6 +73,24 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 		}
 
 		assignee = user
+	}
+
+	if movedCard.ColumnID != oldColumnID || movedCard.Position != oldPosition {
+		requesterID := input.RequesterID
+		common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+			BoardID:    fromColumn.BoardID,
+			UserID:     &requesterID,
+			ActionType: entity.ActivityActionMoved,
+			EntityType: entity.ActivityEntityCard,
+			EntityID:   input.CardID,
+			Metadata: map[string]any{
+				"card_title":        movedCard.Title,
+				"from_column_id":    oldColumnID.String(),
+				"from_column_title": fromColumn.Title,
+				"to_column_id":      movedCard.ColumnID.String(),
+				"to_column_title":   toColumn.Title,
+			},
+		})
 	}
 
 	return &MoveCardOutput{
