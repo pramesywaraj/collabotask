@@ -68,15 +68,20 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 		}
 	}
 	if input.AssignedToPresent {
+		if input.AssignedTo != nil {
+			if err := cru.requireBoardMember(ctx, input.BoardID, *input.AssignedTo); err != nil {
+				return nil, err
+			}
+		}
 		card.AssignedTo = input.AssignedTo
 	}
 	if input.DueDatePresent {
 		card.DueDate = input.DueDate
 	}
 
-	// Resolve the assignee before persisting so an unresolvable assignee can't
-	// leave a committed write behind (mirrors CreateCard's ordering). When the
-	// board-member rule (§2.8) is added, it belongs here too — before Update.
+	// Resolve the assignee for the response payload only. The membership gate
+	// above already validated a newly-set assignee; this block is display-only
+	// so a stale existing assignee never blocks an unrelated edit (Decision B).
 	if card.AssignedTo != nil {
 		user, err := cru.userRepo.GetById(ctx, *card.AssignedTo)
 		if err != nil {

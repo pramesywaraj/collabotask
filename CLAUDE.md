@@ -3,7 +3,7 @@
 Collaborative task management app (Trello-style). This is a monorepo.
 
 The backend (Go) is implemented and lives in `collabotask-backend/`.
-**All technical detail — architecture, conventions, commands, the "add an endpoint" recipe — is in `collabotask-backend/CLAUDE.md`. Read that for any code work.**
+**All technical detail — architecture, conventions, commands, the "add an endpoint" recipe — is in `collabotask-backend/README.md` (conventions + recipe) and `collabotask-backend/TESTING.md` (test approach). Read those for any code work.**
 The frontend (Next.js) is planned as a separate effort.
 
 ## Now
@@ -14,8 +14,10 @@ Phase 1 · CRUD done: auth, workspace, board, column, card
 - **Board `visibility` complete ✅** (build-order step ③ first sub-step; spec §2.2–2.4, ADR-005, migration 000007). Three-method access checker (metadata/view/mutate) + break-glass, 404-hide vs 403-reveal, idempotent self-join, thin roster, `created_by` removed from access logic. SQL filter/`card_count` tested at usecase layer only (repo-layer deferred to post-Phase-1 integration pass).
 - **Workspace ops complete ✅** (build-order step ③ second sub-step; spec §4.2 UC-06b/c/d). Promote/demote with demote guards (owner→403, last-admin→409, self-demotion OK, idempotent no-op); leave workspace (owner→403, last-admin→409, workspace-scoped participation cascade); delete workspace (owner-only). UC-06 RemoveMember retrofitted with the same cascade (`RemoveWithParticipationCascade` — clears board_members + unassigns cards in one TX). Mocks regenerated; 341 tests pass.
 - **Board ownership transfer complete ✅** (build-order step ③ third sub-step; spec §4.3 UC-12e, ADR-006). `created_by` proxy removed from `canAdministerBoard()` + `leave_board` guard (role-based now). Atomic demote-by-role + promote-by-id in one TX; break-glass via `CheckMutateAccess` ∘ `canAdministerBoard`; `ErrTransferTargetNotBoardMember` (400); idempotent no-op; orphan-safe. Mocks regenerated; 361 tests pass. Activity write + `OWNERSHIP_TRANSFERRED` broadcast deferred (step ④).
-- **Building → REST feature completion** (build-order step ③ per spec §9.1): board `visibility` ✅ → workspace ops ✅ → board ownership transfer (UC-12e) ✅ → assignee board-member validation + unassign cascade (UC-14/UC-16, data correction only) ← *next* → activities table + writes.
-- **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ← *here (ownership transfer done)* → ④ WebSocket + participation broadcast.
+- **Assignee validation + board-scoped unassign cascade complete ✅** (build-order step ③ fourth sub-step; spec §2.8, UC-14/UC-16, UC-10/UC-12d). Write-time gate: `boardMemberRepo.IsUserExists` → `ErrAssigneeNotBoardMember` (400) on `create_card`/`update_card`, collapsing the old 404 path (Decision C); `update_card` validates a *newly-set* assignee only, never a stale one (Decision B). Atomic `RemoveWithParticipationCascade` (delete membership + `UPDATE cards SET assigned_to=NULL … RETURNING` in one TX) wired into `leave_board` + board `remove_member`; owner-cannot-leave guard stays ahead of it. Mocks + Wire regenerated; 368 tests pass. `CARD_UPDATED` broadcast for cleared cards deferred (step ④; cascade already returns `[]AffectedCard`).
+- **Building → REST feature completion** (build-order step ③ per spec §9.1): board `visibility` ✅ → workspace ops ✅ → board ownership transfer (UC-12e) ✅ → assignee validation + unassign cascade (UC-14/UC-16) ✅ → activities table + writes ← *next*.
+- **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ← *here (assignee validation + cascade done; activities sub-step next)* → ④ WebSocket + participation broadcast → ⑤ post-Phase-1 integrity pass *(opens once ④ is done: stand up the DB/repo test harness → **composite-FK assignee invariant / ADR-007 first** → then the deferred SQL tests: cascade, rebalance, visibility filter, card_count)*.
+- **Integrity pass (⑤) rationale:** the composite-FK invariant (`cards(board_id, assigned_to) → board_members … ON DELETE SET NULL (assigned_to)`, PG16) would make "assignee ∈ board members" a DB guarantee and auto-cascade unassignment on every membership-loss path — superseding the app-layer checks + `RemoveWithParticipationCascade` helpers and the §2.8 shared-helper design. Deferred out of Phase 1 (needs the harness; reopens shipped cascade code). Do it **FK-first** so you don't test cascade SQL you're about to delete. Full write-up: `docs/handoff/handoff-assignee-validation-cascade.md`; memory [[post-phase1-integration-tests]].
 - **Don't touch:** Phase-2 deferrals (comments, labels, attachments, public boards, refresh tokens, account deletion) and the planned Next.js frontend.
 
 ## Core Concepts
@@ -33,7 +35,7 @@ Phase 1 · CRUD done: auth, workspace, board, column, card
 - PRD — `docs/product/001-PRD.md`
 - User stories — `docs/product/001-user-stories.md`
 - Software spec — `docs/spesifications/001-software-specifications.md`
-- Backend technical — `collabotask-backend/CLAUDE.md`
+- Backend technical — `collabotask-backend/README.md` (conventions + "add an endpoint" recipe), `collabotask-backend/TESTING.md` (test approach)
 - Architecture — `docs/architecture/backend-architecture.md`, `docs/architecture/adr/`
 
 ### Updating docs (flow downstream: PRD → user-stories → SRS → code)

@@ -440,6 +440,80 @@ func (_c *MockBoardMemberRepository_IsUserExists_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// RemoveWithParticipationCascade provides a mock function for the type MockBoardMemberRepository
+func (_mock *MockBoardMemberRepository) RemoveWithParticipationCascade(ctx context.Context, boardID uuid.UUID, userID uuid.UUID) ([]repository.AffectedCard, error) {
+	ret := _mock.Called(ctx, boardID, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveWithParticipationCascade")
+	}
+
+	var r0 []repository.AffectedCard
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) ([]repository.AffectedCard, error)); ok {
+		return returnFunc(ctx, boardID, userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) []repository.AffectedCard); ok {
+		r0 = returnFunc(ctx, boardID, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]repository.AffectedCard)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, boardID, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBoardMemberRepository_RemoveWithParticipationCascade_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveWithParticipationCascade'
+type MockBoardMemberRepository_RemoveWithParticipationCascade_Call struct {
+	*mock.Call
+}
+
+// RemoveWithParticipationCascade is a helper method to define mock.On call
+//   - ctx context.Context
+//   - boardID uuid.UUID
+//   - userID uuid.UUID
+func (_e *MockBoardMemberRepository_Expecter) RemoveWithParticipationCascade(ctx any, boardID any, userID any) *MockBoardMemberRepository_RemoveWithParticipationCascade_Call {
+	return &MockBoardMemberRepository_RemoveWithParticipationCascade_Call{Call: _e.mock.On("RemoveWithParticipationCascade", ctx, boardID, userID)}
+}
+
+func (_c *MockBoardMemberRepository_RemoveWithParticipationCascade_Call) Run(run func(ctx context.Context, boardID uuid.UUID, userID uuid.UUID)) *MockBoardMemberRepository_RemoveWithParticipationCascade_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBoardMemberRepository_RemoveWithParticipationCascade_Call) Return(affectedCards []repository.AffectedCard, err error) *MockBoardMemberRepository_RemoveWithParticipationCascade_Call {
+	_c.Call.Return(affectedCards, err)
+	return _c
+}
+
+func (_c *MockBoardMemberRepository_RemoveWithParticipationCascade_Call) RunAndReturn(run func(ctx context.Context, boardID uuid.UUID, userID uuid.UUID) ([]repository.AffectedCard, error)) *MockBoardMemberRepository_RemoveWithParticipationCascade_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // TransferOwnership provides a mock function for the type MockBoardMemberRepository
 func (_mock *MockBoardMemberRepository) TransferOwnership(ctx context.Context, boardID uuid.UUID, newOwnerID uuid.UUID) (*uuid.UUID, error) {
 	ret := _mock.Called(ctx, boardID, newOwnerID)

@@ -97,22 +97,45 @@ func TestCreateCard(t *testing.T) {
 			},
 			wantErr: domain.ErrInvalidAssigneeID,
 		},
+		// UC-14/UC-16 — assignee board-membership gate
 		{
-			name:  "assignee GetById returns error → wrapped error",
+			name:  "assignee IsUserExists fails → wrapped error (no card write)",
 			input: assigneeInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(false, errors.New("db error"))
+			},
+			wantErrMsg: "failed to verify assignee board membership",
+		},
+		{
+			name:  "assignee not a board member → ErrAssigneeNotBoardMember (no card write, Decision C)",
+			input: assigneeInput,
+			setupMocks: func(d cardTestDeps) {
+				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(false, nil)
+			},
+			wantErr: domain.ErrAssigneeNotBoardMember,
+		},
+		{
+			name:  "assignee is a board member but GetById fails → wrapped error (display fetch)",
+			input: assigneeInput,
+			setupMocks: func(d cardTestDeps) {
+				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
+				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(true, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(nil, errors.New("db error"))
 			},
 			wantErrMsg: "failed to fetch assignee",
 		},
 		{
-			name:  "assignee nil/empty → ErrUserNotFound",
+			name:  "assignee is a board member but GetById returns nil → ErrUserNotFound",
 			input: assigneeInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(true, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(nil, nil)
 			},
 			wantErr: domain.ErrUserNotFound,
@@ -139,7 +162,8 @@ func TestCreateCard(t *testing.T) {
 			wantErrMsg: "failed to create card",
 		},
 		{
-			name:  "success — without assignee (maxPos=4000 → position=5000)",
+			// IsUserExists must NOT be called when there is no assignee (Decision B analog for create).
+			name:  "success — without assignee (maxPos=4000 → position=5000, IsUserExists not called)",
 			input: validInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
@@ -158,11 +182,12 @@ func TestCreateCard(t *testing.T) {
 			},
 		},
 		{
-			name:  "success — first card in empty column (maxPos=0 → position=1000)",
+			name:  "success — first card in empty column (maxPos=0 → position=1000, assignee is a board member)",
 			input: assigneeInput,
 			setupMocks: func(d cardTestDeps) {
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newColumn(), nil)
 				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).Return(&common.BoardAccess{Board: board}, nil)
+				d.boardMemberRepo.EXPECT().IsUserExists(mock.Anything, boardID, assigneeID).Return(true, nil)
 				d.userRepo.EXPECT().GetById(mock.Anything, assigneeID).Return(
 					&entity.User{ID: assigneeID, Name: "Assignee"}, nil,
 				)

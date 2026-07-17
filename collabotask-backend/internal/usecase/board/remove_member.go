@@ -43,7 +43,8 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 		return domain.ErrBoardPermissionDenied
 	}
 
-	err = bu.boardMemberRepo.Delete(ctx, input.BoardID, input.UserID)
+	// TODO(ws, step ④): broadcast CARD_UPDATED for the returned affected cards.
+	_, err = bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.UserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrBoardMemberNotFound) {
 			return domain.ErrBoardMemberNotFound

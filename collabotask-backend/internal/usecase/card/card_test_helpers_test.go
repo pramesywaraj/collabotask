@@ -8,22 +8,24 @@ import (
 )
 
 type cardTestDeps struct {
-	checker    *mocks.MockBoardAccessChecker
-	cardRepo   *mocks.MockCardRepository
-	columnRepo *mocks.MockColumnRepository
-	userRepo   *mocks.MockUserRepository
-	uc         *card.CardUseCase
+	checker         *mocks.MockBoardAccessChecker
+	cardRepo        *mocks.MockCardRepository
+	columnRepo      *mocks.MockColumnRepository
+	userRepo        *mocks.MockUserRepository
+	boardMemberRepo *mocks.MockBoardMemberRepository
+	uc              *card.CardUseCase
 }
 
 func newDeps(t *testing.T) cardTestDeps {
 	t.Helper()
 	d := cardTestDeps{
-		checker:    mocks.NewMockBoardAccessChecker(t),
-		cardRepo:   mocks.NewMockCardRepository(t),
-		columnRepo: mocks.NewMockColumnRepository(t),
-		userRepo:   mocks.NewMockUserRepository(t),
+		checker:         mocks.NewMockBoardAccessChecker(t),
+		cardRepo:        mocks.NewMockCardRepository(t),
+		columnRepo:      mocks.NewMockColumnRepository(t),
+		userRepo:        mocks.NewMockUserRepository(t),
+		boardMemberRepo: mocks.NewMockBoardMemberRepository(t),
 	}
-	d.uc = card.NewCardUseCase(d.cardRepo, d.columnRepo, d.userRepo, d.checker)
+	d.uc = card.NewCardUseCase(d.cardRepo, d.columnRepo, d.userRepo, d.checker, d.boardMemberRepo)
 	return d
 }
 

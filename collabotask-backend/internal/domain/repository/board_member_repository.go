@@ -21,4 +21,9 @@ type BoardMemberRepository interface {
 	// Returns the demoted owner's id (nil when the board has no owner) for the
 	// future OWNERSHIP_TRANSFERRED broadcast — returned now so step ④ is a pure wire-up.
 	TransferOwnership(ctx context.Context, boardID, newOwnerID uuid.UUID) (fromUserID *uuid.UUID, err error)
+	// RemoveWithParticipationCascade deletes the board_members row and clears that
+	// user's card assignments on THIS board, in one tx. Returns the unassigned cards
+	// (for the future CARD_UPDATED broadcast — returned now so step ④ is a pure
+	// wire-up). ErrBoardMemberNotFound when the row is absent.
+	RemoveWithParticipationCascade(ctx context.Context, boardID, userID uuid.UUID) ([]AffectedCard, error)
 }

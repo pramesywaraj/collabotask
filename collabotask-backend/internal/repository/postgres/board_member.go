@@ -162,6 +162,46 @@ func (bmr *boardMemberRepository) IsUserExists(ctx context.Context, boardID, use
 	return isExists, nil
 }
 
+func (bmr *boardMemberRepository) RemoveWithParticipationCascade(ctx context.Context, boardID, userID uuid.UUID) ([]repository.AffectedCard, error) {
+	tx, err := bmr.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	result, err := tx.Exec(ctx, deleteBoardMemberForCascadeQuery, boardID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove board member: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return nil, domain.ErrBoardMemberNotFound
+	}
+
+	rows, err := tx.Query(ctx, unassignBoardCardsForUserQuery, boardID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unassign cards: %w", err)
+	}
+	defer rows.Close()
+
+	var affected []repository.AffectedCard
+	for rows.Next() {
+		var card repository.AffectedCard
+		if err := rows.Scan(&card.CardID, &card.ColumnID); err != nil {
+			return nil, fmt.Errorf("failed to scan affected card: %w", err)
+		}
+		affected = append(affected, card)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating affected cards: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit cascade transaction: %w", err)
+	}
+
+	return affected, nil
+}
+
 func (bmr *boardMemberRepository) TransferOwnership(ctx context.Context, boardID, newOwnerID uuid.UUID) (*uuid.UUID, error) {
 	tx, err := bmr.db.Begin(ctx)
 	if err != nil {

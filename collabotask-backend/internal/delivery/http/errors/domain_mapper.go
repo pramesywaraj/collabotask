@@ -41,7 +41,8 @@ func MapDomainError(err error) *AppError {
 		errors.Is(err, domain.ErrCannotRemoveYourself),
 		errors.Is(err, domain.ErrBoardNoMembersToInvite),
 		errors.Is(err, domain.ErrInvalidAssigneeID),
-		errors.Is(err, domain.ErrTransferTargetNotBoardMember):
+		errors.Is(err, domain.ErrTransferTargetNotBoardMember),
+		errors.Is(err, domain.ErrAssigneeNotBoardMember):
 		return NewAppError(http.StatusBadRequest, ErrCodeValidation, err.Error())
 	case errors.Is(err, domain.ErrEmailAlreadyExists),
 		errors.Is(err, domain.ErrAlreadyMember),
