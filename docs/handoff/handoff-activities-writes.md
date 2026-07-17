@@ -204,3 +204,35 @@ Plus targeted cases:
 - `migrate` up to `000008` against a scratch DB (confirm the migration applies + rolls back)
 - `go build ./... && go vet ./...`
 - `go test ./internal/usecase/... ./internal/delivery/...`
+
+---
+
+## Code review — results (2026-07-17, `/code-review` two-axis, post-implementation)
+
+Reviewed the staged implementation (`git diff HEAD`, 70 files, +2099/−71) against this handoff + ADR-007 + SRS §4.6 (Spec axis) and `README.md`/`TESTING.md` + Fowler smell baseline (Standards axis).
+
+**Verdict: faithful and idiomatic.** No hard standards violations; no missing map rows; no scope creep. All findings below are non-blocking — the two decision items (A1, S1) are the only things needing an explicit call before this is considered closed.
+
+### Spec axis — faithful
+- All **17 rows** of the §4.6 map implemented with correct `entity_type`/`action_type`, correct fire-gates, and `entity_id` = **target user** for MEMBER events (actor stays in `UserID`). ✓
+- `break_glass` = `IsAdmin() && Visibility==Private`, only on `inserted`. ✓ `from_user_id` omitted on orphan appointment. ✓
+- **Per-affected-board cascade rows incl. zero-assigned-card boards** — `DELETE … RETURNING bm.board_id` captures every deleted membership independently of the card `UPDATE`. The key correctness point — done right. ✓
+- Swallow centralized in `common.WriteActivity` only; postgres `Log` returns the error (ADR-007 Option A). ✓
+- Placeholder TODOs at `transfer_ownership.go:41`, `self_join_board.go:68`, `board_io.go:126` replaced; only step-④ broadcast TODOs remain. ✓
+- **No deferred work crept in** — no `Broadcast()`, no Transactor/`WithinTransaction`, no composite-FK, no reader/feed, no old→new diffs, no async. `AffectedCards` still returned-but-unused (intentional, staged for step ④). ✓
+
+### Standards axis — no hard violations
+New entity/repository/postgres files, tests (external `_test` package, table/`t.Run`, `require`, `NewMock*(t)`), and use-case shapes all match sibling conventions. `WorkspaceCascadeResult` bundling `AffectedCards` + `AffectedBoardIDs` is a clean fix for a would-be Data Clump.
+
+### Action items for the next agent
+Priority order. **A-items are required fixes/reconciliations (product-owner decided); S-items are optional quality cleanups.**
+
+- **[A1 · FIX — add the fields] `update_board` must emit `visibility_from` / `visibility_to`.** **Decided (2026-07-17, product owner): option (b) — add the two fields.** The §4.6 map row (line 552) already specifies `BOARD/UPDATED {changed_fields, visibility_from?, visibility_to?}`; the impl currently only appends the bare name `"visibility"` to `changed_fields` ([update_board.go:68-70](../../collabotask-backend/internal/usecase/board/update_board.go#L68-L70)) and emits no from/to ([update_board.go:107](../../collabotask-backend/internal/usecase/board/update_board.go#L107)).
+  - **Why this is the right call (not names-only):** the activity feed (US-09 / UC-22) must let a reader reconstruct a *visibility* change without guessing — this is a **security-relevant, access-widening** transition (e.g. `private → workspace-visible`), so the feed needs to render "changed visibility from Private to Workspace-visible," not just "changed visibility." Unlike free-text fields, visibility is a **2-value enum**, so from/to is cheap, bounded, and unambiguous.
+  - **Visibility is the deliberate exception to §4.6's "UPDATE stores `changed_fields` names only, not old→new diffs" rule (line 538).** That rule exists to avoid diffing arbitrary-length free text (title/description) and to defer general field-diffing to Phase 2 — neither cost applies to a bounded enum whose *value is the auditable fact*. Keep names-only for every other field; visibility carries from/to.
+  - **Implementation:** old value = `board.Visibility` **before** the mutation at [update_board.go:90-92](../../collabotask-backend/internal/usecase/board/update_board.go#L90-L92); new value = `*input.Visibility`. No extra query. Set `visibility_from`/`visibility_to` in the metadata **only when visibility actually changed** (it's already gated by the `changedFields` "visibility" check). Add a happy-path test asserting both keys on a visibility flip, and asserting they're **absent** when visibility didn't change.
+  - **Doc:** add a one-line note under the §4.6 "names-only" rule (line 538) recording that **visibility is exempt** because the transition is the auditable fact — so a future reader doesn't "fix" the code back to names-only.
+- **[A2 · doc reconcile] Add `board_title` to the §4.6 `BOARD/UPDATED` map row.** `update_board` writes `board_title` ([update_board.go:107](../../collabotask-backend/internal/usecase/board/update_board.go#L107)) but the map row (line 552) doesn't list it. The code is *correct* — a board can be renamed, so snapshotting its title matches the §4.6 snapshot principle (line 538). Just **add `board_title` to the map row** so doc matches code. (Note: `card_title` is *already* in the `CARD/UPDATED` row (line 546) — `update_card` needs no change; this item is board-only.)
+- **[S1 · optional refactor] Duplicated `WriteActivity` call shape across ~17 sites.** Every site repeats `requesterID := input.RequesterID` (a temp existing only to take `&` of a struct field) + the literal `&entity.Activity{…}`. Consider changing `WriteActivity` to take the actor `uuid.UUID` **by value** (build the `*uuid.UUID` internally), and/or a `common.MemberActivity(boardID, actor, action, target, source)` constructor to collapse the MEMBER shape and the near-identical per-board loops in `workspace/remove_member.go` + `leave_workspace.go`. Judgement call — do it if touching these sites again.
+- **[S2 · optional] Stringly-typed metadata keys.** `"source"`, `"board_title"`, `"changed_fields"`, etc. are untyped literals scattered across sites (and type-asserted in tests). Consider `entity.Meta*` key constants to prevent drift. Minor.
+- **[S3 · no-op] `set_archived.go` passes `Metadata: map[string]any{}`** while siblings pass populated maps. Leave as-is — `{}` marshals to `{}` (vs `nil` → `null`), so it's the safer literal; flagged only for awareness.
