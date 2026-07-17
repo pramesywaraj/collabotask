@@ -115,14 +115,15 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 	}
 
 	if len(changedFields) > 0 {
-		requesterID := input.RequesterID
-		common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+		common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
 			BoardID:    column.BoardID,
-			UserID:     &requesterID,
 			ActionType: entity.ActivityActionUpdated,
 			EntityType: entity.ActivityEntityCard,
 			EntityID:   input.CardID,
-			Metadata:   map[string]any{"card_title": card.Title, "changed_fields": changedFields},
+			Metadata: map[string]any{
+				entity.ActivityMetaCardTitle:     card.Title,
+				entity.ActivityMetaChangedFields: changedFields,
+			},
 		})
 	}
 

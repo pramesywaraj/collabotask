@@ -50,14 +50,12 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 		return fmt.Errorf("failed to remove member from board: %w", err)
 	}
 
-	requesterID := input.RequesterID
-	common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    input.BoardID,
-		UserID:     &requesterID,
 		ActionType: entity.ActivityActionLeft,
 		EntityType: entity.ActivityEntityMember,
 		EntityID:   input.RequesterID,
-		Metadata:   map[string]any{"source": "board"},
+		Metadata:   map[string]any{entity.ActivityMetaSource: "board"},
 	})
 
 	return nil

@@ -55,10 +55,8 @@ func (bu *BoardUseCase) SetArchived(ctx context.Context, input SetArchivedInput)
 	if !board.IsArchived {
 		actionType = entity.ActivityActionUnarchived
 	}
-	requesterID := input.RequesterID
-	common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    board.ID,
-		UserID:     &requesterID,
 		ActionType: actionType,
 		EntityType: entity.ActivityEntityBoard,
 		EntityID:   board.ID,

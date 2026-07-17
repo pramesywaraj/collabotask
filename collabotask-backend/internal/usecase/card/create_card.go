@@ -71,14 +71,12 @@ func (cru *CardUseCase) CreateCard(ctx context.Context, input CreateCardInput) (
 		return nil, fmt.Errorf("failed to create card: %w", err)
 	}
 
-	requesterID := input.RequesterID
-	common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    column.BoardID,
-		UserID:     &requesterID,
 		ActionType: entity.ActivityActionCreated,
 		EntityType: entity.ActivityEntityCard,
 		EntityID:   card.ID,
-		Metadata:   map[string]any{"card_title": card.Title},
+		Metadata:   map[string]any{entity.ActivityMetaCardTitle: card.Title},
 	})
 
 	return &CreateCardOutput{

@@ -33,14 +33,12 @@ func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInp
 		return nil, err
 	}
 
-	requesterID := input.RequesterID
-	common.WriteActivity(ctx, cu.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    column.BoardID,
-		UserID:     &requesterID,
 		ActionType: entity.ActivityActionCreated,
 		EntityType: entity.ActivityEntityColumn,
 		EntityID:   column.ID,
-		Metadata:   map[string]any{"column_title": column.Title},
+		Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
 	})
 
 	return &CreateColumnOutput{

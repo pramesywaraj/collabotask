@@ -87,16 +87,13 @@ func (bu *BoardUseCase) InviteMember(ctx context.Context, input InviteMemberInpu
 		return err
 	}
 
-	requesterID := input.RequesterID
 	for _, m := range membersToAdd {
-		inviteeID := m.UserID
-		common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+		common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
 			BoardID:    input.BoardID,
-			UserID:     &requesterID,
 			ActionType: entity.ActivityActionAdded,
 			EntityType: entity.ActivityEntityMember,
-			EntityID:   inviteeID,
-			Metadata:   map[string]any{"role": string(m.Role)},
+			EntityID:   m.UserID,
+			Metadata:   map[string]any{entity.ActivityMetaRole: string(m.Role)},
 		})
 	}
 

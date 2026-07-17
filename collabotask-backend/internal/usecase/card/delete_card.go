@@ -47,14 +47,12 @@ func (cru *CardUseCase) DeleteCard(ctx context.Context, input DeleteCardInput) e
 		return err
 	}
 
-	requesterID := input.RequesterID
-	common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    column.BoardID,
-		UserID:     &requesterID,
 		ActionType: entity.ActivityActionDeleted,
 		EntityType: entity.ActivityEntityCard,
 		EntityID:   input.CardID,
-		Metadata:   map[string]any{"card_title": cardTitle},
+		Metadata:   map[string]any{entity.ActivityMetaCardTitle: cardTitle},
 	})
 	return nil
 }

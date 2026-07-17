@@ -37,16 +37,13 @@ func (wu *WorkspaceUseCase) RemoveMember(ctx context.Context, input RemoveMember
 		return fmt.Errorf("failed to remove member from the workspace: %w", err)
 	}
 
-	requesterID := input.RequesterID
-	targetID := input.UserID
 	for _, boardID := range result.AffectedBoardIDs {
-		common.WriteActivity(ctx, wu.activityRepo, &entity.Activity{
+		common.WriteActivity(ctx, wu.activityRepo, input.RequesterID, &entity.Activity{
 			BoardID:    boardID,
-			UserID:     &requesterID,
 			ActionType: entity.ActivityActionRemoved,
 			EntityType: entity.ActivityEntityMember,
-			EntityID:   targetID,
-			Metadata:   map[string]any{"source": "workspace"},
+			EntityID:   input.UserID,
+			Metadata:   map[string]any{entity.ActivityMetaSource: "workspace"},
 		})
 	}
 

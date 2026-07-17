@@ -76,19 +76,17 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 	}
 
 	if movedCard.ColumnID != oldColumnID || movedCard.Position != oldPosition {
-		requesterID := input.RequesterID
-		common.WriteActivity(ctx, cru.activityRepo, &entity.Activity{
+		common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
 			BoardID:    fromColumn.BoardID,
-			UserID:     &requesterID,
 			ActionType: entity.ActivityActionMoved,
 			EntityType: entity.ActivityEntityCard,
 			EntityID:   input.CardID,
 			Metadata: map[string]any{
-				"card_title":        movedCard.Title,
-				"from_column_id":    oldColumnID.String(),
-				"from_column_title": fromColumn.Title,
-				"to_column_id":      movedCard.ColumnID.String(),
-				"to_column_title":   toColumn.Title,
+				entity.ActivityMetaCardTitle:       movedCard.Title,
+				entity.ActivityMetaFromColumnID:    oldColumnID.String(),
+				entity.ActivityMetaFromColumnTitle: fromColumn.Title,
+				entity.ActivityMetaToColumnID:      movedCard.ColumnID.String(),
+				entity.ActivityMetaToColumnTitle:   toColumn.Title,
 			},
 		})
 	}

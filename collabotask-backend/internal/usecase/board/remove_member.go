@@ -54,15 +54,12 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 		return fmt.Errorf("failed to remove member from board: %w", err)
 	}
 
-	requesterID := input.RequesterID
-	targetID := input.UserID
-	common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    input.BoardID,
-		UserID:     &requesterID,
 		ActionType: entity.ActivityActionRemoved,
 		EntityType: entity.ActivityEntityMember,
-		EntityID:   targetID,
-		Metadata:   map[string]any{"source": "board"},
+		EntityID:   input.UserID,
+		Metadata:   map[string]any{entity.ActivityMetaSource: "board"},
 	})
 
 	return nil

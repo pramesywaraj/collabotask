@@ -46,14 +46,12 @@ func (bu *BoardUseCase) TransferOwnership(ctx context.Context, input TransferOwn
 		return fmt.Errorf("failed to transfer ownership: %w", err)
 	}
 
-	requesterID := input.RequesterID
-	meta := map[string]any{"to_user_id": input.ToUserID.String()}
+	meta := map[string]any{entity.ActivityMetaToUserID: input.ToUserID.String()}
 	if fromUserID != nil {
-		meta["from_user_id"] = fromUserID.String()
+		meta[entity.ActivityMetaFromUserID] = fromUserID.String()
 	}
-	common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    input.BoardID,
-		UserID:     &requesterID,
 		ActionType: entity.ActivityActionOwnershipTransferred,
 		EntityType: entity.ActivityEntityBoard,
 		EntityID:   input.BoardID,

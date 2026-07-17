@@ -42,14 +42,12 @@ func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateC
 	column.Position = newPos
 
 	if newPos != oldPosition {
-		requesterID := input.RequesterID
-		common.WriteActivity(ctx, cu.activityRepo, &entity.Activity{
+		common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
 			BoardID:    column.BoardID,
-			UserID:     &requesterID,
 			ActionType: entity.ActivityActionMoved,
 			EntityType: entity.ActivityEntityColumn,
 			EntityID:   column.ID,
-			Metadata:   map[string]any{"column_title": column.Title},
+			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
 		})
 	}
 

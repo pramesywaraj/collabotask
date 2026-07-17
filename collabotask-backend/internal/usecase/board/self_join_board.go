@@ -74,14 +74,15 @@ func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardIn
 
 	if inserted {
 		breakGlass := workspaceMember.IsAdmin() && board.Visibility == entity.BoardVisibilityPrivate
-		requesterID := input.RequesterID
-		common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+		common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
 			BoardID:    input.BoardID,
-			UserID:     &requesterID,
 			ActionType: entity.ActivityActionJoined,
 			EntityType: entity.ActivityEntityMember,
 			EntityID:   input.RequesterID,
-			Metadata:   map[string]any{"role": string(entity.BoardRoleMember), "break_glass": breakGlass},
+			Metadata: map[string]any{
+				entity.ActivityMetaRole:       string(entity.BoardRoleMember),
+				entity.ActivityMetaBreakGlass: breakGlass,
+			},
 		})
 	}
 

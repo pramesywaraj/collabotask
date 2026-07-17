@@ -36,14 +36,12 @@ func (cu *ColumnUseCase) DeleteColumn(ctx context.Context, input DeleteColumnInp
 		return err
 	}
 
-	requesterID := input.RequesterID
-	common.WriteActivity(ctx, cu.activityRepo, &entity.Activity{
+	common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
 		BoardID:    column.BoardID,
-		UserID:     &requesterID,
 		ActionType: entity.ActivityActionDeleted,
 		EntityType: entity.ActivityEntityColumn,
 		EntityID:   column.ID,
-		Metadata:   map[string]any{"column_title": colTitle},
+		Metadata:   map[string]any{entity.ActivityMetaColumnTitle: colTitle},
 	})
 	return nil
 }
