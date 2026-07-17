@@ -3,6 +3,7 @@ package column
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"fmt"
@@ -31,6 +32,16 @@ func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInp
 	if err != nil {
 		return nil, err
 	}
+
+	requesterID := input.RequesterID
+	common.WriteActivity(ctx, cu.activityRepo, &entity.Activity{
+		BoardID:    column.BoardID,
+		UserID:     &requesterID,
+		ActionType: entity.ActivityActionCreated,
+		EntityType: entity.ActivityEntityColumn,
+		EntityID:   column.ID,
+		Metadata:   map[string]any{"column_title": column.Title},
+	})
 
 	return &CreateColumnOutput{
 		Column: column,
