@@ -3,6 +3,7 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -65,10 +66,23 @@ func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardIn
 
 	// ON CONFLICT DO NOTHING RETURNING: guards the race where a concurrent join
 	// slipped in between the check above and here. A no-op insert reports
-	// Joined=false so the (future) activity log / broadcast stays silent.
+	// Joined=false so the activity log / broadcast stays silent.
 	inserted, err := bu.boardMemberRepo.CreateIfAbsent(ctx, newBoardMember)
 	if err != nil {
 		return nil, fmt.Errorf("failed join to the board: %w", err)
+	}
+
+	if inserted {
+		breakGlass := workspaceMember.IsAdmin() && board.Visibility == entity.BoardVisibilityPrivate
+		requesterID := input.RequesterID
+		common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+			BoardID:    input.BoardID,
+			UserID:     &requesterID,
+			ActionType: entity.ActivityActionJoined,
+			EntityType: entity.ActivityEntityMember,
+			EntityID:   input.RequesterID,
+			Metadata:   map[string]any{"role": string(entity.BoardRoleMember), "break_glass": breakGlass},
+		})
 	}
 
 	return &SelfJoinBoardOutput{Joined: inserted}, nil

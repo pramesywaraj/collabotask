@@ -2,6 +2,8 @@ package board
 
 import (
 	"collabotask/internal/domain"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -51,6 +53,17 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 		}
 		return fmt.Errorf("failed to remove member from board: %w", err)
 	}
+
+	requesterID := input.RequesterID
+	targetID := input.UserID
+	common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+		BoardID:    input.BoardID,
+		UserID:     &requesterID,
+		ActionType: entity.ActivityActionRemoved,
+		EntityType: entity.ActivityEntityMember,
+		EntityID:   targetID,
+		Metadata:   map[string]any{"source": "board"},
+	})
 
 	return nil
 }

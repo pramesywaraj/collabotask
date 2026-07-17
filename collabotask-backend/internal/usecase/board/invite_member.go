@@ -3,6 +3,7 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -84,6 +85,19 @@ func (bu *BoardUseCase) InviteMember(ctx context.Context, input InviteMemberInpu
 
 	if err := bu.boardMemberRepo.CreateMany(ctx, membersToAdd); err != nil {
 		return err
+	}
+
+	requesterID := input.RequesterID
+	for _, m := range membersToAdd {
+		inviteeID := m.UserID
+		common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+			BoardID:    input.BoardID,
+			UserID:     &requesterID,
+			ActionType: entity.ActivityActionAdded,
+			EntityType: entity.ActivityEntityMember,
+			EntityID:   inviteeID,
+			Metadata:   map[string]any{"role": string(m.Role)},
+		})
 	}
 
 	return nil

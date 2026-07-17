@@ -169,6 +169,7 @@ func TestRemoveMemberBoard(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			d := newDeps(t)
+			d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 			tt.setupMocks(d)
 
 			err := d.uc.RemoveMember(context.Background(), tt.input)

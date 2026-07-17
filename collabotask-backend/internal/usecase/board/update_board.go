@@ -3,6 +3,7 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
 	"errors"
@@ -45,6 +46,29 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 		return nil, domain.ErrBoardPermissionDenied
 	}
 
+	var changedFields []string
+	if input.Title != nil && *input.Title != board.Title {
+		changedFields = append(changedFields, "title")
+	}
+	if input.DescriptionPresent {
+		var newDesc *string
+		if input.Description != nil && strings.TrimSpace(*input.Description) != "" {
+			s := strings.TrimSpace(*input.Description)
+			newDesc = &s
+		}
+		oldNil := board.Description == nil
+		newNil := newDesc == nil
+		if oldNil != newNil || (!oldNil && !newNil && *board.Description != *newDesc) {
+			changedFields = append(changedFields, "description")
+		}
+	}
+	if input.BackgroundColor != nil && *input.BackgroundColor != board.BackgroundColor {
+		changedFields = append(changedFields, "background_color")
+	}
+	if input.Visibility != nil && string(board.Visibility) != *input.Visibility {
+		changedFields = append(changedFields, "visibility")
+	}
+
 	if input.Title != nil {
 		board.Title = *input.Title
 	}
@@ -70,6 +94,18 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 	err = bu.boardRepo.Update(ctx, board)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update the board: %w", err)
+	}
+
+	if len(changedFields) > 0 {
+		requesterID := input.RequesterID
+		common.WriteActivity(ctx, bu.activityRepo, &entity.Activity{
+			BoardID:    board.ID,
+			UserID:     &requesterID,
+			ActionType: entity.ActivityActionUpdated,
+			EntityType: entity.ActivityEntityBoard,
+			EntityID:   board.ID,
+			Metadata:   map[string]any{"board_title": board.Title, "changed_fields": changedFields},
+		})
 	}
 
 	return &UpdateBoardOutput{
