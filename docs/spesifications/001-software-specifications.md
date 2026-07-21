@@ -178,6 +178,7 @@ Card and column ordering uses **fractional positions** stored as `NUMERIC`, not 
 
 ### 3.5 Auth specifics
 - JWT, **7-day expiry, no refresh token in Phase 1** (conscious decision; refresh-token rotation is a Phase 2 candidate).
+- **JWT delivery: `Authorization: Bearer` header today → migrating to an httpOnly, Secure, SameSite cookie** (build step ③.5, **[ADR-008](../architecture/adr/adr-008-auth-httponly-cookie.md)**), unifying auth across REST + WebSocket + SSR and forcing explicit CORS origins (design pending its own grilling).
 - Password hashed with **bcrypt**; min length **8**.
 - **No account deletion or deactivation in Phase 1** (see §8 / §10). Therefore the old "Account disabled → 403" error case is **removed** from UC-02.
 
@@ -508,17 +509,29 @@ WHERE id=$card RETURNING *;
 
 ### 4.5 Real-time Collaboration
 
+> **Design settled — [ADR-009](../architecture/adr/adr-009-websocket-realtime-layer.md); build step ④** (after ③.5 auth-cookie). Broadcasts originate in the **usecase layer** via a `Broadcaster` port, best-effort + after-commit (swallow-on-failure, exactly like `WriteActivity`/ADR-007). Mutations stay **REST-in, server-broadcasts-out** (§5.1); the WS layer adds broadcast taps. Full build plan: `docs/handoff/websocket-participation-broadcast/index.md`.
+
 #### UC-18: WebSocket Lifecycle
-- **Endpoint:** `GET /api/v1/ws?token=<jwt>` (or `Authorization` header) — **NEW, not in code.**
-- **Connect:** validate JWT → register connection → client sends `JOIN_BOARD{board_id}` → server validates board access → add to in-memory board room → broadcast `USER_JOINED` → send `ACTIVE_USERS` to the joiner.
-- **Disconnect:** remove from room + pool → broadcast `USER_LEFT`.
+- **Endpoint:** `GET /api/v1/ws` · Auth — **NEW, not in code.** Authenticated from the **httpOnly JWT cookie** (ADR-008 / §3.5): `Accept` reads the cookie → `ValidateToken` → reject `401` **before** upgrade. (No `?token=` query param, no subprotocol.)
+- **Server write-timeout:** the shared `http.Server`'s 30s `WriteTimeout` (§3.1) would kill a long-lived idle WS — cleared for *this connection only* via `http.ResponseController`; REST keeps its 30s. WS liveness is **server-driven ping/pong**, not a fixed deadline.
+- **Origin (CSWSH):** coder/websocket's `OriginPatterns` is fed the **explicit** `CORS_ALLOWED_ORIGINS` shared with REST CORS (cookie auth forbids `*`). Never `InsecureSkipVerify`.
+- **Connect:** authenticate → register connection → client sends `JOIN_BOARD{board_id}` → server re-validates board access via **`CheckViewAccess`** (room visibility == kanban visibility; break-glass falls out) → add to in-memory room → broadcast `USER_JOINED` (on the user's 0→1 edge) → send `ACTIVE_USERS` to the joiner.
+- **Disconnect:** remove connection from all its rooms → broadcast `USER_LEFT` (on the user's 1→0 edge).
 - **Reconnect:** client exponential backoff (immediate, 1s, 2s, 4s, … max 30s) → re-`JOIN_BOARD` → client refetches board state via REST and reconciles.
 
-#### UC-19: Presence
-- Server keeps in-memory rooms: `map[board_id] -> map[user_id] -> connection`. On join, the joiner receives `ACTIVE_USERS`.
+#### UC-19: Presence (multi-connection, edge-triggered)
+- Server keeps in-memory rooms **keyed by user with a *set* of connections**: `map[board_id] → map[user_id] → {conn_id → connection}` (supersedes the earlier single-connection sketch — correct under multi-tab/device and reconnect; ADR-009).
+- Presence is **edge-triggered**: `USER_JOINED` fires only on a user's **0→1** connection edge in a room, `USER_LEFT` only on **1→0**; broadcasts fan out to **all** of a user's connections. `ACTIVE_USERS` (sent to the joiner) lists **distinct connected user_ids** — built from the in-memory room, never the DB roster (presence = who's connected, not who's a member).
+
+#### UC-19b: Continuous Access Enforcement (instant eviction)
+- Access is enforced **continuously, not just at join.** When a connection loses access it is **evicted immediately** from the affected room(s) via one of three hub primitives:
+  - `EvictUser(board, X)` — removed from / leaves a board (UC-10, UC-12d).
+  - `EvictExcept(board, members+admins)` — board flips **WORKSPACE→PRIVATE** (UC-12b): evict everyone not a member/admin. (`PRIVATE→WORKSPACE` needs no eviction — access only widens.)
+  - `EvictUserFromRooms(X, workspace's boards)` — removed from / leaves the workspace (UC-06, UC-06c); also closes the **workspace-visible-watcher leak** (X watching a WORKSPACE board without membership → not in `AffectedBoardIDs`).
+- **Involuntary** loss (removal, flip) sends the evicted connection a new **`ACCESS_REVOKED{board_id, reason}`** event (§5.2) — its single "leave this board view" signal. **Voluntary** leaves (UC-10, UC-06c) evict **silently** (`USER_LEFT` covers the room). Cascades use **evict-first ordering** (evict → `MEMBER_REMOVED` → per-card `CARD_UPDATED`) so room broadcasts exclude the departing user.
 
 #### UC-20: Optimistic UI
-- Client applies the change immediately, sends to server; on success other clients update, on rejection the originating client reverts and shows an error.
+- Client applies the change immediately, sends to server; on success other clients update, on rejection the originating client reverts and shows an error. Broadcasts **include the sender** (§5.2) — a REST mutation carries no WS connection identity to exclude, and the sender's other tabs must update; clients dedupe against their authoritative REST response.
 
 ### 4.6 Activity Logging (writes — Phase 1; UI = UC-22, Phase 2)
 
@@ -571,10 +584,12 @@ Every board-scoped, state-changing mutation writes **one `activities` row** (SRS
 
 All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Timestamps UTC ISO-8601.
 
+> **Handshake auth:** the connection is authenticated from the **httpOnly JWT cookie** at upgrade time (ADR-008 / §4.5 UC-18) — there is no auth message. Client→server messages are **only** the two below; all mutations go over REST (§5.1 note).
+
 ### 5.1 Client → Server
 | Type | Payload | Notes |
 | --- | --- | --- |
-| `JOIN_BOARD` | `{ board_id }` | Join a board room (access re-validated). |
+| `JOIN_BOARD` | `{ board_id }` | Join a board room; access re-validated via `CheckViewAccess`. |
 | `LEAVE_BOARD` | `{ board_id }` | Optional explicit leave. |
 
 > Card/column mutations may go over REST **or** WS depending on implementation; the **authoritative broadcast** below is what every client must handle. (Recommended: mutations via REST, server broadcasts the resulting event — simpler and reuses existing handlers.)
@@ -585,6 +600,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 | `USER_JOINED` | `{ board_id, user{id,name,avatar_url}, timestamp }` | UC-09, UC-18 |
 | `USER_LEFT` | `{ board_id, user_id, timestamp }` | UC-10, UC-18 |
 | `ACTIVE_USERS` | `{ board_id, users:[{id,name,avatar_url,joined_at}] }` | sent to joiner (UC-19) |
+| `ACCESS_REVOKED` | `{ board_id, reason }` | sent to an **involuntarily** evicted connection (UC-19b) — removal or WORKSPACE→PRIVATE flip. Voluntary leaves evict silently. |
 | `MEMBER_ADDED` | `{ board_id, user{…}, role }` | UC-11 |
 | `MEMBER_REMOVED` | `{ board_id, user_id }` | UC-12d |
 | `OWNERSHIP_TRANSFERRED` | `{ board_id, from_user_id, to_user_id }` | UC-12e |
@@ -680,7 +696,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **✅ FIXED (P1) — Assignee not validated as a board member:** ~~`create_card.go`, `update_card.go` check the user exists but not that they are a **board member** of the card's board~~ — both now gate `assigned_to` through `boardMemberRepo.IsUserExists` and return **400 `ErrAssigneeNotBoardMember`** for a non-member (assignment = participation, §2.8). Collapses the old "user exists" 404 path into a single validation error (Decision C). **Decision B:** `update_card` validates only a *newly-set* assignee (`AssignedToPresent && != nil`); a stale existing assignee is re-resolved display-only and never blocks an unrelated edit — the board-scoped unassign cascade (UC-10/UC-12d) keeps assignees honest instead. TOCTOU window accepted for Phase 1 (§2.8 "safety net"); DB-level enforcement is the deferred composite-FK candidate (see integrity-pass note below). *(Superseded the earlier "validate against workspace" framing — board membership is the stricter, correct rule.)*
 
-**🔵 Deferred (integrity pass) — composite-FK assignee invariant (ADR-008 candidate):** the "assignee ∈ board members" rule is enforced at the **application layer** today (write-time `IsUserExists` check + explicit `RemoveWithParticipationCascade`). A stronger design enforces it in the **schema**: add `board_id` to `cards` (backfill, NOT NULL), then `cards(board_id, assigned_to) → board_members(board_id, user_id) ON DELETE SET NULL (assigned_to)` (PG16). That would make assignee-validity a DB guarantee on every write path (closing the TOCTOU race) and make the unassign-cascade automatic on *every* membership-loss path — subsuming both the workspace and board app-layer cascades. **Deferred out of Phase 1:** it's a schema/architecture change beyond "data-correction only", reopens shipped cascade code, still needs the explicit `RETURNING` list for the step-④ broadcast, and wants SQL-level tests the project has deferred to the post-Phase-1 integrity pass. Headline candidate for that pass; write up as `adr-008` **when adopted** (candidate, not a decision). *(Renumbered from the earlier `adr-007` reservation: ADR-007 is now **activity logging** — see `docs/architecture/adr/adr-007-activity-logging-writes.md`.)* See [[post-phase1-integration-tests]].
+**🔵 Deferred (integrity pass) — composite-FK assignee invariant (ADR-010 candidate):** the "assignee ∈ board members" rule is enforced at the **application layer** today (write-time `IsUserExists` check + explicit `RemoveWithParticipationCascade`). A stronger design enforces it in the **schema**: add `board_id` to `cards` (backfill, NOT NULL), then `cards(board_id, assigned_to) → board_members(board_id, user_id) ON DELETE SET NULL (assigned_to)` (PG16). That would make assignee-validity a DB guarantee on every write path (closing the TOCTOU race) and make the unassign-cascade automatic on *every* membership-loss path — subsuming both the workspace and board app-layer cascades. **Deferred out of Phase 1:** it's a schema/architecture change beyond "data-correction only", reopens shipped cascade code, still needs the explicit `RETURNING` list for the step-④ broadcast, and wants SQL-level tests the project has deferred to the post-Phase-1 integrity pass. Headline candidate for that pass; write up as `adr-010` **when adopted** (candidate, not a decision). *(Renumbered 008→010: ADR-008 is now **auth httpOnly-cookie** and ADR-009 is the **WebSocket realtime layer** — both Phase-1 build steps that landed ahead of this deferred candidate.)* See [[post-phase1-integration-tests]].
 
 **✅ RESOLVED (P2) — Two sources of truth for board ownership:** ~~owner is implied by both `boards.created_by` and a `board_members(BOARD_OWNER)` row~~ — `board_members.role` is now the **sole** ownership authority (ADR-006). `created_by` is a historical-creator trace only; the `canAdministerBoard()` proxy check and the `leave_board` creator guard have been replaced with role-based checks as part of UC-12e.
 
@@ -700,7 +716,8 @@ Correctness/security first, then features. (Story IDs reference [001-user-storie
    - ~~Ownership transfer (UC-12e)~~ **✅ DONE** (ADR-006). `created_by` proxy removed from `canAdministerBoard()` + `leave_board`; atomic demote-by-role + promote-by-id in one TX; break-glass via `CheckMutateAccess` ∘ `canAdministerBoard`; `ErrTransferTargetNotBoardMember` (400); idempotent no-op when target already owns; orphan-safe. Activity write + `OWNERSHIP_TRANSFERRED` broadcast **deferred** (activities sub-step / step ④).
    - ~~Assignee = board member validation (UC-14/UC-16) + unassign-on-lost-participation data correction (UC-10, UC-12d — board-scoped).~~ **✅ DONE.** Write-time gate via `boardMemberRepo.IsUserExists` → `ErrAssigneeNotBoardMember` (400), newly-set assignee only (Decision B); atomic `RemoveWithParticipationCascade` on `BoardMemberRepository` (delete membership + `UPDATE cards SET assigned_to = NULL … RETURNING` in one TX), wired into `leave_board` + board `remove_member`. No WebSocket dependency — the `CARD_UPDATED` broadcast for the cleared cards waits for step ④ (cascade already returns `[]AffectedCard`).
    - ~~`activities` table migration + write an activity row on every (board-scoped) mutation.~~ **✅ DONE** (ADR-007, migration 000008). Best-effort synchronous after-commit write (Option A — `common.WriteActivity` swallows errors, never fails the mutation); log-only-on-state-change (no-op requests stay silent); verb×entity vocabulary (§4.6); snapshot-title metadata; board-scoped incl. per-affected-board rows on the workspace cascade (`AffectedBoardIDs` from `RemoveWithParticipationCascade`). 17 call sites across card/column/board/workspace usecases; 163 new activity-contract test cases (438 total passing). `CARD_UPDATED` broadcast for cascade-cleared cards and Transactor atomicity remain deferred to step ④ / ⑤.
-4. **WebSocket layer + participation broadcast:** full realtime layer (UC-18/19); wire broadcast calls (`CARD_UPDATED`, `CARD_MOVED`, `COLUMN_MOVED`, etc.) onto the already-correct mutations; add the `CARD_UPDATED` broadcast for the unassign cascade completed in step ③.
+3.5. **Auth: `Bearer` → httpOnly cookie — NEW prerequisite, before ④.** Move JWT delivery from the JS-held `Authorization: Bearer` header to an **httpOnly, Secure, SameSite cookie**, unifying auth across REST + WebSocket + SSR and forcing explicit CORS origins. Surfaced while grilling ④ (a browser `WebSocket` can't set headers; SSR can't read `localStorage`; JS-readable tokens are XSS-exposed). Own grilling/design pass; **[ADR-008](../architecture/adr/adr-008-auth-httponly-cookie.md)** (currently a reservation stub — full ADR written after that grilling). Carries: cookie attributes, JWT-in-cookie vs session id, CSRF, dual-read migration, logout, explicit origins.
+4. **WebSocket layer + participation broadcast — design settled ([ADR-009](../architecture/adr/adr-009-websocket-realtime-layer.md); handoff `docs/handoff/websocket-participation-broadcast/`).** Full realtime layer (UC-18/19); `Broadcaster` port (usecase-layer, best-effort after-commit like activities); wire broadcast calls (`CARD_UPDATED`, `CARD_MOVED`, `COLUMN_MOVED`, etc.) onto the already-correct mutations; multi-connection edge-triggered presence; **continuous access enforcement** (instant eviction + `ACCESS_REVOKED`, UC-19b); add the `CARD_UPDATED` broadcast for the unassign cascade completed in step ③. Built in parts **A→B→C→D→E** (hub → endpoint → mutation broadcasts → enforcement → cascade fan-out). **Depends on ③.5; recheck for drift after it lands.**
 
 > **Why ③ and ④ were arranged this way:** REST features first means the WebSocket layer wraps a complete, correct surface from day one — no retrofit pass. Activities writes belong in step ③ because they are plain DB inserts tied to each mutation; adding them alongside the feature avoids reopening those code paths in step ④. The participation *cascade* (data correction) goes in step ③ too — it has no WebSocket dependency; only its *broadcast* waits for step ④.
 
