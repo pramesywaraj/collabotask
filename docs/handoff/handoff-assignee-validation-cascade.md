@@ -121,7 +121,7 @@ That single migration would: (1) make assignee-validity a **DB guarantee** on ev
 
 **Why deferred, not now:** it's a schema/architecture change beyond "data-correction only"; it **reopens shipped, tested** workspace-cascade code; it doesn't fully replace the explicit `UPDATE … RETURNING` (the FK nulls rows *silently*, so the step-④ broadcast still needs the affected-card list); and it wants **SQL-level tests** the project has deliberately deferred to the post-Phase-1 integration pass. It also **supersedes the §2.8 "shared clear-assignments helper"** approach, so it deserves its own ADR when adopted.
 
-**Where it goes:** this is the headline candidate for the **post-Phase-1 integrity pass** — write it up as **`adr-008`** *at that time* (not now; it's a candidate, not a decision). *(Renumbered from `adr-007`, which is now activity logging — ADR-007.)* See `[[post-phase1-integration-tests]]`.
+**Where it goes:** this is the headline candidate for the **post-Phase-1 integrity pass** — write it up as **`adr-010`** *at that time* (not now; it's a candidate, not a decision). *(Renumbered 008→010: ADR-008 is now auth httpOnly-cookie, ADR-009 the WebSocket realtime layer.)* See `[[post-phase1-integration-tests]]`.
 
 ## Out of scope / DEFERRED (do NOT do here — recorded so they aren't lost)
 - **`CARD_UPDATED` (`assigned_to: null`) broadcasts** for the cleared cards → **step ④**. The cascade method already returns `[]AffectedCard` so step ④ is a pure wire-up. Leave a marked `// TODO(ws, step ④)` where the slice is discarded in `leave_board.go` / `remove_member.go`.
@@ -137,7 +137,7 @@ That single migration would: (1) make assignee-validity a **DB guarantee** on ev
 - SRS **§9** "🟡 P1 — Assignee not validated as a board member" (`create_card.go`/`update_card.go`) → strike to **✅**, note `ErrAssigneeNotBoardMember` + the Decision-B "newly-set only" rule.
 - SRS **§9.2** map: flip `Assignee must be a board member` and `Unassign on lost participation (board-scoped: UC-10, UC-12d)` rows to ✅.
 - SRS **UC-16**: add the one-line Decision-B clarification (validate only a newly-set assignee; a stale existing assignee never blocks an unrelated edit).
-- SRS **§9 deferred / integrity-pass note**: record the composite-FK invariant as the `adr-008` candidate.
+- SRS **§9 deferred / integrity-pass note**: record the composite-FK invariant as the `adr-010` candidate.
 - Root `CLAUDE.md` › `## Now`: mark this sub-step ✅; move the pointer to the **activities** sub-step; note the board-scoped cascade broadcast still waits for step ④.
 - `collabotask-backend/temp_unit-test-checklist.md`: add the UC-14/16 + UC-10/12d cases + the deferred repo-layer cascade-SQL note.
 

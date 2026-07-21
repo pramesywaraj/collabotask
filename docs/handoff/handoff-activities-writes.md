@@ -26,7 +26,7 @@ Scope is **exactly**:
 6. **Extend the two workspace-cascade repo methods to `RETURNING board_id`** (so the per-affected-board rows can be written).
 7. Tests for all of the above.
 
-**Nothing else** — no WebSocket broadcast (step ④), no composite-FK / schema-for-invariant (ADR-008 candidate, pass ⑤), no activity **reader**/feed (UC-22, Phase 2), no Transactor/atomic write (Option C, pass ⑤).
+**Nothing else** — no WebSocket broadcast (step ④), no composite-FK / schema-for-invariant (ADR-010 candidate, pass ⑤), no activity **reader**/feed (UC-22, Phase 2), no Transactor/atomic write (Option C, pass ⑤).
 
 ---
 
@@ -148,8 +148,8 @@ The per-affected-board rows (UC-06/UC-06c) need the set of boards the user was r
 
 ## Out of scope / DEFERRED (do NOT do here — recorded so they aren't lost)
 - **WebSocket broadcasts** (`CARD_UPDATED`, `USER_JOINED`, `OWNERSHIP_TRANSFERRED`, `MEMBER_REMOVED`, …) → **step ④**. Activity write and broadcast are independent; the cascade methods already return `[]AffectedCard` for the future `CARD_UPDATED`.
-- **Atomic activity writes (Option C / Unit-of-Work / Transactor)** → **integrity pass ⑤**, after the DB harness and the composite-FK (**ADR-008**). Resolved ⑤ order in `[[post-phase1-integration-tests]]`. Keep metadata assembly in the usecase so this becomes a pure relocation into a `WithinTransaction(...)` closure.
-- **Composite-FK assignee invariant** (ADR-008 candidate) → pass ⑤. Unrelated to this sub-step beyond the shared ⑤ home.
+- **Atomic activity writes (Option C / Unit-of-Work / Transactor)** → **integrity pass ⑤**, after the DB harness and the composite-FK (**ADR-010**). Resolved ⑤ order in `[[post-phase1-integration-tests]]`. Keep metadata assembly in the usecase so this becomes a pure relocation into a `WithinTransaction(...)` closure.
+- **Composite-FK assignee invariant** (ADR-010 candidate) → pass ⑤. Unrelated to this sub-step beyond the shared ⑤ home.
 - **Activity reader / UC-22 feed** → Phase 2.
 - **Old→new value diffs** on UPDATE (we store `changed_fields` names only) → Phase-2 enhancement if the feed needs it.
 - **Async write** — rejected (ADR-007): the write is synchronous. (Request `ctx` is canceled on handler return; async needs `context.WithoutCancel` + panic `recover()` for no Phase-1 benefit.)
@@ -190,7 +190,7 @@ Plus targeted cases:
 - **Decision record:** `docs/architecture/adr/adr-007-activity-logging-writes.md`.
 - **Contract:** SRS `docs/spesifications/001-software-specifications.md` **§4.6** (map + rules), §7 (table/index), §2.7, §2.8, UC-09/UC-12e.
 - **Story:** `docs/product/001-user-stories.md` US-09 (the only user-facing mention — "recorded in the activity history").
-- **Model / deferrals:** `[[activities-logging-best-effort-then-atomic]]`, `[[post-phase1-integration-tests]]` (⑤ order; Option C; composite-FK = ADR-008).
+- **Model / deferrals:** `[[activities-logging-best-effort-then-atomic]]`, `[[post-phase1-integration-tests]]` (⑤ order; Option C; composite-FK = ADR-010).
 - **Patterns to mirror:** repo `internal/repository/postgres/board_member.go` (+ `_queries.go`); DI `internal/injection/providers.go`; entity `internal/domain/entity/board.go` (typed enums + `TableName()`); the prior sub-step's shape `docs/handoff/handoff-assignee-validation-cascade.md`.
 - Backend conventions & the "add an endpoint" recipe: `collabotask-backend/README.md` (Conventions) + `TESTING.md`.
 - **Current placeholder TODOs to replace:** `internal/usecase/board/transfer_ownership.go:41`, `internal/usecase/board/self_join_board.go:68`, `internal/usecase/board/board_io.go:126`.
