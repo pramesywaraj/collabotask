@@ -177,8 +177,13 @@ Card and column ordering uses **fractional positions** stored as `NUMERIC`, not 
 | `workspace_members.user_id`, `board_members.user_id` | `CASCADE` | Membership disappears with the user. |
 
 ### 3.5 Auth specifics
-- JWT, **7-day expiry, no refresh token in Phase 1** (conscious decision; refresh-token rotation is a Phase 2 candidate).
-- **JWT delivery: `Authorization: Bearer` header today → migrating to an httpOnly, Secure, SameSite cookie** (build step ③.5, **[ADR-008](../architecture/adr/adr-008-auth-httponly-cookie.md)**), unifying auth across REST + WebSocket + SSR and forcing explicit CORS origins (design pending its own grilling).
+- JWT, **7-day expiry, no refresh token in Phase 1** (conscious decision; refresh-token rotation is a Phase 2 candidate). *(Note: code default `AUTH_JWT_EXPIRATION` is currently 24h — reconcile separately; the cookie `Max-Age` tracks whatever `cfg.JWTExpiration` is, so delivery is expiration-agnostic.)*
+- **JWT delivery: httpOnly cookie** (build step ③.5 — **settled, [ADR-008](../architecture/adr/adr-008-auth-httponly-cookie.md)**; supersedes the former `Authorization: Bearer` header). The cookie carries the **same signed JWT** (stateless — session/refresh model is Phase 2); only transport changes.
+  - **Cookie:** `__Host-token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=<JWT expiry>` (host-only — no `Domain`; `Secure` + `__Host-` prefix dropped only for non-`localhost` http dev via `COOKIE_SECURE=false`).
+  - **Hard cutover:** middleware reads the **cookie only**; login/register **no longer return `token` in the body** (no `Bearer` path). Achieves the XSS goal by construction — no token is exposed to browser JS.
+  - **Topology:** cross-origin **sibling subdomains** (`app.` ↔ `api.`); single-origin reverse-proxy (SSR auth + no CORS) is a future enhancement. **No authenticated SSR** in Phase 1 (host-only cookie).
+  - **CSRF:** a custom header **`X-CSRF-Protection`** is **required on all state-changing requests** (`POST/PUT/PATCH/DELETE`, incl. `login`/`register`/`logout`) → 403 if absent; the header forces a CORS preflight gated by the origin allowlist (closes the same-site sibling-subdomain vector `SameSite=Lax` leaves open). No CSRF token/cookie needed.
+  - **CORS:** explicit origin allowlist (**no `*`** with credentials — startup fails on that combination), `AllowCredentials: true`, methods `GET,POST,PATCH,DELETE,OPTIONS`, headers `Content-Type,X-CSRF-Protection`, `Vary: Origin`. Shared by REST + WebSocket (ADR-009).
 - Password hashed with **bcrypt**; min length **8**.
 - **No account deletion or deactivation in Phase 1** (see §8 / §10). Therefore the old "Account disabled → 403" error case is **removed** from UC-02.
 
@@ -214,11 +219,11 @@ Error shape:
 ### 4.1 Authentication
 
 #### UC-01: User Registration
-- **API:** `POST /api/v1/auth/register` · Public
+- **API:** `POST /api/v1/auth/register` · Public · requires `X-CSRF-Protection` header
 - **Request:** `{ "email", "name", "password" }`
-- **Response 201:** `{ "user": { "id", "email", "name", "avatar_url" }, "token": "<jwt>" }`
-- **Flow:** validate email format (client + server) → normalize email (lowercase + trim) → check email not taken (case-insensitive; the normalized email is both checked and stored) → bcrypt hash → insert user → issue JWT (7d) → redirect to workspace list.
-- **Errors:** Email exists → 409 `CONFLICT`; invalid body → 400 `VALIDATION_ERROR`.
+- **Response 201:** `{ "user": { "id", "email", "name", "avatar_url" } }` + **`Set-Cookie: __Host-token=<jwt>; …`** (auto-login; **no `token` in body** — ADR-008 hard cutover). *Auto-login is provisional: email verification (Phase 2+) supersedes it.*
+- **Flow:** validate email format (client + server) → normalize email (lowercase + trim) → check email not taken (case-insensitive; the normalized email is both checked and stored) → bcrypt hash → insert user → issue JWT (7d) → **set the auth cookie** → redirect to workspace list.
+- **Errors:** Email exists → 409 `CONFLICT`; invalid body → 400 `VALIDATION_ERROR`; missing CSRF header → 403 `FORBIDDEN`.
 ```sql
 SELECT id FROM users WHERE email = $1;
 INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)
@@ -226,14 +231,21 @@ RETURNING id, email, name, avatar_url, created_at;
 ```
 
 #### UC-02: User Login
-- **API:** `POST /api/v1/auth/login` · Public
+- **API:** `POST /api/v1/auth/login` · Public · requires `X-CSRF-Protection` header
 - **Request:** `{ "email", "password" }`
-- **Response 200:** `{ "user": {…}, "token": "<jwt>" }`
-- **Flow:** normalize email (lowercase + trim) → look up user → verify bcrypt password → issue JWT. Lookup is case-insensitive (same normalization as registration).
-- **Errors:** Email not found → 401 `UNAUTHORIZED`; wrong password → 401 `UNAUTHORIZED`. *(No "account disabled" case in Phase 1.)*
+- **Response 200:** `{ "user": {…} }` + **`Set-Cookie: __Host-token=<jwt>; …`** (**no `token` in body** — ADR-008 hard cutover).
+- **Flow:** normalize email (lowercase + trim) → look up user → verify bcrypt password → issue JWT → **set the auth cookie**. Lookup is case-insensitive (same normalization as registration).
+- **Errors:** Email not found → 401 `UNAUTHORIZED`; wrong password → 401 `UNAUTHORIZED`; missing CSRF header → 403 `FORBIDDEN`. *(No "account disabled" case in Phase 1.)*
 ```sql
 SELECT id, email, password_hash, name, avatar_url FROM users WHERE email = $1;
 ```
+
+#### UC-03: User Logout · **NEW**
+- **API:** `POST /api/v1/auth/logout` · Public (no `Auth` middleware) · requires `X-CSRF-Protection` header
+- **Request:** empty.
+- **Response 200:** `{ }` + **`Set-Cookie: __Host-token=; Max-Age=0; …`** (clears the cookie with matching attributes).
+- **Flow:** unconditional / idempotent — clears the auth cookie regardless of session validity (so an expired session can still log out cleanly). Stateless: this removes the browser's copy but does **not** invalidate the JWT server-side (true revocation / "log out all devices" is the Phase-2 session model — ADR-008 §7).
+- **Errors:** missing CSRF header → 403 `FORBIDDEN`.
 
 #### UC-02b: Get Profile
 - **API:** `GET /api/v1/user/profile` · Auth

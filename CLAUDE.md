@@ -3,59 +3,81 @@
 Collaborative task management app (Trello-style). This is a monorepo.
 
 The backend (Go) is implemented and lives in `collabotask-backend/`.
-**All technical detail — architecture, conventions, commands, the "add an endpoint" recipe — is in `collabotask-backend/README.md` (conventions + recipe) and `collabotask-backend/TESTING.md` (test approach). Read those for any code work.**
+**All technical detail — architecture, conventions, commands, the "add an endpoint" recipe — is in** `collabotask-backend/README.md` **(conventions + recipe) and** `collabotask-backend/TESTING.md` **(test approach). Read those for any code work.**
 The frontend (Next.js) is planned as a separate effort.
 
 ## Now
-<!-- Update "Building" when focus shifts. Read every turn. Full sequence: spec §9.1. -->
+
+
+
 Phase 1 · CRUD done: auth, workspace, board, column, card
+
 - **Unit-test coverage complete ✅** (275/275 cases; `collabotask-backend/temp_unit-test-checklist.md`). Deferred test cases noted in checklist for when `visibility` column lands (step ③).
 - **Fractional NUMERIC positioning complete ✅** (build-order step ②, spec §3.2, ADR-004, migration 000006). Single UPDATE per move; repository-layer rebalance; `domain.PositionStep`/`PositionRebalanceThreshold` as single source of truth. Repo-layer rebalance tests deferred (no DB harness yet).
-- **Board `visibility` complete ✅** (build-order step ③ first sub-step; spec §2.2–2.4, ADR-005, migration 000007). Three-method access checker (metadata/view/mutate) + break-glass, 404-hide vs 403-reveal, idempotent self-join, thin roster, `created_by` removed from access logic. SQL filter/`card_count` tested at usecase layer only (repo-layer deferred to post-Phase-1 integration pass).
+- **Board** `visibility` **complete ✅** (build-order step ③ first sub-step; spec §2.2–2.4, ADR-005, migration 000007). Three-method access checker (metadata/view/mutate) + break-glass, 404-hide vs 403-reveal, idempotent self-join, thin roster, `created_by` removed from access logic. SQL filter/`card_count` tested at usecase layer only (repo-layer deferred to post-Phase-1 integration pass).
 - **Workspace ops complete ✅** (build-order step ③ second sub-step; spec §4.2 UC-06b/c/d). Promote/demote with demote guards (owner→403, last-admin→409, self-demotion OK, idempotent no-op); leave workspace (owner→403, last-admin→409, workspace-scoped participation cascade); delete workspace (owner-only). UC-06 RemoveMember retrofitted with the same cascade (`RemoveWithParticipationCascade` — clears board_members + unassigns cards in one TX). Mocks regenerated; 341 tests pass.
 - **Board ownership transfer complete ✅** (build-order step ③ third sub-step; spec §4.3 UC-12e, ADR-006). `created_by` proxy removed from `canAdministerBoard()` + `leave_board` guard (role-based now). Atomic demote-by-role + promote-by-id in one TX; break-glass via `CheckMutateAccess` ∘ `canAdministerBoard`; `ErrTransferTargetNotBoardMember` (400); idempotent no-op; orphan-safe. Mocks regenerated; 361 tests pass. Activity write + `OWNERSHIP_TRANSFERRED` broadcast deferred (step ④).
 - **Assignee validation + board-scoped unassign cascade complete ✅** (build-order step ③ fourth sub-step; spec §2.8, UC-14/UC-16, UC-10/UC-12d). Write-time gate: `boardMemberRepo.IsUserExists` → `ErrAssigneeNotBoardMember` (400) on `create_card`/`update_card`, collapsing the old 404 path (Decision C); `update_card` validates a *newly-set* assignee only, never a stale one (Decision B). Atomic `RemoveWithParticipationCascade` (delete membership + `UPDATE cards SET assigned_to=NULL … RETURNING` in one TX) wired into `leave_board` + board `remove_member`; owner-cannot-leave guard stays ahead of it. Mocks + Wire regenerated; 368 tests pass. `CARD_UPDATED` broadcast for cleared cards deferred (step ④; cascade already returns `[]AffectedCard`).
 - **Activities table + writes complete ✅** (build-order step ③ fifth/final sub-step; spec §4.6, ADR-007, migration 000008). Best-effort synchronous after-commit writes (`common.WriteActivity` swallows errors, never fails the mutation); log-only-on-state-change; verb×entity vocabulary; snapshot-title metadata; board-scoped incl. per-affected-board rows on workspace cascade (`AffectedBoardIDs`). 17 call sites across card/column/board/workspace. 163 new activity-contract test cases (438 total passing). `CARD_UPDATED` broadcast for cascade-cleared cards and Transactor atomicity remain deferred to step ④ / ⑤.
 - **Building → REST feature completion** (build-order step ③ per spec §9.1): board `visibility` ✅ → workspace ops ✅ → board ownership transfer (UC-12e) ✅ → assignee validation + unassign cascade (UC-14/UC-16) ✅ → activities table + writes ✅ → **step ③ COMPLETE**.
 - **WebSocket design settled ✅ (not built)** — `/grill-with-docs` locked the full ④ design: `Broadcaster` port in the **usecase layer** (best-effort after-commit, mirrors activities); RWMutex hub + per-conn read/write pumps; **multi-connection edge-triggered presence** (corrects the SRS single-conn sketch); **continuous access enforcement** (instant eviction + new `ACCESS_REVOKED` event, UC-19b); REST-in/broadcast-out; participation-cascade fan-out. Recorded: ADR-009, SRS §4.5/§5, handoff `docs/handoff/websocket-participation-broadcast/index.md`, memory [[websocket-participation-broadcast-design]]. Built in parts A→B→C→D→E; **recheck for drift after ③.5**.
-- **NEW prerequisite ③.5 — Auth: `Bearer` → httpOnly cookie** *(next: grill, then build)* — surfaced while grilling ④; unifies auth across REST + WebSocket + SSR, kills the token-in-URL problem, forces explicit CORS origins. Own grilling/design pass; ADR-008 is a reservation stub until then. Memory [[auth-cookie-migration-prereq]].
-- **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ✅ → **③.5 auth httpOnly-cookie** *(grill next → build)* → ④ WebSocket + participation broadcast *(design ✅, build after ③.5)* → ⑤ post-Phase-1 integrity pass *(opens once ④ is done: stand up the DB/repo test harness → **composite-FK assignee invariant / ADR-010 first** → then the deferred SQL tests: cascade, rebalance, visibility filter, card_count)*.
+- **Auth ③.5 design settled ✅ (not built)** — `/grill-with-docs` locked the full `Bearer` **→ httpOnly cookie** design (8 decisions, all with recommended-answer grilling): **JWT-in-cookie/stateless** (session/refresh → Phase 2); **topology A** cross-origin sibling subdomains `app.`↔`api.` (single-origin C2 reverse-proxy → future); **host-only cookie** ⇒ **no authenticated SSR** in Phase 1; `__Host-token; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=<cfg.JWTExpiration>`; **CSRF** = required `X-CSRF-Protection` header on all mutations incl. login/register/logout (forces CORS-preflight gate; closes sibling-subdomain vector); **hard cutover** (cookie-only, login/register drop body `token`, no `Bearer`); **unconditional logout** `POST /auth/logout`; **CORS corrected** (explicit allowlist, add `PATCH`, no `*`+creds → fail-fast). Register auto-login kept provisionally (email-verify supersedes it, Phase 2). Recorded: ADR-008 (full), SRS §3.5/§4.1 (UC-01/02 + new UC-03 logout), handoff `docs/handoff/handoff-auth-httponly-cookie.md`, memory [[auth-cookie-migration-prereq]]. **Build next** (6-step TDD plan in the handoff; middleware/handler tests need no DB harness). **Recheck ④ for drift after this lands.**
+- **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ✅ → **③.5 auth httpOnly-cookie** *(design ✅, build next)* → ④ WebSocket + participation broadcast *(design ✅, build after ③.5)* → ⑤ post-Phase-1 integrity pass *(opens once ④ is done: stand up the DB/repo test harness → **composite-FK assignee invariant / ADR-010 first** → then the deferred SQL tests: cascade, rebalance, visibility filter, card_count)*.
 - **Integrity pass (⑤) rationale:** the composite-FK invariant (`cards(board_id, assigned_to) → board_members … ON DELETE SET NULL (assigned_to)`, PG16) would make "assignee ∈ board members" a DB guarantee and auto-cascade unassignment on every membership-loss path — superseding the app-layer checks + `RemoveWithParticipationCascade` helpers and the §2.8 shared-helper design. Deferred out of Phase 1 (needs the harness; reopens shipped cascade code). Do it **FK-first** so you don't test cascade SQL you're about to delete. Full write-up: `docs/handoff/handoff-assignee-validation-cascade.md`; memory [[post-phase1-integration-tests]].
 - **Don't touch:** Phase-2 deferrals (comments, labels, attachments, public boards, refresh tokens, account deletion) and the planned Next.js frontend.
 
+
+
 ## Core Concepts
+
 - Hierarchy: **Workspace → Board → Column → Card**
 - **Workspace Admin authority outranks Board authority.**
 - Board visibility: `workspace-visible` or `private`.
 - Private boards are visible to workspace admins but require **joining before opening contents**.
 - Realtime: board changes (card create/update/delete/move, column reorder, member join/leave) are broadcast to connected clients. Clients are optimistic; **the server is the source of truth.**
 
+
+
 ## Tech Stack
+
 - Backend: Go, Gin, PostgreSQL (pgx), Google Wire, JWT, WebSocket
 - Frontend (planned): Next.js, TypeScript, TanStack Query, Zustand, dnd-kit
 
+
+
 ## Docs
+
 - PRD — `docs/product/001-PRD.md`
 - User stories — `docs/product/001-user-stories.md`
 - Software spec — `docs/spesifications/001-software-specifications.md`
 - Backend technical — `collabotask-backend/README.md` (conventions + "add an endpoint" recipe), `collabotask-backend/TESTING.md` (test approach)
 - Architecture — `docs/architecture/backend-architecture.md`, `docs/architecture/adr/`
 
+
+
 ### Updating docs (flow downstream: PRD → user-stories → SRS → code)
-- **`## Now` above** — every time I switch focus (the only frequently-edited thing).
-- **`CONTEXT.md`** — only when a domain *term* is added/renamed/retired. Not for features.
+
+- `## Now` **above** — every time I switch focus (the only frequently-edited thing).
+- `CONTEXT.md` — only when a domain *term* is added/renamed/retired. Not for features.
 - **PRD / user-stories** — scope or product-decision changes (edit first, upstream).
 - **SRS** — technical-contract changes (API, schema, permission rules, closing §9 audit items).
 - **ADRs** — never edit an existing one; write a new ADR that supersedes it.
 
+
+
 ## Working With Me
+
 - **Don't scan the repo.** For a feature, read only the relevant user story + spec section.
 - **Non-trivial change → I plan first and wait for your approval before coding.** One-liners I just do.
 - **If a request conflicts with the spec or architecture, I flag it before building** — not after.
 - Specific decisions (e.g. "admins bypass the member check") go to memory, not this file.
 - **Task tracking is doc-driven + just-in-time:** spec §9.1 is the roadmap, `## Now` is the pointer. I break a step into a TodoWrite checklist only when you start it — no GitHub issues, no separate task files.
 
+
+
 ## Agent skills
+
+
 
 ### Issue tracker
 
