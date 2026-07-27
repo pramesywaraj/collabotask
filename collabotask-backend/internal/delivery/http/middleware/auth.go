@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 
 	"collabotask/internal/config"
 	apperrors "collabotask/internal/delivery/http/errors"
@@ -17,22 +16,13 @@ const ContextUserIDKey = "userID"
 
 func Auth(cfg *config.AuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-
-		if authHeader == "" {
-			response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, "Authorization header required"))
+		tokenString, err := c.Cookie(cfg.CookieName)
+		if err != nil {
+			response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, "Authentication required"))
 			c.Abort()
 			return
 		}
 
-		const prefix = "Bearer "
-		if !strings.HasPrefix(authHeader, prefix) {
-			response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, "Invalid authorization formata"))
-			c.Abort()
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, prefix)
 		claims, err := infraauth.ValidateToken(cfg, tokenString)
 		if err != nil {
 			response.GenerateErrorResponse(c, apperrors.NewAppError(http.StatusUnauthorized, apperrors.ErrCodeUnauthorized, "Invalid or expired token"))

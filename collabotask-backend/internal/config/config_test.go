@@ -6,144 +6,103 @@ import (
 	"time"
 )
 
+// setRequiredEnvVars sets the minimum env vars needed to pass Validate().
+func setRequiredEnvVars() {
+	os.Setenv("DB_NAME", "testdb")
+	os.Setenv("DB_USER", "testuser")
+	os.Setenv("AUTH_JWT_SECRET", "test-secret")
+}
+
 func TestConfigLoad(t *testing.T) {
-	// Save original environment
 	originalPort := os.Getenv("SERVER_PORT")
 	originalDBName := os.Getenv("DB_NAME")
 	originalDBUser := os.Getenv("DB_USER")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
 	defer func() {
-		if originalPort != "" {
-			os.Setenv("SERVER_PORT", originalPort)
-		} else {
-			os.Unsetenv("SERVER_PORT")
-		}
-		if originalDBName != "" {
-			os.Setenv("DB_NAME", originalDBName)
-		} else {
-			os.Unsetenv("DB_NAME")
-		}
-		if originalDBUser != "" {
-			os.Setenv("DB_USER", originalDBUser)
-		} else {
-			os.Unsetenv("DB_USER")
-		}
+		restoreEnv("SERVER_PORT", originalPort)
+		restoreEnv("DB_NAME", originalDBName)
+		restoreEnv("DB_USER", originalDBUser)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
+	setRequiredEnvVars()
 	os.Setenv("SERVER_PORT", "3000")
-	os.Setenv("DB_NAME", "testdb")
-	os.Setenv("DB_USER", "testuser")
 
 	config, err := Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Test that custom values are loaded
 	if config.Server.Port != "3000" {
 		t.Errorf("Expected port 3000, got %s", config.Server.Port)
 	}
-
 	if config.Database.Name != "testdb" {
 		t.Errorf("Expected db name testdb, got %s", config.Database.Name)
 	}
-
 	if config.Database.User != "testuser" {
 		t.Errorf("Expected db user testuser, got %s", config.Database.User)
 	}
 }
 
 func TestConfigDefaults(t *testing.T) {
-	// Save original environment
 	originalPort := os.Getenv("SERVER_PORT")
 	originalHost := os.Getenv("SERVER_HOST")
 	originalAppEnv := os.Getenv("APP_ENV")
 	originalAppName := os.Getenv("APP_NAME")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
-	// Clean up
 	defer func() {
-		if originalPort != "" {
-			os.Setenv("SERVER_PORT", originalPort)
-		} else {
-			os.Unsetenv("SERVER_PORT")
-		}
-		if originalHost != "" {
-			os.Setenv("SERVER_HOST", originalHost)
-		} else {
-			os.Unsetenv("SERVER_HOST")
-		}
-		if originalAppEnv != "" {
-			os.Setenv("APP_ENV", originalAppEnv)
-		} else {
-			os.Unsetenv("APP_ENV")
-		}
-		if originalAppName != "" {
-			os.Setenv("APP_NAME", originalAppName)
-		} else {
-			os.Unsetenv("APP_NAME")
-		}
+		restoreEnv("SERVER_PORT", originalPort)
+		restoreEnv("SERVER_HOST", originalHost)
+		restoreEnv("APP_ENV", originalAppEnv)
+		restoreEnv("APP_NAME", originalAppName)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
-	// Unset environment variables to test defaults
+	setRequiredEnvVars()
 	os.Unsetenv("SERVER_PORT")
 	os.Unsetenv("SERVER_HOST")
 	os.Unsetenv("APP_ENV")
 	os.Unsetenv("APP_NAME")
-	os.Setenv("DB_NAME", "testdb")   // Required field
-	os.Setenv("DB_USER", "testuser") // Required field
 
 	config, err := Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Test defaults
 	if config.Server.Port != "8080" {
 		t.Errorf("Expected default port 8080, got %s", config.Server.Port)
 	}
-
 	if config.Server.Host != "localhost" {
 		t.Errorf("Expected default host localhost, got %s", config.Server.Host)
 	}
-
 	if config.App.Environment != "development" {
 		t.Errorf("Expected default environment development, got %s", config.App.Environment)
 	}
-
 	if config.App.AppName != "collabotask" {
 		t.Errorf("Expected default app name collabotask, got %s", config.App.AppName)
 	}
 }
 
 func TestConfigValidation(t *testing.T) {
-	// Save original
 	originalDBName := os.Getenv("DB_NAME")
 	originalDBUser := os.Getenv("DB_USER")
 	originalAppEnv := os.Getenv("APP_ENV")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
-	// Clean up
 	defer func() {
-		if originalDBName != "" {
-			os.Setenv("DB_NAME", originalDBName)
-		} else {
-			os.Unsetenv("DB_NAME")
-		}
-		if originalDBUser != "" {
-			os.Setenv("DB_USER", originalDBUser)
-		} else {
-			os.Unsetenv("DB_USER")
-		}
-		if originalAppEnv != "" {
-			os.Setenv("APP_ENV", originalAppEnv)
-		} else {
-			os.Unsetenv("APP_ENV")
-		}
+		restoreEnv("DB_NAME", originalDBName)
+		restoreEnv("DB_USER", originalDBUser)
+		restoreEnv("APP_ENV", originalAppEnv)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
-	// Test missing DB_NAME
+	os.Setenv("AUTH_JWT_SECRET", "test-secret")
+
+	// Missing DB_NAME
 	os.Unsetenv("DB_NAME")
 	os.Setenv("DB_USER", "testuser")
-
 	_, err := Load()
 	if err == nil {
 		t.Error("Expected error when DB_NAME is missing, got nil")
@@ -152,10 +111,9 @@ func TestConfigValidation(t *testing.T) {
 		t.Errorf("Expected 'DB_NAME is required' error, got: %v", err)
 	}
 
-	// Test missing DB_USER
+	// Missing DB_USER
 	os.Setenv("DB_NAME", "testdb")
 	os.Unsetenv("DB_USER")
-
 	_, err = Load()
 	if err == nil {
 		t.Error("Expected error when DB_USER is missing, got nil")
@@ -164,11 +122,10 @@ func TestConfigValidation(t *testing.T) {
 		t.Errorf("Expected 'DB_USER is required' error, got: %v", err)
 	}
 
-	// Test invalid APP_ENV
+	// Invalid APP_ENV
 	os.Setenv("DB_NAME", "testdb")
 	os.Setenv("DB_USER", "testuser")
 	os.Setenv("APP_ENV", "invalid")
-
 	_, err = Load()
 	if err == nil {
 		t.Error("Expected error when APP_ENV is invalid, got nil")
@@ -178,104 +135,128 @@ func TestConfigValidation(t *testing.T) {
 	}
 }
 
-func TestConfigDurationParsing(t *testing.T) {
-	// Save original
-	originalTimeout := os.Getenv("SERVER_TIMEOUT")
-	originalMaxConnLifetime := os.Getenv("DB_MAX_CONN_LIFETIME")
+func TestValidate_WildcardWithCredentials(t *testing.T) {
+	originalOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	originalCreds := os.Getenv("CORS_ALLOW_CREDENTIALS")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
-	// Clean up
 	defer func() {
-		if originalTimeout != "" {
-			os.Setenv("SERVER_TIMEOUT", originalTimeout)
-		} else {
-			os.Unsetenv("SERVER_TIMEOUT")
-		}
-		if originalMaxConnLifetime != "" {
-			os.Setenv("DB_MAX_CONN_LIFETIME", originalMaxConnLifetime)
-		} else {
-			os.Unsetenv("DB_MAX_CONN_LIFETIME")
-		}
+		restoreEnv("CORS_ALLOWED_ORIGINS", originalOrigins)
+		restoreEnv("CORS_ALLOW_CREDENTIALS", originalCreds)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
-	// Set required fields
-	os.Setenv("DB_NAME", "testdb")
-	os.Setenv("DB_USER", "testuser")
+	setRequiredEnvVars()
+	os.Setenv("CORS_ALLOWED_ORIGINS", "*")
+	os.Setenv("CORS_ALLOW_CREDENTIALS", "true")
 
-	// Test custom timeout
+	_, err := Load()
+	if err == nil {
+		t.Fatal("Expected error when CORS uses * with AllowCredentials=true, got nil")
+	}
+}
+
+func TestAuthCookieConfig(t *testing.T) {
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
+	originalCookieSecure := os.Getenv("COOKIE_SECURE")
+	originalCookieName := os.Getenv("COOKIE_NAME")
+
+	defer func() {
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
+		restoreEnv("COOKIE_SECURE", originalCookieSecure)
+		restoreEnv("COOKIE_NAME", originalCookieName)
+	}()
+
+	setRequiredEnvVars()
+
+	// Defaults
+	os.Unsetenv("COOKIE_SECURE")
+	os.Unsetenv("COOKIE_NAME")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+	if !cfg.Auth.CookieSecure {
+		t.Error("Expected CookieSecure default true")
+	}
+	if cfg.Auth.CookieName != "__Host-token" {
+		t.Errorf("Expected CookieName default __Host-token, got %s", cfg.Auth.CookieName)
+	}
+
+	// Custom values
+	os.Setenv("COOKIE_SECURE", "false")
+	os.Setenv("COOKIE_NAME", "token")
+
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+	if cfg.Auth.CookieSecure {
+		t.Error("Expected CookieSecure false")
+	}
+	if cfg.Auth.CookieName != "token" {
+		t.Errorf("Expected CookieName token, got %s", cfg.Auth.CookieName)
+	}
+}
+
+func TestConfigDurationParsing(t *testing.T) {
+	originalTimeout := os.Getenv("SERVER_TIMEOUT")
+	originalMaxConnLifetime := os.Getenv("DB_MAX_CONN_LIFETIME")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
+
+	defer func() {
+		restoreEnv("SERVER_TIMEOUT", originalTimeout)
+		restoreEnv("DB_MAX_CONN_LIFETIME", originalMaxConnLifetime)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
+	}()
+
+	setRequiredEnvVars()
+
 	os.Setenv("SERVER_TIMEOUT", "60s")
-
 	config, err := Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-
-	expectedTimeout := 60 * time.Second
-	if config.Server.Timeout != expectedTimeout {
+	if config.Server.Timeout != 60*time.Second {
 		t.Errorf("Expected timeout 60s, got %v", config.Server.Timeout)
 	}
 
-	// Test default timeout
 	os.Unsetenv("SERVER_TIMEOUT")
-
 	config, err = Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-
-	expectedTimeout = 30 * time.Second
-	if config.Server.Timeout != expectedTimeout {
+	if config.Server.Timeout != 30*time.Second {
 		t.Errorf("Expected default timeout 30s, got %v", config.Server.Timeout)
 	}
 
-	// Test database connection lifetime
 	os.Setenv("DB_MAX_CONN_LIFETIME", "1h")
-
 	config, err = Load()
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-
-	expectedLifetime := 1 * time.Hour
-	if config.Database.MaxConnLifetime != expectedLifetime {
+	if config.Database.MaxConnLifetime != time.Hour {
 		t.Errorf("Expected max conn lifetime 1h, got %v", config.Database.MaxConnLifetime)
 	}
 }
 
 func TestAppConfig(t *testing.T) {
-	// Save original
 	originalAppEnv := os.Getenv("APP_ENV")
 	originalAppName := os.Getenv("APP_NAME")
 	originalAppVersion := os.Getenv("APP_VERSION")
 	originalAppDebug := os.Getenv("APP_DEBUG")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
 	defer func() {
-		if originalAppEnv != "" {
-			os.Setenv("APP_ENV", originalAppEnv)
-		} else {
-			os.Unsetenv("APP_ENV")
-		}
-		if originalAppName != "" {
-			os.Setenv("APP_NAME", originalAppName)
-		} else {
-			os.Unsetenv("APP_NAME")
-		}
-		if originalAppVersion != "" {
-			os.Setenv("APP_VERSION", originalAppVersion)
-		} else {
-			os.Unsetenv("APP_VERSION")
-		}
-		if originalAppDebug != "" {
-			os.Setenv("APP_DEBUG", originalAppDebug)
-		} else {
-			os.Unsetenv("APP_DEBUG")
-		}
+		restoreEnv("APP_ENV", originalAppEnv)
+		restoreEnv("APP_NAME", originalAppName)
+		restoreEnv("APP_VERSION", originalAppVersion)
+		restoreEnv("APP_DEBUG", originalAppDebug)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
-	// Set required fields
-	os.Setenv("DB_NAME", "testdb")
-	os.Setenv("DB_USER", "testuser")
-
-	// Test custom app config
+	setRequiredEnvVars()
 	os.Setenv("APP_ENV", "staging")
 	os.Setenv("APP_NAME", "testapp")
 	os.Setenv("APP_VERSION", "2.0.0")
@@ -289,67 +270,37 @@ func TestAppConfig(t *testing.T) {
 	if config.App.Environment != "staging" {
 		t.Errorf("Expected environment staging, got %s", config.App.Environment)
 	}
-
 	if config.App.AppName != "testapp" {
 		t.Errorf("Expected app name testapp, got %s", config.App.AppName)
 	}
-
 	if config.App.Version != "2.0.0" {
 		t.Errorf("Expected version 2.0.0, got %s", config.App.Version)
 	}
-
-	if config.App.Debug != true {
+	if !config.App.Debug {
 		t.Errorf("Expected debug true, got %v", config.App.Debug)
 	}
 }
 
 func TestDatabaseConfig(t *testing.T) {
-	// Save original
 	originalDBHost := os.Getenv("DB_HOST")
 	originalDBPort := os.Getenv("DB_PORT")
 	originalDBPassword := os.Getenv("DB_PASSWORD")
 	originalDBSSLMode := os.Getenv("DB_SSLMODE")
 	originalMaxConns := os.Getenv("DB_MAX_CONNS")
 	originalMinConns := os.Getenv("DB_MIN_CONNS")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
 	defer func() {
-		if originalDBHost != "" {
-			os.Setenv("DB_HOST", originalDBHost)
-		} else {
-			os.Unsetenv("DB_HOST")
-		}
-		if originalDBPort != "" {
-			os.Setenv("DB_PORT", originalDBPort)
-		} else {
-			os.Unsetenv("DB_PORT")
-		}
-		if originalDBPassword != "" {
-			os.Setenv("DB_PASSWORD", originalDBPassword)
-		} else {
-			os.Unsetenv("DB_PASSWORD")
-		}
-		if originalDBSSLMode != "" {
-			os.Setenv("DB_SSLMODE", originalDBSSLMode)
-		} else {
-			os.Unsetenv("DB_SSLMODE")
-		}
-		if originalMaxConns != "" {
-			os.Setenv("DB_MAX_CONNS", originalMaxConns)
-		} else {
-			os.Unsetenv("DB_MAX_CONNS")
-		}
-		if originalMinConns != "" {
-			os.Setenv("DB_MIN_CONNS", originalMinConns)
-		} else {
-			os.Unsetenv("DB_MIN_CONNS")
-		}
+		restoreEnv("DB_HOST", originalDBHost)
+		restoreEnv("DB_PORT", originalDBPort)
+		restoreEnv("DB_PASSWORD", originalDBPassword)
+		restoreEnv("DB_SSLMODE", originalDBSSLMode)
+		restoreEnv("DB_MAX_CONNS", originalMaxConns)
+		restoreEnv("DB_MIN_CONNS", originalMinConns)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
-	// Set required fields
-	os.Setenv("DB_NAME", "testdb")
-	os.Setenv("DB_USER", "testuser")
-
-	// Test custom database config
+	setRequiredEnvVars()
 	os.Setenv("DB_HOST", "db.example.com")
 	os.Setenv("DB_PORT", "5433")
 	os.Setenv("DB_PASSWORD", "secret123")
@@ -365,28 +316,23 @@ func TestDatabaseConfig(t *testing.T) {
 	if config.Database.Host != "db.example.com" {
 		t.Errorf("Expected host db.example.com, got %s", config.Database.Host)
 	}
-
 	if config.Database.Port != "5433" {
 		t.Errorf("Expected port 5433, got %s", config.Database.Port)
 	}
-
 	if config.Database.Password != "secret123" {
 		t.Errorf("Expected password secret123, got %s", config.Database.Password)
 	}
-
 	if config.Database.SSLMode != "require" {
 		t.Errorf("Expected SSL mode require, got %s", config.Database.SSLMode)
 	}
-
 	if config.Database.MaxConns != 50 {
 		t.Errorf("Expected max conns 50, got %d", config.Database.MaxConns)
 	}
-
 	if config.Database.MinConns != 10 {
 		t.Errorf("Expected min conns 10, got %d", config.Database.MinConns)
 	}
 
-	// Test defaults
+	// Defaults
 	os.Unsetenv("DB_HOST")
 	os.Unsetenv("DB_PORT")
 	os.Unsetenv("DB_SSLMODE")
@@ -401,47 +347,32 @@ func TestDatabaseConfig(t *testing.T) {
 	if config.Database.Host != "localhost" {
 		t.Errorf("Expected default host localhost, got %s", config.Database.Host)
 	}
-
 	if config.Database.Port != "5432" {
 		t.Errorf("Expected default port 5432, got %s", config.Database.Port)
 	}
-
 	if config.Database.SSLMode != "disable" {
 		t.Errorf("Expected default SSL mode disable, got %s", config.Database.SSLMode)
 	}
-
 	if config.Database.MaxConns != 25 {
 		t.Errorf("Expected default max conns 25, got %d", config.Database.MaxConns)
 	}
-
 	if config.Database.MinConns != 5 {
 		t.Errorf("Expected default min conns 5, got %d", config.Database.MinConns)
 	}
 }
 
 func TestLogConfig(t *testing.T) {
-	// Save original
 	originalLogLevel := os.Getenv("LOG_LEVEL")
 	originalLogFormat := os.Getenv("LOG_FORMAT")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
 	defer func() {
-		if originalLogLevel != "" {
-			os.Setenv("LOG_LEVEL", originalLogLevel)
-		} else {
-			os.Unsetenv("LOG_LEVEL")
-		}
-		if originalLogFormat != "" {
-			os.Setenv("LOG_FORMAT", originalLogFormat)
-		} else {
-			os.Unsetenv("LOG_FORMAT")
-		}
+		restoreEnv("LOG_LEVEL", originalLogLevel)
+		restoreEnv("LOG_FORMAT", originalLogFormat)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
-	// Set required fields
-	os.Setenv("DB_NAME", "testdb")
-	os.Setenv("DB_USER", "testuser")
-
-	// Test custom log config
+	setRequiredEnvVars()
 	os.Setenv("LOG_LEVEL", "debug")
 	os.Setenv("LOG_FORMAT", "json")
 
@@ -449,16 +380,13 @@ func TestLogConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-
 	if config.Log.Level != "debug" {
 		t.Errorf("Expected log level debug, got %s", config.Log.Level)
 	}
-
 	if config.Log.Format != "json" {
 		t.Errorf("Expected log format json, got %s", config.Log.Format)
 	}
 
-	// Test defaults
 	os.Unsetenv("LOG_LEVEL")
 	os.Unsetenv("LOG_FORMAT")
 
@@ -466,57 +394,34 @@ func TestLogConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
-
 	if config.Log.Level != "info" {
 		t.Errorf("Expected default log level info, got %s", config.Log.Level)
 	}
-
 	if config.Log.Format != "console" {
 		t.Errorf("Expected default log format console, got %s", config.Log.Format)
 	}
 }
 
 func TestCORSConfig(t *testing.T) {
-	// Save original
 	originalCORSOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
 	originalCORSMethods := os.Getenv("CORS_ALLOWED_METHODS")
 	originalCORSHeaders := os.Getenv("CORS_ALLOWED_HEADERS")
 	originalCORSAllowCreds := os.Getenv("CORS_ALLOW_CREDENTIALS")
 	originalCORSMaxAge := os.Getenv("CORS_MAX_AGE")
+	originalJWTSecret := os.Getenv("AUTH_JWT_SECRET")
 
 	defer func() {
-		if originalCORSOrigins != "" {
-			os.Setenv("CORS_ALLOWED_ORIGINS", originalCORSOrigins)
-		} else {
-			os.Unsetenv("CORS_ALLOWED_ORIGINS")
-		}
-		if originalCORSMethods != "" {
-			os.Setenv("CORS_ALLOWED_METHODS", originalCORSMethods)
-		} else {
-			os.Unsetenv("CORS_ALLOWED_METHODS")
-		}
-		if originalCORSHeaders != "" {
-			os.Setenv("CORS_ALLOWED_HEADERS", originalCORSHeaders)
-		} else {
-			os.Unsetenv("CORS_ALLOWED_HEADERS")
-		}
-		if originalCORSAllowCreds != "" {
-			os.Setenv("CORS_ALLOW_CREDENTIALS", originalCORSAllowCreds)
-		} else {
-			os.Unsetenv("CORS_ALLOW_CREDENTIALS")
-		}
-		if originalCORSMaxAge != "" {
-			os.Setenv("CORS_MAX_AGE", originalCORSMaxAge)
-		} else {
-			os.Unsetenv("CORS_MAX_AGE")
-		}
+		restoreEnv("CORS_ALLOWED_ORIGINS", originalCORSOrigins)
+		restoreEnv("CORS_ALLOWED_METHODS", originalCORSMethods)
+		restoreEnv("CORS_ALLOWED_HEADERS", originalCORSHeaders)
+		restoreEnv("CORS_ALLOW_CREDENTIALS", originalCORSAllowCreds)
+		restoreEnv("CORS_MAX_AGE", originalCORSMaxAge)
+		restoreEnv("AUTH_JWT_SECRET", originalJWTSecret)
 	}()
 
-	// Set required fields
-	os.Setenv("DB_NAME", "testdb")
-	os.Setenv("DB_USER", "testuser")
+	setRequiredEnvVars()
 
-	// Test custom CORS config
+	// Custom values
 	os.Setenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
 	os.Setenv("CORS_ALLOWED_METHODS", "GET,POST")
 	os.Setenv("CORS_ALLOWED_HEADERS", "Content-Type,Authorization")
@@ -537,21 +442,17 @@ func TestCORSConfig(t *testing.T) {
 			t.Errorf("Expected origin %s, got %s", origin, config.CORS.AllowedOrigins[i])
 		}
 	}
-
-	expectedMethods := []string{"GET", "POST"}
-	if len(config.CORS.AllowedMethods) != len(expectedMethods) {
-		t.Errorf("Expected %d methods, got %d", len(expectedMethods), len(config.CORS.AllowedMethods))
+	if len(config.CORS.AllowedMethods) != 2 {
+		t.Errorf("Expected 2 methods, got %d", len(config.CORS.AllowedMethods))
 	}
-
 	if config.CORS.AllowCredentials != false {
 		t.Errorf("Expected allow credentials false, got %v", config.CORS.AllowCredentials)
 	}
-
 	if config.CORS.MaxAge != 7200 {
 		t.Errorf("Expected max age 7200, got %d", config.CORS.MaxAge)
 	}
 
-	// Test defaults
+	// Defaults (no * → safe with credentials)
 	os.Unsetenv("CORS_ALLOWED_ORIGINS")
 	os.Unsetenv("CORS_ALLOWED_METHODS")
 	os.Unsetenv("CORS_ALLOWED_HEADERS")
@@ -563,15 +464,27 @@ func TestCORSConfig(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	if len(config.CORS.AllowedOrigins) != 1 || config.CORS.AllowedOrigins[0] != "*" {
-		t.Errorf("Expected default origins [*], got %v", config.CORS.AllowedOrigins)
+	if len(config.CORS.AllowedOrigins) == 0 {
+		t.Error("Expected at least one default CORS origin")
 	}
-
+	for _, o := range config.CORS.AllowedOrigins {
+		if o == "*" {
+			t.Error("Default CORS origins must not contain * (invalid with AllowCredentials=true)")
+		}
+	}
 	if config.CORS.AllowCredentials != true {
 		t.Errorf("Expected default allow credentials true, got %v", config.CORS.AllowCredentials)
 	}
-
 	if config.CORS.MaxAge != 3600 {
 		t.Errorf("Expected default max age 3600, got %d", config.CORS.MaxAge)
+	}
+}
+
+// restoreEnv sets or unsets an env var based on whether the saved value is non-empty.
+func restoreEnv(key, saved string) {
+	if saved != "" {
+		os.Setenv(key, saved)
+	} else {
+		os.Unsetenv(key)
 	}
 }

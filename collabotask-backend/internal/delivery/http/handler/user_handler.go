@@ -18,11 +18,11 @@ func NewUserHandler(authUseCase *auth.AuthUseCase) *UserHandler {
 
 // GetProfile godoc
 // @Summary Get current user profile
-// @Description Returns the authenticated user's profile. Requires a valid Bearer JWT.
+// @Description Returns the authenticated user's profile. Requires a valid authentication cookie.
 // @Tags user
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Success 200 {object} response.UserProfileSuccessDoc "OK"
 // @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized (missing/invalid token or user context)"
 // @Failure 404 {object} response.Failure404NotFoundDoc "User not found"

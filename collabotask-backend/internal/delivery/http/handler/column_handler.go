@@ -51,7 +51,7 @@ func parseColumnPathParams(ctx *gin.Context) (boardID, columnID uuid.UUID, ok bo
 // @Tags column
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param body body request.CreateColumnRequest true "Column payload"
@@ -113,7 +113,7 @@ func (ch *ColumnHandler) CreateColumn(ctx *gin.Context) {
 // @Tags column
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param column_id path string true "Column UUID"
@@ -168,7 +168,7 @@ func (ch *ColumnHandler) UpdateColumn(ctx *gin.Context) {
 // @Tags column
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param column_id path string true "Column UUID"
@@ -215,7 +215,7 @@ func (ch *ColumnHandler) DeleteColumn(ctx *gin.Context) {
 // @Tags column
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param column_id path string true "Column UUID"

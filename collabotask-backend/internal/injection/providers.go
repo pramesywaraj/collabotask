@@ -115,8 +115,8 @@ func ProvideBoardAccessChecker(
 }
 
 // Handler
-func ProvideAuthHandler(authUseCase *auth.AuthUseCase) *handler.AuthHandler {
-	return handler.NewAuthHandler(authUseCase)
+func ProvideAuthHandler(authUseCase *auth.AuthUseCase, cfg *config.Config) *handler.AuthHandler {
+	return handler.NewAuthHandler(authUseCase, &cfg.Auth)
 }
 func ProvideUserHandler(authUseCase *auth.AuthUseCase) *handler.UserHandler {
 	return handler.NewUserHandler(authUseCase)

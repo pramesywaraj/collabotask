@@ -89,6 +89,31 @@ COOKIE_NAME=__Host-token    # when COOKIE_SECURE=false, use a plain name (prefix
 - **Max-Age vs JWT expiry:** always derive `Max-Age` from `cfg.JWTExpiration` — never hardcode. (Reconcile SRS §3.5 "7-day" vs code default 24h separately; design is expiration-agnostic.)
 - **Register auto-login is provisional** — remove it when email verification lands (Phase 2+).
 
+## Post-implementation review — follow-ups (2026-07-27)
+
+Build complete; `/code-review` run against `HEAD` (two-axis: Standards + Spec). **Both axes pass on substance** — all 6 build steps and all 8 ADR-008 decisions implemented correctly; **0 hard standards violations, 0 functional spec gaps**. Cookie attributes, derived `Max-Age`, hard cutover, CSRF-on-`/auth/*`, logout-not-behind-`Auth`, CORS fail-fast + `Vary: Origin`, and the required attribute-assertion/flow/middleware tests are all present and correct. The items below are **cleanup, not correctness.**
+
+### To address
+
+**P1 — fix before commit: stale `Bearer` doc-strings (contradicts the hard cutover in the public Swagger).**
+The `swag` annotations still say "Bearer" though no Bearer path remains — this bakes false prose into the regenerated Swagger UI. 9 sites, all comment-only:
+- 8× [`handler/workspace_handler.go`](../../collabotask-backend/internal/delivery/http/handler/workspace_handler.go) lines 38, 81, 119, 171, 220, 273, 312, 352 — `@Failure 401 … "Missing or invalid Bearer token"` → `"Missing or invalid authentication cookie"` (`replace_all`).
+- 1× [`handler/user_handler.go:21`](../../collabotask-backend/internal/delivery/http/handler/user_handler.go) — `@Description … Requires a valid Bearer JWT.` → `… Requires a valid authentication cookie.`
+- Then `cd collabotask-backend && swag init -g cmd/api/main.go` and **verify** `grep -rl "Bearer" docs/` returns nothing (confirms the generated `swagger.json`/`swagger.yaml`/`docs.go` flushed).
+
+**P2 — optional clarifying comments (cheap, readability only):**
+- [`response/swagger_doc.go`](../../collabotask-backend/internal/delivery/http/response/swagger_doc.go) `SuccessNullDataDoc.Data *struct{}` — add `// *struct{} makes swag render data:null (an empty struct renders {}).`
+- [`middleware/csrf.go`](../../collabotask-backend/internal/delivery/http/middleware/csrf.go) `csrfSafeMethods` — add `// RFC 7231 safe methods — deliberately independent of the CORS method allowlist; do not consolidate.`
+
+**P3 — optional history hygiene:** [`config_test.go`](../../collabotask-backend/internal/config/config_test.go) mixes the required CORS-validation test with a large helper-extraction/whitespace refactor. If clean commit boundaries matter, stage as two commits — `refactor(config): extract env test helpers` then `feat(auth): CORS credentials validation`. Test-only, no functional risk.
+
+### Notes (looked at, deliberately left as-is — don't re-open without new reason)
+
+- **Duplicated `*Doc` structs (`swagger_doc.go`)** — the "extract shared shape" refactor is blocked by `swag`, which needs one concrete named type per endpoint for distinct schemas/examples. Collapsing them worsens the docs; a generic rewrite would be ~40 structs, far out of scope. Keep the established pattern.
+- **`config.Validate()` spans DB/auth/CORS/env** — idiomatic "validate the whole config on load"; four guard clauses don't warrant a split. Extract a `validateCORS(c)` helper only if the check count grows (>~8).
+- **`csrfSafeMethods` vs CORS `AllowedMethods` is NOT duplication** — two independent axes that overlap by coincidence: CSRF-safe = "non-mutating per RFC 7231" (`GET/HEAD/OPTIONS`); CORS-allowed = "browser may send cross-origin" (`GET/POST/PATCH/PUT/DELETE/OPTIONS`). Coupling them (e.g. deriving one from the other) would be a bug, not a DRY win. (P2 comment records this so the next reader doesn't "fix" it.)
+- **`.env.example` vs compiled default `CORS_ALLOWED_ORIGINS`** — the Config-delta block above lists the prod origin (`https://app.collabotask.com`) as the example, but [`config.go`](../../collabotask-backend/internal/config/config.go) defaults to the dev origin (`http://localhost:3000`) **on purpose** — fail-safe: a prod deploy that forgets the env var won't accidentally allow a prod origin. Not a code change; add a deploy-checklist reminder that `CORS_ALLOWED_ORIGINS` **must** be set in production.
+
 ## References
 - **[ADR-008](../architecture/adr/adr-008-auth-httponly-cookie.md)** — the decision record (8 decisions + deferrals).
 - **SRS §3.5 / §4.1** — auth contract (cookie delivery, CSRF header, CORS, UC-01/02 responses, UC-03 logout).

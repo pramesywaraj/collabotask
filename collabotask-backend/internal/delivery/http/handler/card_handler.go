@@ -80,7 +80,7 @@ func parseBoardAndColumnPathParams(ctx *gin.Context) (boardID, columnID uuid.UUI
 // @Tags card
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param column_id path string true "Column UUID"
@@ -139,7 +139,7 @@ func (crh *CardHandler) CreateCard(ctx *gin.Context) {
 // @Tags card
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param column_id path string true "Column UUID"
@@ -208,7 +208,7 @@ func (crh *CardHandler) UpdateCard(ctx *gin.Context) {
 // @Tags card
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param column_id path string true "Column UUID"
@@ -257,7 +257,7 @@ func (crh *CardHandler) DeleteCard(ctx *gin.Context) {
 // @Tags card
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param column_id path string true "Source column UUID"

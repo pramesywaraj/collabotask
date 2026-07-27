@@ -28,16 +28,18 @@ func New(cfg Config) *gin.Engine {
 	routes.Use(middleware.Recover(cfg.Log))
 	routes.Use(middleware.Logger(cfg.Log))
 	routes.Use(middleware.CORS(&cfg.Cfg.CORS))
+	routes.Use(middleware.CSRF())
 
 	routes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	v1Routes := routes.Group("/api/v1")
 
-	// Public routes
+	// Public routes (CSRF middleware applies globally, Auth middleware is not required)
 	auth := v1Routes.Group("/auth")
 	{
 		auth.POST("/register", cfg.AuthHandler.Register)
 		auth.POST("/login", cfg.AuthHandler.Login)
+		auth.POST("/logout", cfg.AuthHandler.Logout)
 	}
 
 	// Protected routes

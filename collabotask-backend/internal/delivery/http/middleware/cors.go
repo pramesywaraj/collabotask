@@ -15,14 +15,10 @@ func CORS(cfg *config.CORSConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 
-		if len(cfg.AllowedOrigins) > 0 {
-			if slices.Contains(cfg.AllowedOrigins, "*") {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			} else if origin != "" && slices.Contains(cfg.AllowedOrigins, origin) {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			} else if len(cfg.AllowedOrigins) > 0 {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", cfg.AllowedOrigins[0])
-			}
+		c.Writer.Header().Add("Vary", "Origin")
+
+		if origin != "" && slices.Contains(cfg.AllowedOrigins, origin) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 
 		if len(cfg.AllowedMethods) > 0 {

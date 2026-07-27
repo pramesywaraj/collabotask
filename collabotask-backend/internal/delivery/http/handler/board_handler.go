@@ -46,7 +46,7 @@ func parseBoardPathParams(ctx *gin.Context) (workspaceID, boardID uuid.UUID, ok 
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param body body request.CreateBoardRequest true "Board payload"
 // @Success 201 {object} response.BoardCreateSuccessDoc "Created"
@@ -110,7 +110,7 @@ func (bh *BoardHandler) CreateBoard(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Success 200 {object} response.BoardDetailSuccessDoc "OK"
@@ -154,7 +154,7 @@ func (bh *BoardHandler) GetBoardDetail(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Success 200 {object} response.BoardListInWorkspaceSuccessDoc "OK"
 // @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id"
@@ -210,7 +210,7 @@ func (bh *BoardHandler) GetBoardsInWorkspace(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Success 200 {object} response.BoardInviteesListSuccessDoc "OK"
@@ -260,7 +260,7 @@ func (bh *BoardHandler) GetWorkspaceInviteesForBoard(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param body body request.UpdateBoardRequest true "Partial update"
@@ -318,7 +318,7 @@ func (bh *BoardHandler) UpdateBoard(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param body body request.SetArchivedBoardRequest true "Archived flag"
@@ -370,7 +370,7 @@ func (bh *BoardHandler) SetBoardArchivedStatus(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param body body request.InviteMemberBoardRequest true "User IDs to invite"
@@ -424,7 +424,7 @@ func (bh *BoardHandler) InviteMembersToBoard(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param body body request.RemoveMemberBoardRequest true "Member user id"
@@ -478,7 +478,7 @@ func (bh *BoardHandler) RemoveMemberFromBoard(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Success 200 {object} response.BoardSelfJoinSuccessDoc "OK (joined=true when newly added, false when already a member)"
@@ -529,7 +529,7 @@ func (bh *BoardHandler) SelfJoinToBoard(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Success 200 {object} response.BoardLeaveSuccessDoc "OK"
@@ -573,7 +573,7 @@ func (bh *BoardHandler) LeaveBoard(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Param body body request.TransferOwnershipRequest true "Target user id"
@@ -621,7 +621,7 @@ func (bh *BoardHandler) TransferOwnership(ctx *gin.Context) {
 // @Tags board
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param board_id path string true "Board UUID"
 // @Success 200 {object} response.BoardKanbanSuccessDoc "OK"

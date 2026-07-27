@@ -89,6 +89,20 @@ type successDocBase struct {
 	Success bool `json:"success" example:"true"`
 }
 
+type SuccessDoc struct {
+	successDocBase
+	StatusCode int         `json:"status_code" example:"200"`
+	Message    string      `json:"message" example:"OK"`
+	Data       interface{} `json:"data"`
+}
+
+type SuccessNullDataDoc struct {
+	successDocBase
+	StatusCode int       `json:"status_code" example:"200"`
+	Message    string    `json:"message" example:"OK"`
+	Data       *struct{} `json:"data"` // *struct{} makes swag render data:null (an empty struct renders {})
+}
+
 // AUTH
 type AuthRegisterSuccessDoc struct {
 	successDocBase
@@ -145,6 +159,13 @@ type WorkspaceRemoveMemberSuccessDoc struct {
 	successDocBase
 	StatusCode int         `json:"status_code" example:"200"`
 	Message    string      `json:"message" example:"Member removed successfully"`
+	Data       interface{} `json:"data"`
+}
+
+type WorkspaceSetMemberRoleSuccessDoc struct {
+	successDocBase
+	StatusCode int         `json:"status_code" example:"200"`
+	Message    string      `json:"message" example:"Member role updated successfully"`
 	Data       interface{} `json:"data"`
 }
 

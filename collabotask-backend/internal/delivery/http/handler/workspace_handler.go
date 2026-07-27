@@ -31,11 +31,11 @@ func NewWorkspaceHandler(workspaceUseCase *workspace.WorkspaceUseCase) *Workspac
 // @Tags workspace
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param body body request.CreateWorkspaceRequest true "Create workspace payload"
 // @Success 201 {object} response.WorkspaceCreateSuccessDoc "Created"
 // @Failure 400 {object} response.Failure400ValidationDoc "Validation error (body or use case validation)"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace [post]
 func (wh *WorkspaceHandler) CreateWorkspace(ctx *gin.Context) {
@@ -76,9 +76,9 @@ func (wh *WorkspaceHandler) CreateWorkspace(ctx *gin.Context) {
 // @Tags workspace
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Success 200 {object} response.WorkspaceListSuccessDoc "OK"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
 // @Router /workspace [get]
 func (wh *WorkspaceHandler) GetWorkspaces(ctx *gin.Context) {
@@ -111,12 +111,12 @@ func (wh *WorkspaceHandler) GetWorkspaces(ctx *gin.Context) {
 // @Tags workspace
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param body body request.InviteMemberRequest true "Email list"
 // @Success 200 {object} response.WorkspaceInviteSuccessDoc "OK — per-email results in data array"
 // @Failure 400 {object} response.Failure400ValidationDoc "Validation failed or invalid workspace id"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 403 {object} response.Failure403ForbiddenDoc "Requester is not workspace admin"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error (infra failure mid-batch)"
 // @Router /workspace/{workspace_id}/member/invite [post]
@@ -162,13 +162,13 @@ func (wh *WorkspaceHandler) InviteMember(ctx *gin.Context) {
 // @Tags workspace
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param user_id path string true "Member user UUID to remove"
 // @Success 200 {object} response.WorkspaceRemoveMemberSuccessDoc "OK"
 // @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id or invalid user id in path"
 // @Failure 400 {object} response.Failure400ValidationDoc "Cannot remove yourself or validation error"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 403 {object} response.Failure403ForbiddenDoc "Not admin or user not in workspace"
 // @Failure 404 {object} response.Failure404NotFoundDoc "Member not found"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
@@ -211,13 +211,13 @@ func (wh *WorkspaceHandler) RemoveMember(ctx *gin.Context) {
 // @Tags workspace
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Param user_id path string true "Target member user UUID"
 // @Param body body request.SetMemberRoleRequest true "New role"
 // @Success 200 {object} response.WorkspaceSetMemberRoleSuccessDoc "OK — updated member"
 // @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 403 {object} response.Failure403ForbiddenDoc "Not admin, demoting owner, or insufficient authority"
 // @Failure 404 {object} response.Failure404NotFoundDoc "Target member not found"
 // @Failure 409 {object} response.Failure409ConflictDoc "Last admin guard triggered"
@@ -266,11 +266,11 @@ func (wh *WorkspaceHandler) SetMemberRole(ctx *gin.Context) {
 // @Description Authenticated user leaves the workspace. Owner cannot leave; last admin cannot leave.
 // @Tags workspace
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Success 200 {object} response.SuccessNullDataDoc "OK"
 // @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 403 {object} response.Failure403ForbiddenDoc "Owner cannot leave"
 // @Failure 404 {object} response.Failure404NotFoundDoc "Not a member"
 // @Failure 409 {object} response.Failure409ConflictDoc "Last admin guard"
@@ -305,11 +305,11 @@ func (wh *WorkspaceHandler) LeaveWorkspace(ctx *gin.Context) {
 // @Description Hard delete; only the workspace owner may call this. DB cascades boards/columns/cards/members.
 // @Tags workspace
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Success 200 {object} response.SuccessNullDataDoc "OK"
 // @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 403 {object} response.Failure403ForbiddenDoc "Not the workspace owner"
 // @Failure 404 {object} response.Failure404NotFoundDoc "Workspace not found"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
@@ -344,12 +344,12 @@ func (wh *WorkspaceHandler) DeleteWorkspace(ctx *gin.Context) {
 // @Tags workspace
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Param workspace_id path string true "Workspace UUID"
 // @Success 200 {object} response.WorkspaceDetailSuccessDoc "OK"
 // @Failure 400 {object} response.Failure400BadRequestDoc "Invalid workspace id in path"
 // @Failure 400 {object} response.Failure400ValidationDoc "Validation error"
-// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid Bearer token"
+// @Failure 401 {object} response.Failure401UnauthorizedDoc "Missing or invalid authentication cookie"
 // @Failure 403 {object} response.Failure403ForbiddenDoc "User not in workspace"
 // @Failure 404 {object} response.Failure404NotFoundDoc "Workspace or user not found"
 // @Failure 500 {object} response.Failure500InternalDoc "Internal server error"
