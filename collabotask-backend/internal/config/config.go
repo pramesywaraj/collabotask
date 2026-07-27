@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -62,6 +63,8 @@ type AuthConfig struct {
 	JWTSecret     string
 	JWTExpiration time.Duration
 	BcryptCost    int
+	CookieSecure  bool
+	CookieName    string
 }
 
 func getEnv(key, defaultValue string) string {
@@ -141,9 +144,9 @@ func Load() (*Config, error) {
 			Format: getEnv("LOG_FORMAT", "console"),
 		},
 		CORS: CORSConfig{
-			AllowedOrigins:   getEnvStringSlice("CORS_ALLOWED_ORIGINS", []string{"*"}),
-			AllowedMethods:   getEnvStringSlice("CORS_ALLOWED_METHODS", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-			AllowedHeaders:   getEnvStringSlice("CORS_ALLOWED_HEADERS", []string{"*"}),
+			AllowedOrigins:   getEnvStringSlice("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000"}),
+			AllowedMethods:   getEnvStringSlice("CORS_ALLOWED_METHODS", []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"}),
+			AllowedHeaders:   getEnvStringSlice("CORS_ALLOWED_HEADERS", []string{"Content-Type", "X-CSRF-Protection"}),
 			AllowCredentials: getEnvBool("CORS_ALLOW_CREDENTIALS", true),
 			MaxAge:           getEnvInt("CORS_MAX_AGE", 3600),
 		},
@@ -151,6 +154,8 @@ func Load() (*Config, error) {
 			JWTSecret:     getEnv("AUTH_JWT_SECRET", ""),
 			JWTExpiration: getEnvDuration("AUTH_JWT_EXPIRATION", 24*time.Hour),
 			BcryptCost:    getEnvInt("AUTH_BCRYPT_COST", 12),
+			CookieSecure:  getEnvBool("COOKIE_SECURE", true),
+			CookieName:    getEnv("COOKIE_NAME", "__Host-token"),
 		},
 	}
 
@@ -171,6 +176,10 @@ func (c *Config) Validate() error {
 
 	if c.Auth.JWTSecret == "" {
 		return fmt.Errorf("AUTH_JWT_SECRET is required")
+	}
+
+	if c.CORS.AllowCredentials && slices.Contains(c.CORS.AllowedOrigins, "*") {
+		return fmt.Errorf("CORS_ALLOWED_ORIGINS must not contain * when CORS_ALLOW_CREDENTIALS is true")
 	}
 
 	validEnvs := map[string]bool{
