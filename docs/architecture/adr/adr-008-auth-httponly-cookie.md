@@ -6,7 +6,7 @@
 
 ## Context
 
-Grilling the WebSocket layer (ADR-009) surfaced that "how does the JWT reach the WS handshake" is a symptom of a deeper question: **where the token lives on the client.** The current `Bearer`-in-JS model has three problems for the target app (Next.js — a public SSR zone + an auth-gated app zone — with realtime over WebSocket):
+Grilling the WebSocket layer (ADR-009) surfaced that "how does the JWT reach the WS handshake" is a symptom of a deeper question: **where the token lives on the client.** The current `Bearer`-in-JS model has three problems for the target stack (Astro SSG public zone + Vite SPA app zone — with realtime over WebSocket):
 
 1. **WebSocket:** a browser's native `WebSocket` cannot set an `Authorization` header → forces a `?token=` query param or a `Sec-WebSocket-Protocol` hack (token in the URL, logged everywhere).
 2. **SSR:** `localStorage`/JS memory is invisible to the Next.js **server**, so it cannot make authenticated calls during server render.
@@ -39,7 +39,7 @@ This is the hinge: it decides whether `SameSite` protects for free, how hard CSR
 
 Under topology A this is a real fork with a security-surface cost, and it *is* the "do we want authenticated SSR" question.
 
-- **Host-only (chosen):** no `Domain=` attribute → the cookie belongs to `api.` only. Client-side `fetch` app→api still works (same-site, `credentials:'include'`); the WS handshake to `api.` still carries it. **Only** authenticated SSR breaks — the Next.js server (on `app.`) never receives an `api.`-scoped cookie, so it cannot render authenticated pages. Blast radius = one host; a subdomain takeover elsewhere never sees the cookie.
+- **Host-only (chosen):** no `Domain=` attribute → the cookie belongs to `api.` only. Client-side `fetch` app→api still works (same-site, `credentials:'include'`); the WS handshake to `api.` still carries it. **Only** authenticated SSR breaks — the Vite SPA (on `app.`) has no server, so it cannot render authenticated pages server-side regardless. Blast radius = one host; a subdomain takeover elsewhere never sees the cookie.
 - **Shared `Domain=collabotask.com` (rejected for now):** the cookie is sent to *every* `*.collabotask.com` host → the Next.js server receives it → **authenticated SSR works** — but every current/future subdomain (and any subdomain takeover) is now in the cookie's blast radius. `HttpOnly` does **not** help here: it stops JS *reading* the cookie, not a malicious subdomain *server* *receiving* it.
 
 Authenticated SSR was a stated *motivation* for this migration; it still holds, but under A you only get it by accepting the shared-`Domain` surface. Chosen host-only because the gated zone is a **live realtime board** — it hydrates and opens a socket immediately, so server-rendering it with the user's data buys little; the public zone is unauthenticated anyway. When SSR auth genuinely pays off, the answer is **C2** (which gives SSR auth *and* a tight cookie), not shared-`Domain` (which widens the surface).
@@ -156,7 +156,7 @@ sequenceDiagram
     Note over BR: SSR ✓ cookie can reach the server (†deferred under host-only)
     Note over BR: XSS ✓ HttpOnly → nothing in JS to steal
 ```
-**(†) SSR caveat for *our* chosen config:** the httpOnly cookie makes SSR auth *possible in general*, but our **host-only + topology-A** decisions (§2, §3) deliberately **defer authenticated SSR** — a `api.`-scoped cookie is not sent to the `app.` origin the Next.js server runs on. SSR auth is unlocked later by **C2 single-origin** (or, less preferably, a shared-`Domain` cookie). The WebSocket and XSS wins apply **now**; the SSR win is the understood-but-deferred one.
+**(†) SSR caveat for *our* chosen config:** the httpOnly cookie makes SSR auth *possible in general*, but our **host-only + topology-A** decisions (§2, §3) deliberately **defer authenticated SSR** — a `api.`-scoped cookie is not sent to any server on `app.`, and the Vite SPA has no server anyway. SSR auth is unlocked later by **C2 single-origin** (or, less preferably, a shared-`Domain` cookie). The WebSocket and XSS wins apply **now**; the SSR win is the understood-but-deferred one.
 
 ### Request flow — authenticated mutation
 ```mermaid
