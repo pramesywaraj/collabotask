@@ -22,7 +22,7 @@ func NewUserHandler(authUseCase *auth.AuthUseCase) *UserHandler {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security CSRF
 // @Success 200 {object} response.UserProfileSuccessDoc "OK"
 // @Failure 401 {object} response.Failure401UnauthorizedDoc "Unauthorized (missing/invalid token or user context)"
 // @Failure 404 {object} response.Failure404NotFoundDoc "User not found"

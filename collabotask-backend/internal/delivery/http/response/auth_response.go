@@ -15,8 +15,7 @@ type UserResponse struct {
 }
 
 type AuthResponse struct {
-	User  UserResponse `json:"user"`
-	Token string       `json:"token"`
+	User UserResponse `json:"user"`
 }
 
 func UserToResponse(u auth.UserProfile) UserResponse {

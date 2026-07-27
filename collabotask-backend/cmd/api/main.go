@@ -6,10 +6,10 @@
 // @BasePath /api/v1
 // @schemes http
 
-// @securityDefinitions.apikey BearerAuth
+// @securityDefinitions.apikey CSRF
 // @in header
-// @name Authorization
-// @description Add "Bearer " and your JWT token
+// @name X-CSRF-Protection
+// @description Required on all state-changing requests (POST/PUT/PATCH/DELETE). Set to any non-empty value (e.g. "1"). Authentication is via httpOnly cookie set by POST /auth/login.
 package main
 
 import (

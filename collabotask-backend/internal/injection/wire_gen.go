@@ -28,7 +28,7 @@ func InitializeApp() (*App, error) {
 	}
 	userRepository := ProvideUserRepository(db)
 	authUseCase := ProvideAuthUseCase(userRepository, config)
-	authHandler := ProvideAuthHandler(authUseCase)
+	authHandler := ProvideAuthHandler(authUseCase, config)
 	userHandler := ProvideUserHandler(authUseCase)
 	workspaceRepository := ProvideWorkspaceRepository(db)
 	workspaceMemberRepository := ProvideWorkspaceMemberRepository(db)
