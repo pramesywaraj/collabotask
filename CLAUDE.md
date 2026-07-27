@@ -4,7 +4,7 @@ Collaborative task management app (Trello-style). This is a monorepo.
 
 The backend (Go) is implemented and lives in `collabotask-backend/`.
 **All technical detail — architecture, conventions, commands, the "add an endpoint" recipe — is in** `collabotask-backend/README.md` **(conventions + recipe) and** `collabotask-backend/TESTING.md` **(test approach). Read those for any code work.**
-The frontend (Next.js) is planned as a separate effort.
+The frontend architecture is settled and documented (`docs/architecture/frontend-architecture.md`, ADR-011/012). App zone: React + Vite SPA. Public zone: Next.js (SSG). Frontend implementation is a separate effort.
 
 ## Now
 
@@ -24,7 +24,8 @@ Phase 1 · CRUD done: auth, workspace, board, column, card
 - **Auth ③.5 design settled ✅ (not built)** — `/grill-with-docs` locked the full `Bearer` **→ httpOnly cookie** design (8 decisions, all with recommended-answer grilling): **JWT-in-cookie/stateless** (session/refresh → Phase 2); **topology A** cross-origin sibling subdomains `app.`↔`api.` (single-origin C2 reverse-proxy → future); **host-only cookie** ⇒ **no authenticated SSR** in Phase 1; `__Host-token; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=<cfg.JWTExpiration>`; **CSRF** = required `X-CSRF-Protection` header on all mutations incl. login/register/logout (forces CORS-preflight gate; closes sibling-subdomain vector); **hard cutover** (cookie-only, login/register drop body `token`, no `Bearer`); **unconditional logout** `POST /auth/logout`; **CORS corrected** (explicit allowlist, add `PATCH`, no `*`+creds → fail-fast). Register auto-login kept provisionally (email-verify supersedes it, Phase 2). Recorded: ADR-008 (full), SRS §3.5/§4.1 (UC-01/02 + new UC-03 logout), handoff `docs/handoff/handoff-auth-httponly-cookie.md`, memory [[auth-cookie-migration-prereq]]. **Build next** (6-step TDD plan in the handoff; middleware/handler tests need no DB harness). **Recheck ④ for drift after this lands.**
 - **Queue (in order):** ① P0 fixes ✅ → ② fractional positioning ✅ → ③ REST features ✅ → **③.5 auth httpOnly-cookie** *(design ✅, build next)* → ④ WebSocket + participation broadcast *(design ✅, build after ③.5)* → ⑤ post-Phase-1 integrity pass *(opens once ④ is done: stand up the DB/repo test harness → **composite-FK assignee invariant / ADR-010 first** → then the deferred SQL tests: cascade, rebalance, visibility filter, card_count)*.
 - **Integrity pass (⑤) rationale:** the composite-FK invariant (`cards(board_id, assigned_to) → board_members … ON DELETE SET NULL (assigned_to)`, PG16) would make "assignee ∈ board members" a DB guarantee and auto-cascade unassignment on every membership-loss path — superseding the app-layer checks + `RemoveWithParticipationCascade` helpers and the §2.8 shared-helper design. Deferred out of Phase 1 (needs the harness; reopens shipped cascade code). Do it **FK-first** so you don't test cascade SQL you're about to delete. Full write-up: `docs/handoff/handoff-assignee-validation-cascade.md`; memory [[post-phase1-integration-tests]].
-- **Don't touch:** Phase-2 deferrals (comments, labels, attachments, public boards, refresh tokens, account deletion) and the planned Next.js frontend.
+- **Frontend architecture settled ✅** — `/grill-with-docs` locked the full frontend design (10 decisions): **Vite SPA** (app zone) + **Astro** (public zone) split (ADR-011, ADR-013); **TanStack Query** (server/REST state) + **Zustand** (WS push + UI state), WS-patches-cache pattern (ADR-012); React Router v7; URL-based card modal; `_authenticated` layout route as auth middleware; feature-based folder structure; shadcn/ui + Tailwind; axios with CSRF interceptor; WS connects once on app mount. Recorded: ADR-011, ADR-012, ADR-013, `docs/architecture/frontend-architecture.md`, SRS §3.1 updated.
+- **Don't touch:** Phase-2 deferrals (comments, labels, attachments, public boards, refresh tokens, account deletion) and the frontend implementation (architecture is settled, code not started).
 
 
 
@@ -41,7 +42,8 @@ Phase 1 · CRUD done: auth, workspace, board, column, card
 ## Tech Stack
 
 - Backend: Go, Gin, PostgreSQL (pgx), Google Wire, JWT, WebSocket
-- Frontend (planned): Next.js, TypeScript, TanStack Query, Zustand, dnd-kit
+- Frontend (app zone): React + Vite SPA, TypeScript, React Router v7, TanStack Query, Zustand, axios, shadcn/ui, Tailwind, dnd-kit
+- Frontend (public zone): Astro (SSG) — landing, login, register; React islands for forms
 
 
 
@@ -51,7 +53,7 @@ Phase 1 · CRUD done: auth, workspace, board, column, card
 - User stories — `docs/product/001-user-stories.md`
 - Software spec — `docs/spesifications/001-software-specifications.md`
 - Backend technical — `collabotask-backend/README.md` (conventions + "add an endpoint" recipe), `collabotask-backend/TESTING.md` (test approach)
-- Architecture — `docs/architecture/backend-architecture.md`, `docs/architecture/adr/`
+- Architecture — `docs/architecture/backend-architecture.md` (backend), `docs/architecture/frontend-architecture.md` (frontend), `docs/architecture/adr/`
 
 
 

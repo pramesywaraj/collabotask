@@ -145,10 +145,13 @@ Consequences:
 - API docs: **swaggo/swag** (Swagger)
 - **Realtime: `coder/websocket`** — *to be added; not yet in `go.mod`.*
 
-**Frontend:** **Next.js** in two zones:
-- *Public zone* (SSG/SSR, SEO): landing page, marketing, login/register.
-- *App zone* (`/app/*`, CSR/SPA, auth-gated): the Kanban app.
-- **WebSocket connects directly to the Go backend**, never via Next.js API routes. (Next on serverless cannot host persistent WS; keeping WS in Go avoids that entirely.) Drag-and-drop: `dnd-kit`.
+**Frontend:** Two-zone split (**[ADR-011](../architecture/adr/adr-011-frontend-framework.md)**):
+- *Public zone* — **Astro** (SSG, ADR-013): landing page, login, register. Login/register forms are React islands (`client:load`). No Next.js used in the frontend.
+- *App zone* — **React + Vite SPA** (`app.*`, CSR/SPA, auth-gated): the Kanban app. No authenticated SSR in Phase 1 (host-only `__Host-token` cookie cannot be forwarded browser → Next.js server → Go API — ADR-008).
+- **WebSocket connects directly to the Go backend**, never via Next.js. Auth via httpOnly cookie at handshake (ADR-008 / §3.5); no `?token=` query param.
+- **State management** (**[ADR-012](../architecture/adr/adr-012-frontend-state-management.md)**): **TanStack Query** (server/REST cache) + **Zustand** (WS connection + presence + UI state). WS events patch TanStack Query cache directly — no refetch on board mutations.
+- **Router:** React Router v7. **HTTP client:** axios (CSRF header via request interceptor; global 401 redirect via response interceptor). **UI components:** shadcn/ui + Tailwind.
+- Drag-and-drop: `dnd-kit`.
 
 **Database:** PostgreSQL.
 
