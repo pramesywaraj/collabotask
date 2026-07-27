@@ -98,9 +98,9 @@ type SuccessDoc struct {
 
 type SuccessNullDataDoc struct {
 	successDocBase
-	StatusCode int    `json:"status_code" example:"200"`
-	Message    string `json:"message" example:"OK"`
-	Data       *struct{} `json:"data"`
+	StatusCode int       `json:"status_code" example:"200"`
+	Message    string    `json:"message" example:"OK"`
+	Data       *struct{} `json:"data"` // *struct{} makes swag render data:null (an empty struct renders {})
 }
 
 // AUTH

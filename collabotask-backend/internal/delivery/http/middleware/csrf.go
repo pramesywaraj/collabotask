@@ -9,6 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RFC 7231 safe methods — deliberately independent of the CORS method allowlist;
+// do not consolidate. CSRF-safe = "non-mutating per RFC 7231" (GET/HEAD/OPTIONS);
+// CORS-allowed = "browser may send cross-origin" — the two sets overlap by coincidence.
 var csrfSafeMethods = map[string]bool{
 	http.MethodGet:     true,
 	http.MethodHead:    true,

@@ -18,7 +18,7 @@ func NewUserHandler(authUseCase *auth.AuthUseCase) *UserHandler {
 
 // GetProfile godoc
 // @Summary Get current user profile
-// @Description Returns the authenticated user's profile. Requires a valid Bearer JWT.
+// @Description Returns the authenticated user's profile. Requires a valid authentication cookie.
 // @Tags user
 // @Accept json
 // @Produce json
