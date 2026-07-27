@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-23
 **Repo:** `collabotask` (backend: `collabotask-backend/`)
-**Status:** **Planning handoff** from a `/grill-with-docs` session. Design settled and **approved by the product owner**. **Nothing built yet.**
+**Status:** **Built + reviewed 2026-07-27.** Design settled, approved, and implemented; two-axis `/code-review` clean (0 hard standards violations, 0 spec gaps); P1/P2 follow-ups applied (see *Post-implementation review* below). 473 tests pass. **④ WebSocket now unblocked.**
 
 > This is the durable build guide for step ③.5. The *why/decision* record is **[ADR-008](../architecture/adr/adr-008-auth-httponly-cookie.md)**; the API/contract changes are in **SRS §3.5 / §4.1**. This file is the *how-to-build*: sequencing, files to touch, TDD checklist, tooling, and gotchas.
 
