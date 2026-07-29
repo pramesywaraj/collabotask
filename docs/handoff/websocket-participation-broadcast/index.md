@@ -13,8 +13,33 @@ NOW      docs capture (this handoff, ADR-009, SRS §4.5/§5, CLAUDE.md, memory)
 ④        WebSocket + participation broadcast (this design), built in parts A→B→C→D→E
 ```
 - **④ depends on ③.5.** The WS handshake authenticates from the **JWT cookie** (no `?token=`, no subprotocol). Cookie auth also forces **explicit CORS origins** (no `*`) shared by REST + WS.
-- **Recheck this design for drift after ③.5 is implemented** before starting Part A — auth-cookie touches the auth middleware/handlers this design assumes.
+- **Drift recheck after ③.5: DONE (2026-07-29, `/grill-with-docs`).** See **[§ Post-③.5 drift recheck — resolved](#post-35-drift-recheck--resolved-2026-07-29)** below. Four points resolved (middleware reuse, origin-format translation, CSRF-GET invariant, handshake-only-auth limitation); **no design reversal** — mechanics refined and one limitation made explicit. §3 below already reflects the corrected mechanics.
 - Full rationale for the WS decisions: **[ADR-009](../../architecture/adr/adr-009-websocket-realtime-layer.md)**. Auth-cookie decision + why-before-WS: **ADR-008** (pending its grilling). SRS **§4.5 / §5** hold the settled realtime contract.
+
+---
+
+## Post-③.5 drift recheck — resolved (2026-07-29)
+
+`/grill-with-docs` session comparing this design against what ③.5 (auth httpOnly cookie) **actually built** ([`middleware/auth.go`](../../../collabotask-backend/internal/delivery/http/middleware/auth.go), [`csrf.go`](../../../collabotask-backend/internal/delivery/http/middleware/csrf.go), [`cors.go`](../../../collabotask-backend/internal/delivery/http/middleware/cors.go), [`handler/auth_handler.go`](../../../collabotask-backend/internal/delivery/http/handler/auth_handler.go), [`config.go`](../../../collabotask-backend/internal/config/config.go)). **Headline: the big-ticket item was NOT drift** — this design pre-committed to cookie auth on 2026-07-21 and ③.5 built exactly that transport. Drift was confined to finer mechanics that ③.5's implementation now pins down. Four points, all resolved; §3 above is updated to match.
+
+| # | Drift | Resolution | Lands in |
+|---|---|---|---|
+| **1** | Design read as "the `/ws` endpoint reads the cookie itself" — a Bearer-era hangover (the old middleware read `Authorization`, unusable for WS). | **Reuse `middleware.Auth`.** ③.5 made it cookie-based, so `/ws` mounts under `middleware.Auth(&cfg.Auth)`; handler reads `GetUserID(c)`. Abort-before-handler = reject-before-upgrade. Zero new auth surface; one validation path shared with REST (so the Phase-2 session swap changes one place). | Part B |
+| **2** | "Feed `CORS_ALLOWED_ORIGINS` into `OriginPatterns`" glossed a **format mismatch**: CORS stores full origins *with scheme* (for reflection); `OriginPatterns` matches *host only*. Feeding full origins → every cross-origin handshake silently rejected. | **Derive host-patterns** via `url.Parse(origin).Host` over `CORS.AllowedOrigins`. Single source of truth (no second WS origin var). **Fail-fast at startup** on any unparseable origin (mirrors the existing `*`+credentials guard in `config.Validate()`). | Part B + config validation |
+| **3** | Global CSRF passes the GET handshake — **correct, but an undocumented invariant** a future dev could "harden" into a WS outage. | **Mechanism correct; document it.** Handshake CSWSH defense = `OriginPatterns` + `SameSite=Lax`, *not* the header (browser WS can't send `X-CSRF-Protection`). Add a comment to `csrf.go`; the "never gate GET in CSRF" invariant is now in §3. | Part B (comment only) |
+| **4** | Design has continuous **authorization** enforcement (evict on membership loss) but only handshake-time **authentication**. Logout / token-expiry do **not** evict a live socket (③.5 logout is stateless — can't revoke a JWT). | **Accept handshake-only auth** as a conscious Phase-1 limitation; consistent with ADR-008 §7 (stateless logout). Residual exposure is low — a still-valid member who logged out keeps an already-open socket until it drops; anyone who *loses access* is still evicted. **Closed in Phase 2** (see ledger). Not a ④ prerequisite. | Note only (see ledger A) |
+
+### Note-for-later ledger (do not miss)
+
+**A. Phase-2 session/revocation model — the real fix for drift #4.**
+- Add a server-side auth anchor: opaque session-id + `sessions` table, **or** ADR-008's likely hybrid (short-lived access JWT + revocable refresh token). Gives the server a real "off switch": logout → revoke session (dead immediately); "log out all devices" → revoke all.
+- **WS closure is additive, not rework:** bind each socket to its session at handshake; a revocation event evicts bound sockets through **④'s existing `EvictUser` / `EvictUserFromRooms` / `ACCESS_REVOKED` primitives**. Closes **both** the logout and token-expiry gaps at once. Choosing handshake-only now does **not** paint us into a corner — Phase 2 wires a new *trigger* into the same eviction surface.
+- **Triggers to start it:** (1) real need for instant revocation / "log out all devices" (compromised account, password-change kills sessions); (2) wanting short-lived access tokens (pulls in refresh); (3) "remember me" UX; (4) device/session management UI. **Bundle with refresh tokens** — same infrastructure. Already recorded as deferred in ADR-008 §1 + out-of-scope.
+
+**B. Part-B implementation reminders (drift #1–3), so Part B doesn't re-derive them:**
+- Mount `/ws` under `middleware.Auth(&cfg.Auth)`; handler uses `GetUserID(c)`; **no inline cookie read.**
+- Build `OriginPatterns` from `CORS.AllowedOrigins` via `url.Parse().Host`; **fail-fast** on unparseable origin.
+- Add the CSRF-GET invariant comment to [`csrf.go`](../../../collabotask-backend/internal/delivery/http/middleware/csrf.go); handshake CSWSH defense lives in `OriginPatterns` + `SameSite=Lax`.
 
 ---
 
@@ -31,9 +56,10 @@ NOW      docs capture (this handoff, ADR-009, SRS §4.5/§5, CLAUDE.md, memory)
 - **Three robustness policies:** bounded `send` buffer → **drop the slow connection** (it reconnects + resyncs via REST); **server-driven ping/pong** liveness (reaps half-open sockets); **`sync.Once` teardown** (unregister from all rooms → close `send` → close socket).
 
 ### 3. The `/ws` endpoint
-- **Auth:** read JWT from the **cookie** → `ValidateToken` → reject `401` **before** upgrade.
+- **Auth:** **reuse the existing `middleware.Auth`** (③.5 made it cookie-based). Mount `/ws` under `middleware.Auth(&cfg.Auth)`; on invalid/absent cookie it aborts `401` *before the handler runs* = before upgrade. The handler reads `middleware.GetUserID(c)` then upgrades — **no inline cookie read, no second auth path.** (Corrected 2026-07-29: the original "endpoint reads the cookie itself" phrasing was a Bearer-era hangover from when the middleware read `Authorization` and couldn't be reused for WS. See drift recheck below.)
 - **Timeout:** clear this connection's read/write deadlines via `http.ResponseController` so the server's 30s `WriteTimeout` doesn't kill a long-lived WS; **REST keeps its 30s**. WS liveness = ping/pong, not a fixed deadline.
-- **Origin:** feed the explicit `CORS_ALLOWED_ORIGINS` into coder/websocket's `OriginPatterns` (CSWSH protection). Never `InsecureSkipVerify`.
+- **Origin:** feed the explicit `CORS_ALLOWED_ORIGINS` into coder/websocket's `OriginPatterns` (CSWSH protection) — **but translate first:** `OriginPatterns` matches the Origin header's **host** (`app.collabotask.com`, no scheme), while `CORS_ALLOWED_ORIGINS` holds full origins (`https://app.collabotask.com`, needed for CORS reflection). Derive patterns via `url.Parse(origin).Host` per configured origin; **fail-fast at startup** on any unparseable origin. Single source of truth (no second WS-only origin var). Never `InsecureSkipVerify`.
+- **CSRF on the handshake:** the handshake is a **GET**, so the global `middleware.CSRF` passes it through (GET is RFC-7231-safe) — this is *required*, because the browser `WebSocket` API cannot send `X-CSRF-Protection`. The handshake's cross-site defense is **`OriginPatterns` + `SameSite=Lax`**, not the header. **Invariant: never extend CSRF to gate GET, or every WS handshake breaks.**
 - **Topology:** one `/ws` per tab; a connection may hold a **set** of rooms; on disconnect it's removed from all.
 
 ### 4. Presence (edge-triggered)
