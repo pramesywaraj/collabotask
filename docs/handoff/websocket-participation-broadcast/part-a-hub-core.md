@@ -126,3 +126,35 @@ Fake socket (`fakeSocket`: records writes, programmable `Read` to block or retur
 
 ## Checkpoint (done-when)
 Hub unit tests green under `-race`: join/leave, multi-tab edge-triggered presence, the eviction family, slow-consumer drop, teardown. No HTTP, no `coder/websocket` dependency yet. → unblocks **Part B** (`/ws` endpoint + lifecycle), which supplies the real `socket` adapter and the wire protocol.
+
+---
+
+## Code review — Part A (2026-07-29)
+
+Two-axis `/code-review` (Standards + Spec, parallel sub-agents) of the `internal/realtime/` package against this doc + [index.md](./index.md). **Outcome: clean, faithful implementation — nothing blocks Part B.**
+
+**Grounding:** `go build` ✔ · `go vet` clean ✔ · `gofmt` clean ✔ · **19/19 tests pass under `-race`** ✔
+
+### Standards axis — 0 hard violations
+- **Concurrency invariants all upheld** (the highest-value checks):
+  - *Lock never held during a socket write* — `Broadcast` does only non-blocking `c.send <- msg` under `RLock`; the real `s.Write` is in `writePump` outside any lock; `unregisterConn` releases `h.mu` before `teardown`.
+  - *No send-on-closed-channel panic window.* `unregisterConn` removes `c` from every room under `Lock` **before** `teardown` closes `send`; `Broadcast` only selects on `c.send` (under `RLock`) for conns still in the room — mutually exclusive, so no concurrent send can hit a closed channel. High confidence.
+  - *Double-teardown safe* — both pumps → `unregisterConn` → `sync.Once` `teardown`; `unregisterConn` is itself idempotent (second pass finds `c.rooms` empty). `TestTeardown_DoubleTeardown_IsNoop` covers it.
+- **TESTING.md conformance:** external `package realtime_test`, `t.Run` slices, `require`/`assert` split, hand-rolled `fakeSocket` appropriate for the unexported `socket` seam (not in the mockery config).
+- **Dependency rule:** imports only `context`, `sync`, `uuid` — no HTTP/DB/framework; `Broadcaster` port correctly deferred to Part C.
+- **Reviewed and deliberately kept** (not smells to fix): the duplicated evict "collect-under-lock → tear-down-after-unlock" shape (each site differs in RLock/Lock + predicate), `EvictUserFromRooms` looping `EvictUser` (a spec-required primitive Parts D/E call directly), and the threaded `reason string` (decision #3 — Part D's `ACCESS_REVOKED` adds no signature churn).
+
+### Spec axis — 0 missing, 0 scope creep, 0 wrong
+- Every "Part A builds" bullet present; all 10 test-checklist items map to concrete tests.
+- No scope leaked from Parts B/C/D — no HTTP, no `coder/websocket`, no message parsing, no `Broadcaster` port, no `ACCESS_REVOKED` frame. `reason` is threaded but never rendered as a frame — exactly per decision #3.
+- Two signature deltas from the "Key types & signatures" block, **both in-spirit, accepted:**
+  - `Register(ctx, userID, s)` adds `ctx` — the `socket` seam needs a context to drive `Read`/`Write`; threading it from `Register` is the natural source.
+  - `Join` returns unnamed `[]uuid.UUID` vs the doc's named `(activeUsers []uuid.UUID)` — documentation-only; behaviour identical.
+
+### Action items
+Both are **cosmetic polish — non-blocking.** Do them at the start of Part B (or skip the optional one); neither gates Part A approval.
+
+- [ ] **Reword the `// re-acquire properly via unregisterConn` comment** (`hub.go`, in `EvictUser`). It reads like a stale TODO — `EvictUser` already released the `Lock`, so nothing is "re-acquired" there. State the intent instead, e.g. `// tear down outside the lock (unregisterConn re-locks per conn)`.
+- [ ] *(Optional)* **Name the anonymous `struct{ boardID uuid.UUID; kind PresenceKind }`** in `unregisterConn` as a `presenceEdge` local type, to remove the verbatim repetition between the slice element type and its literal. Trivial; skip if not worth the churn.
+
+**Verdict:** Part A approved. Both axes converge — a clean, faithful hub core. → proceed to **Part B**.

@@ -101,7 +101,7 @@ The server enforces access **continuously, not just at join.** Any loss of acces
 
 | Part | Builds | Done when (checkpoint) | Depends on |
 |---|---|---|---|
-| **A — Hub core** | Registry + RWMutex, `Conn` with send-channel + read/write pumps, edge-triggered presence, the 3 eviction primitives — pure in-memory, no HTTP | Hub unit tests green under `-race`: join/leave, multi-tab presence, eviction, slow-drop, teardown | ③.5 auth exists |
+| **A — Hub core** | Registry + RWMutex, `Conn` with send-channel + read/write pumps, edge-triggered presence, the 3 eviction primitives — pure in-memory, no HTTP | **Built + reviewed ✅ 2026-07-29** — 19/19 tests green under `-race`; two-axis `/code-review` clean (0 hard-standards, 0 spec gaps); 2 cosmetic action items → [part-a](./part-a-hub-core.md#code-review--part-a-2026-07-29) | ③.5 auth exists |
 | **B — `/ws` endpoint + lifecycle** | HTTP handler → hub; cookie auth, origin, `ResponseController` timeout fix; `JOIN_BOARD`/`LEAVE_BOARD`; `ACTIVE_USERS`/`USER_JOINED`/`USER_LEFT`; ping/pong | A real client connects, joins a board, sees live presence, survives reconnect | A |
 | **C — Broadcaster port + mutation broadcasts** | Port + typed events + envelope adapter; inject into card/column/board usecases; `Broadcast` next to each `WriteActivity` (~16 events); best-effort | Card/column/board mutations appear live in a joined room; usecase tests assert emission via mock | A, B |
 | **D — Continuous enforcement** | `ACCESS_REVOKED`; `EvictUser` on board-remove (UC-12d), `EvictExcept` on →PRIVATE flip (UC-12b), evict on board-leave (UC-10) | Board-scoped access loss evicts the right connections instantly | A, C |
