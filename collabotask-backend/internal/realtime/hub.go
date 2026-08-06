@@ -27,24 +27,23 @@ type Hub struct {
 	onPresence func(boardID, userID uuid.UUID, kind PresenceKind)
 }
 
-func NewHub(onPresence func(boardID, userID uuid.UUID, kind PresenceKind)) *Hub {
-	return &Hub{
-		rooms:      make(map[uuid.UUID]map[uuid.UUID]map[uuid.UUID]*Conn),
-		onPresence: onPresence,
-	}
+func NewHub() *Hub {
+	return &Hub{rooms: make(map[uuid.UUID]map[uuid.UUID]map[uuid.UUID]*Conn)}
+}
+
+// SetPresence wires the edge callback. Called once at startup (in ProvideWSHandler),
+// before any conn registers — so no lock is needed and there is no race.
+func (h *Hub) SetPresence(fn func(boardID, userID uuid.UUID, kind PresenceKind)) {
+	h.onPresence = fn
 }
 
 // Register creates a Conn for the socket and starts its pumps.
-func (h *Hub) Register(ctx context.Context, userID uuid.UUID, s socket) *Conn {
+// onMsg is called by readPump for each inbound message (may be nil).
+func (h *Hub) Register(ctx context.Context, userID uuid.UUID, s socket, onMsg MessageHandler) *Conn {
 	c := newConn(userID, s)
-
-	teardownOnce := func(reason string) {
-		h.unregisterConn(c, reason)
-	}
-
-	go c.readPump(ctx, teardownOnce)
-	go c.writePump(ctx, teardownOnce)
-
+	teardown := func(reason string) { h.unregisterConn(c, reason) }
+	go c.readPump(ctx, onMsg, teardown)
+	go c.writePump(ctx, teardown)
 	return c
 }
 

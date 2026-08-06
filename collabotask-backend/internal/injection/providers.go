@@ -9,6 +9,7 @@ import (
 	"collabotask/internal/domain/repository"
 	infraauth "collabotask/internal/infrastructure/auth"
 	"collabotask/internal/infrastructure/database"
+	"collabotask/internal/realtime"
 	"collabotask/internal/repository/postgres"
 	"collabotask/internal/server"
 	"collabotask/internal/usecase/auth"
@@ -134,6 +135,20 @@ func ProvideCardHandler(cardUseCase *card.CardUseCase) *handler.CardHandler {
 	return handler.NewCardHandler(cardUseCase)
 }
 
+// ProvideHub is the single in-memory hub for the process (one registry, one lock).
+// Its presence callback is wired by ProvideWSHandler via hub.SetPresence.
+func ProvideHub() *realtime.Hub {
+	return realtime.NewHub()
+}
+
+func ProvideWSHandler(
+	cfg *config.Config,
+	hub *realtime.Hub,
+	access common.BoardAccessChecker,
+) *handler.WSHandler {
+	return handler.NewWSHandler(hub, access, cfg.WSOriginPatterns())
+}
+
 // Router
 func ProvideRouter(
 	cfg *config.Config,
@@ -144,6 +159,7 @@ func ProvideRouter(
 	boardHandler *handler.BoardHandler,
 	columnHandler *handler.ColumnHandler,
 	cardHandler *handler.CardHandler,
+	wsHandler *handler.WSHandler,
 ) *gin.Engine {
 	return router.New(router.Config{
 		Cfg:              cfg,
@@ -154,6 +170,7 @@ func ProvideRouter(
 		BoardHandler:     boardHandler,
 		ColumnHandler:    columnHandler,
 		CardHandler:      cardHandler,
+		WSHandler:        wsHandler,
 	})
 }
 
