@@ -735,3 +735,59 @@ A real client can connect to `/ws` with a valid auth cookie, send a `JOIN_BOARD`
 ## Note for Part C
 
 Part C injects the **same `*realtime.Hub`** straight from `ProvideHub` (Q1 — there is no `WSHandler.Hub()` accessor). The Broadcaster port surface (`Broadcast(boardID, Event)`, `EvictUser`, `EvictExcept`, `EvictUserFromRooms`) wraps `Hub` methods directly — the adapter owns the marshaling from typed event structs to `[]byte`. Part B's `hub.Broadcast(boardID, []byte)` is the underlying fan-out that the adapter calls.
+
+---
+
+## Code review — Part B (2026-08-06)
+
+Two-axis `/code-review` (Standards + Spec, parallel sub-agents) run against the **uncommitted implementation** on top of `HEAD`. **Verdict: production code is spec-faithful and builds clean — the one blocking gap is that the tests were never written.** This section records every finding **with its fix** so the follow-up agent can close them without re-deriving.
+
+**Foundational facts (verified directly):** `go build ./...` ✅ · `go vet ./...` ✅ · `go test -race ./internal/realtime/...` → **19 pass** — but that's the *same* 19 as Part A (no new tests). Both review axes independently landed on **missing tests** as their top finding.
+
+### Standards axis
+
+**HARD — documented-standard breaches**
+
+- **S1 · Missing tests (blocking).** `TESTING.md` mandates test-first at the usecase/delivery/config layers; this diff adds non-trivial branching with **zero** new tests:
+  - `config.go` `Validate()` origin-parse branch + `WSOriginPatterns()` — no case.
+  - `ws_handler.go` `handleMessage`/`handleJoin` — JSON binding + silent-denial branching (TESTING.md's `httptest` trigger).
+  - `conn.go` writePump ping/pong + teardown-`done` — `hub_test.go` was only patched to keep the old 19 green.
+  - **Fix:** implement the [Test checklist](#test-checklist-go-test--race-internalrealtime--handler-tests) already in this doc (`ws_socket_test.go`, presence wire-frame tests, `config_test` cases). Mirror the existing `TestValidate_WildcardWithCredentials` for config; use `fakeSocket` + a mock `BoardAccessChecker` for the handler/presence tests. Drive it with `/tdd`.
+- **S2 · Missing Swagger annotations.** Every existing handler carries `@Summary`/`@Router` godoc (24 in `board_handler.go`); the README promises an always-accurate Swagger reference. New route `GET /ws` (`ServeWS`) has none.
+  - **Fix:** add a godoc annotation block above `ServeWS`, e.g.:
+    ```go
+    // ServeWS godoc
+    // @Summary      WebSocket connection for realtime board updates
+    // @Description  Upgrades to a WebSocket. Auth via httpOnly cookie (middleware.Auth).
+    // @Description  Client sends JOIN_BOARD/LEAVE_BOARD; server pushes ACTIVE_USERS/USER_JOINED/USER_LEFT.
+    // @Tags         realtime
+    // @Success      101 {string} string "Switching Protocols"
+    // @Failure      401 {object} response.ErrorResponse
+    // @Router       /ws [get]
+    ```
+- **S3 · Exported func returns unexported type — `ws_socket.go`.** `func NewWSSocket(...) socket` is exported but returns the unexported `socket` (golint `exported`).
+  - ⚠️ **The review's own suggested fix is wrong:** returning `*wsSocket` does **not** help — `*wsSocket` is also unexported, so the lint still fires.
+  - **Fix — pick one:** **(A, recommended) accept as a judgement call** — `go build`/`go vet` are clean, golint is deprecated and not in this repo's toolchain, and the seam is deliberately package-private. Leave it. **(B, if you want it gone cleanly)** don't export the adapter at all: add `func (h *Hub) RegisterConn(ctx, userID uuid.UUID, wsConn *websocket.Conn, onMsg MessageHandler) *Conn` in `realtime` that wraps `newWSSocket` internally; the handler then never names `socket`, and `socket`/`wsSocket`/`newWSSocket` all revert to unexported. Do **not** ship the `*wsSocket` "fix."
+
+**JUDGEMENT CALLS — baseline smells (optional polish; do before Parts D/E where they grow)**
+
+- **S4 · Repeated Switches — `onPresence`.** The `kind → frameType` switch is a pure `PresenceKind → string` map. **Fix:** replace with a package-level `var presenceFrameType = map[realtime.PresenceKind]string{...}` or a `PresenceKind.FrameType()` method; deletes the `default:` dead branch too.
+- **S5 · Primitive Obsession — `message.go`.** Frame `Type`/`FrameType` are bare `string` consts. **Fix (optional):** `type FrameType string` (and/or `type MsgType string`) so the compiler catches a wrong constant.
+- **S6 · Comment drift / nil-ctx.** The `MessageHandler` doc implies `ctx` "may be nil," but `handleJoin` does `context.WithTimeout(ctx, …)` which panics on nil. Not exercised (`Register` always passes a real ctx). **Fix:** correct the comment to state ctx is always non-nil (don't add a nil-guard — it'd be dead code).
+
+### Spec axis
+
+**Verdict:** code implements the Scope, Files table, and **every** "do-not-re-litigate" decision faithfully. Signatures match this doc verbatim. Verified correct: Q1 standalone `ProvideHub` + `SetPresence` (and wire ordering), Q2 silent join-deny, Q4 bounded ping ctx, Q5 bounded JOIN check (5s), `/ws` outside `/api/v1` under `middleware.Auth`, `WSOriginPatterns` host-derivation + `Validate()` fail-fast, CSRF-GET invariant comment.
+
+- **SP1 · Entire Test checklist unimplemented (= S1).** `ws_socket_test.go` (4 cases), presence wire-frame tests (9 cases), `config_test` `WSOriginPatterns`/`Validate` (5 cases) — all absent; only the `hub_test.go` *updates* landed (correct). Ping/pong test is legitimately deferred (recorded gap). **Fix:** same as S1.
+- **SP2 · Scope creep:** none. Diff touches exactly the Files table.
+- **SP3 · Wrong implementations:** none.
+- **SP4 · Minor — `go.mod` indirect.** `github.com/coder/websocket` is still marked `// indirect` but is now a direct import. **Fix:** `go mod tidy`.
+
+### Action plan (do in this order)
+
+1. **P0 — Write the missing tests (S1 / SP1).** Blocking; both axes agree. Implement this doc's Test checklist via `/tdd`. Done when `go test -race ./...` covers the config, ws_socket, and presence/handler cases and is green.
+2. **P1 — Quick standards items:** `go mod tidy` (SP4); add the `ServeWS` Swagger block (S2); fix the `MessageHandler` nil-ctx comment (S6). Minutes each.
+3. **P2 — Optional polish (pre-D/E):** `presenceFrameType` map (S4); `FrameType`/`MsgType` types (S5). Decide S3 — recommend accept (option A) unless a lint gate lands.
+
+Nothing above blocks Part C except P0. After P0+P1, this is commit-ready.
