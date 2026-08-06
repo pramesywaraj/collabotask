@@ -707,10 +707,10 @@ Using `fakeSocket` + a mock `BoardAccessChecker`. `handleMessage` now takes `ctx
 - [ ] **`JOIN_BOARD` — access granted:** `handleMessage` with valid JOIN_BOARD → `CheckViewAccess` called → `hub.Join` called → `ACTIVE_USERS` queued on the joining conn's send channel → if 0→1 edge, `USER_JOINED` broadcast to room.
 - [ ] **`JOIN_BOARD` — access denied:** `CheckViewAccess` returns error → **silent**: no hub.Join, no ACTIVE_USERS, no broadcast, no error frame.
 - [ ] **`JOIN_BOARD` — access check times out:** mock `CheckViewAccess` returns `context.DeadlineExceeded` → treated exactly like denial (silent, no join). Confirms the `dbJoinCheckTimeout` path is a no-op on the room.
-- [ ] **`JOIN_BOARD` — duplicate (multi-tab):** second conn for same user → hub.Join called (second tab enters room) → 0→1 edge **not** fired (user already present) → no `USER_JOINED` broadcast; ACTIVE_USERS sent with correct snapshot (user appears once).
+- [ ] **`JOIN_BOARD` — duplicate (multi-tab):** second conn for same user → hub.Join called (second tab enters room) → 0→1 edge **not** fired (user already present) → no `USER_JOINED` broadcast; ACTIVE_USERS sent with correct snapshot (user appears once). _(Re-review #2: NOT implemented at handler layer — **hub-covered** by `TestPresence_JoinFires_OnFirstConnOnly` + `TestActiveUsers_MultiTabUserCountedOnce` + `TestOnPresence_Joined`; handler duplicate optional — R2.)_
 - [ ] **`LEAVE_BOARD`:** `handleLeave` → `hub.Leave` → if 1→0 edge, `USER_LEFT` broadcast to room.
-- [ ] **`LEAVE_BOARD` — multi-tab, not last:** hub.Leave called → 1→0 edge not fired → no `USER_LEFT` broadcast.
-- [ ] **Disconnect (readPump EOF):** conn removed from all its rooms; 1→0 edges fire `USER_LEFT` for each; `conn.Done()` closed.
+- [ ] **`LEAVE_BOARD` — multi-tab, not last:** hub.Leave called → 1→0 edge not fired → no `USER_LEFT` broadcast. _(Re-review #2: NOT implemented at handler layer — **hub-covered** by `TestPresence_LeaveFires_OnLastConnOnly` + `TestOnPresence_Left`; handler duplicate optional — R2.)_
+- [ ] ⚠️ **Disconnect (readPump EOF):** conn removed from all its rooms; 1→0 edges fire `USER_LEFT` for each; `conn.Done()` closed. _(Re-review #2: **OUTSTANDING — the one real end-to-end gap.** No test exercises the composed disconnect → teardown → `Done()` + `USER_LEFT` path. Write it — see [Code review #2 → R1](#code-review-2--resolution-re-review-2026-08-06) for a drop-in sketch.)_
 - [ ] **Malformed frame:** `handleMessage` with non-JSON → discarded silently, no panic.
 - [ ] **Unknown frame type:** `handleMessage` with `{"type":"UNKNOWN"}` → discarded, no panic.
 
@@ -791,3 +791,80 @@ Two-axis `/code-review` (Standards + Spec, parallel sub-agents) run against the 
 3. **P2 — Optional polish (pre-D/E):** `presenceFrameType` map (S4); `FrameType`/`MsgType` types (S5). Decide S3 — recommend accept (option A) unless a lint gate lands.
 
 Nothing above blocks Part C except P0. After P0+P1, this is commit-ready.
+
+---
+
+## Code review #2 — resolution re-review (2026-08-06)
+
+Second two-axis `/code-review`, run after the follow-up agent resolved review #1. **Verdict: the resolution is complete and faithful — Part B is commit-ready modulo one real test gap (R1) and optional polish.** All P0/P1 items from review #1 are done.
+
+**Foundational facts (verified directly):** `go build` ✅ · `go vet` ✅ · tests now pass — **realtime 23** (+4 ws_socket), **handler 9** (new presence wire-frame), **config 15** (+5 WSOriginPatterns/Validate). Counts match the Test checklist.
+
+**Resolved from review #1:** S1/SP1 tests written · S2 Swagger on `ServeWS` · S6 nil-ctx comment corrected (`conn.go` now "always non-nil", no dead guard) · SP4 `go mod tidy` (coder/websocket de-`indirect`'d, stray `google/subcommands` pruned).
+
+### Standards axis — clean (0 hard, 2 judgement calls)
+
+New tests follow `TESTING.md` (correct `mocks.NewMockBoardAccessChecker(t)` usage, `require`/`assert` split, well-named helpers, no over-mocking). Swagger block well-formed + consistent with existing handlers (correctly omits `@Security CSRF` — the deliberate GET exemption). No new problems introduced by the fixes.
+
+- **JC1 · Duplicated setup, `config_test.go`** — `TestValidate_OriginMissingScheme_Fails` and `_OriginSchemeOnly_Fails` are near-identical; a 2-row table would collapse them. Minor; matches the file's existing verbose per-test style, so optional.
+- **JC2 · Magic sleeps, `ws_handler_test.go`** — `time.Sleep(20–40ms)` in the negative-path tests to prove the *absence* of a write. Inherent to async fan-out; positive paths correctly use `require.Eventually`. Acceptable. *(Optional improvement: the pure-denial cases enqueue synchronously — no goroutine hop — so they could assert immediately after `handleMessage` returns and drop the sleep; only the fan-out-to-other-conns path is genuinely async.)*
+
+### Spec axis — complete + faithful, one real gap
+
+- ✅ `ws_socket_test.go` 4/4 · `config_test.go` 5/5 · JOIN granted / denied / timeout, malformed, unknown all correct · denial + timeout tests correctly assert **silence** (empty msgs + empty room) · P1 items all match the action plan.
+- ⚠️ **3 of 9 presence *handler-layer* cases not implemented.** The distinction that matters: a **behaviour-coverage hole** (no test anywhere proves it → regression risk) vs a **checklist-completeness gap** (the named test is absent but the behaviour is proven elsewhere → bookkeeping). Two are the latter, one is closer to the former:
+
+  | Case (checklist line) | Status | Verdict |
+  |---|---|---|
+  | Multi-tab JOIN (710) | not implemented | **Hub-covered** — `TestPresence_JoinFires_OnFirstConnOnly` + `TestActiveUsers_MultiTabUserCountedOnce` + `TestOnPresence_Joined`. Handler duplicate optional (R2). |
+  | LEAVE multi-tab, non-last (712) | not implemented | **Hub-covered** — `TestPresence_LeaveFires_OnLastConnOnly` + `TestOnPresence_Left`. Handler duplicate optional (R2). |
+  | Disconnect / readPump-EOF (713) | not implemented | **⚠️ Real gap (R1)** — nothing exercises the composed disconnect → teardown → `Done()` + `USER_LEFT`-on-1→0 path end-to-end. Write it. |
+
+### Action plan for the follow-up agent
+
+**R1 (do this) — write the disconnect-EOF handler test.** This is the one path nothing currently hits end-to-end: a socket dying (not a `LEAVE_BOARD` frame) driving `readPump` EOF → `onClose` → `unregisterConn` → `teardown` → `close(done)`, with the 1→0 edge emitting `USER_LEFT`. Reuse the helpers already in `ws_handler_test.go` (`newTestWSHandler`, `registerTestConn`, `stubSocket.disconnect()`, `findPresenceFrameByUser`).
+
+Sketch (`internal/delivery/http/handler/ws_handler_test.go`):
+```go
+func TestServeWS_DisconnectEOF_RemovesConnAndBroadcastsUserLeft(t *testing.T) {
+    // Two DIFFERENT users in one room: the "watcher" stays connected so it can
+    // observe the leaver's USER_LEFT. The leaver can't observe its own — it's
+    // removed from the room BEFORE onPresence fires and its send channel is closed
+    // during teardown (see hub.unregisterConn ordering: remove → teardown → onPresence).
+    h := newTestWSHandler(t, grantAll)            // access mock granting both users
+    boardID := uuid.New()
+    leaver, watcher := uuid.New(), uuid.New()
+
+    leaverSock, leaverConn := registerTestConn(t, h, leaver)
+    watcherSock, watcherConn := registerTestConn(t, h, watcher)
+    h.handleJoin(context.Background(), leaverConn, boardID)
+    h.handleJoin(context.Background(), watcherConn, boardID)
+
+    leaverSock.disconnect()                       // readPump Read returns io.EOF
+
+    // 1. leaver removed from the room; only watcher remains
+    require.Eventually(t, func() bool {
+        return len(h.hub.ActiveUsers(boardID)) == 1
+    }, 2*time.Second, 10*time.Millisecond)
+    assert.ElementsMatch(t, []uuid.UUID{watcher}, h.hub.ActiveUsers(boardID))
+
+    // 2. USER_LEFT{leaver} broadcast to the room (watcher observes it)
+    require.Eventually(t, func() bool {
+        return findPresenceFrameByUser(watcherSock, realtime.FrameTypeUserLeft, leaver) != nil
+    }, 2*time.Second, 10*time.Millisecond)
+
+    // 3. leaver's Done() is closed (the ServeWS unblock contract)
+    select {
+    case <-leaverConn.Done():
+    case <-time.After(2 * time.Second):
+        t.Fatal("leaver conn.Done() not closed after disconnect")
+    }
+}
+```
+Adjust helper names / return shapes to whatever `ws_handler_test.go` actually exposes (e.g. if `registerTestConn` returns a different tuple, or `findPresenceFrameByUser` takes a different arg). The three assertions are the point: **room removal · `USER_LEFT` broadcast · `Done()` closed.**
+
+**R2 (bookkeeping) — annotate, don't duplicate.** The two multi-tab cases (710, 712) are already covered by the named Part A hub tests + `TestOnPresence_*`; a handler-layer duplicate is optional. They're annotated inline in the Test checklist above so the checklist stays honest.
+
+**R3 (optional, pre-D/E) — no blockers.** Standards JC1 (config table), JC2 (denial-path sleeps); plus review #1's P2 items — S3 (exported-returns-unexported: recommend **accept**, or the `Hub.RegisterConn` wrapper), S4 (`presenceFrameType` map), S5 (`FrameType`/`MsgType` types).
+
+After R1, Part B's test surface matches the checklist in substance and it's commit-ready.
