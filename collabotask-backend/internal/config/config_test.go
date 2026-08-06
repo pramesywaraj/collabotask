@@ -4,6 +4,9 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // setRequiredEnvVars sets the minimum env vars needed to pass Validate().
@@ -478,6 +481,78 @@ func TestCORSConfig(t *testing.T) {
 	if config.CORS.MaxAge != 3600 {
 		t.Errorf("Expected default max age 3600, got %d", config.CORS.MaxAge)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// WSOriginPatterns
+// ---------------------------------------------------------------------------
+
+func TestWSOriginPatterns_ExtractsHosts(t *testing.T) {
+	cfg := &Config{
+		CORS: CORSConfig{
+			AllowedOrigins: []string{
+				"https://app.example.com",
+				"https://app.example.com:3000",
+				"http://localhost:5173",
+			},
+		},
+	}
+	got := cfg.WSOriginPatterns()
+	assert.Equal(t, []string{"app.example.com", "app.example.com:3000", "localhost:5173"}, got)
+}
+
+func TestWSOriginPatterns_SkipsWildcard(t *testing.T) {
+	cfg := &Config{
+		CORS: CORSConfig{
+			AllowedOrigins:   []string{"*", "https://app.example.com"},
+			AllowCredentials: false,
+		},
+	}
+	got := cfg.WSOriginPatterns()
+	assert.Equal(t, []string{"app.example.com"}, got)
+}
+
+func TestWSOriginPatterns_EmptyOrigins(t *testing.T) {
+	cfg := &Config{CORS: CORSConfig{AllowedOrigins: nil}}
+	assert.Empty(t, cfg.WSOriginPatterns())
+}
+
+// ---------------------------------------------------------------------------
+// Validate — CORS origin URL checks
+// ---------------------------------------------------------------------------
+
+func TestValidate_OriginMissingScheme_Fails(t *testing.T) {
+	originalOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	originalCreds := os.Getenv("CORS_ALLOW_CREDENTIALS")
+	defer func() {
+		restoreEnv("CORS_ALLOWED_ORIGINS", originalOrigins)
+		restoreEnv("CORS_ALLOW_CREDENTIALS", originalCreds)
+	}()
+
+	setRequiredEnvVars()
+	os.Setenv("CORS_ALLOW_CREDENTIALS", "false")
+	os.Setenv("CORS_ALLOWED_ORIGINS", "notaurl") // no scheme → host is empty
+
+	_, err := Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "notaurl")
+}
+
+func TestValidate_OriginSchemeOnly_Fails(t *testing.T) {
+	originalOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	originalCreds := os.Getenv("CORS_ALLOW_CREDENTIALS")
+	defer func() {
+		restoreEnv("CORS_ALLOWED_ORIGINS", originalOrigins)
+		restoreEnv("CORS_ALLOW_CREDENTIALS", originalCreds)
+	}()
+
+	setRequiredEnvVars()
+	os.Setenv("CORS_ALLOW_CREDENTIALS", "false")
+	os.Setenv("CORS_ALLOWED_ORIGINS", "https://") // scheme without host
+
+	_, err := Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "https://")
 }
 
 // restoreEnv sets or unsets an env var based on whether the saved value is non-empty.

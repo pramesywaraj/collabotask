@@ -34,8 +34,13 @@ func NewWSHandler(hub *realtime.Hub, access common.BoardAccessChecker, originPat
 	return h
 }
 
-// ServeWS upgrades the connection, registers it with the hub, and blocks until
-// the connection closes. Auth is already enforced by middleware.Auth upstream.
+// ServeWS godoc
+// @Summary      Open a WebSocket connection
+// @Description  Upgrades the HTTP connection to WebSocket. Requires an authenticated httpOnly cookie. Origin is validated against the CORS allowlist (OriginPatterns). The CSRF header is not required for this GET — CSWSH defense is provided by OriginPatterns + SameSite=Lax.
+// @Tags         realtime
+// @Success      101 {string} string "Switching Protocols"
+// @Failure      401 {string} string "Unauthorized"
+// @Router       /ws [get]
 func (h *WSHandler) ServeWS(c *gin.Context) {
 	userID, ok := middleware.GetUserID(c)
 	if !ok {

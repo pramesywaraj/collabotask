@@ -98,7 +98,8 @@ func (c *Conn) writePump(ctx context.Context, onClose func(reason string)) {
 }
 
 // readPump reads from the socket; any error signals closure.
-// onMsg is called for each inbound message with the pump's ctx (may be nil).
+// onMsg (if non-nil) is called for each inbound message; ctx is the pump's
+// context (always non-nil — callers must not pass a nil context to Register).
 func (c *Conn) readPump(ctx context.Context, onMsg MessageHandler, onClose func(string)) {
 	for {
 		data, err := c.s.Read(ctx)
