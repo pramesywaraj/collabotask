@@ -101,11 +101,11 @@ func listenerConn(ctx context.Context, hub *realtime.Hub, boardID uuid.UUID) (*s
 }
 
 // findFrame unmarshals each raw msg looking for one whose Type field equals wantType.
-func findFrameByType(msgs [][]byte, wantType string) []byte {
+func findFrameByType(msgs [][]byte, wantType realtime.FrameType) []byte {
 	for _, raw := range msgs {
 		var m map[string]any
 		if json.Unmarshal(raw, &m) == nil {
-			if m["type"] == wantType {
+			if m["type"] == string(wantType) {
 				return raw
 			}
 		}
@@ -134,9 +134,10 @@ func TestHandleMessage_MalformedJSON_Discards(t *testing.T) {
 	ss, conn := registerTestConn(ctx, hub, h, uuid.New())
 	defer ss.disconnect()
 
+	// Malformed frames are discarded synchronously inside handleMessage (no enqueue,
+	// no goroutine hop), so we can assert immediately — nothing can appear later.
 	h.handleMessage(ctx, conn, []byte("not-json{{{"))
 
-	time.Sleep(20 * time.Millisecond)
 	assert.Empty(t, ss.msgs(), "malformed frame must not trigger any write")
 }
 
@@ -150,9 +151,9 @@ func TestHandleMessage_UnknownType_Discards(t *testing.T) {
 		"type":     "UNKNOWN_OP",
 		"board_id": uuid.New().String(),
 	})
+	// Unknown type falls through the switch with no enqueue — synchronous discard.
 	h.handleMessage(ctx, conn, msg)
 
-	time.Sleep(20 * time.Millisecond)
 	assert.Empty(t, ss.msgs(), "unknown message type must not trigger any write")
 }
 
@@ -172,9 +173,9 @@ func TestHandleJoin_AccessDenied_Silent(t *testing.T) {
 	access.EXPECT().CheckViewAccess(mock.Anything, boardID, userID).
 		Return(nil, errors.New("denied")).Once()
 
+	// Denial returns before any Join/enqueue, all in this goroutine — assert now.
 	h.handleJoin(ctx, conn, boardID)
 
-	time.Sleep(20 * time.Millisecond)
 	assert.Empty(t, ss.msgs(), "no frame expected on denial")
 	assert.Empty(t, hub.ActiveUsers(boardID), "conn must not be in the room after denial")
 }
@@ -224,12 +225,12 @@ func TestHandleJoin_Timeout_Silent(t *testing.T) {
 		}).Once()
 
 	// A pre-cancelled context: context.WithTimeout(cancelledCtx, 5s) is also
-	// immediately done, so CheckViewAccess returns without blocking.
+	// immediately done, so CheckViewAccess returns without blocking and handleJoin
+	// returns before any enqueue — assert immediately.
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
 	h.handleJoin(cancelled, conn, boardID)
 
-	time.Sleep(20 * time.Millisecond)
 	assert.Empty(t, ss.msgs(), "no ACTIVE_USERS expected when the context times out")
 }
 
@@ -301,6 +302,64 @@ func TestOnPresence_Left_BroadcastsUserLeft(t *testing.T) {
 	require.NotNil(t, f, "USER_LEFT frame for userID not found")
 	assert.Equal(t, realtime.FrameTypeUserLeft, f.Type)
 	assert.Equal(t, boardID, f.BoardID)
+}
+
+// ---------------------------------------------------------------------------
+// disconnect / readPump-EOF (Code review #2, R1)
+//
+// The one end-to-end path nothing else exercises: a socket dying (NOT a
+// LEAVE_BOARD frame) drives readPump EOF → onClose → unregisterConn →
+// teardown → close(done), and the leaver's last conn trips the 1→0 presence
+// edge, emitting USER_LEFT to the surviving room.
+// ---------------------------------------------------------------------------
+
+func TestServeWS_DisconnectEOF_RemovesConnAndBroadcastsUserLeft(t *testing.T) {
+	ctx := context.Background()
+	h, hub, access := newTestWSHandler(t)
+	boardID := uuid.New()
+	leaver, watcher := uuid.New(), uuid.New()
+
+	access.EXPECT().CheckViewAccess(mock.Anything, boardID, leaver).
+		Return(&common.BoardAccess{}, nil).Once()
+	access.EXPECT().CheckViewAccess(mock.Anything, boardID, watcher).
+		Return(&common.BoardAccess{}, nil).Once()
+
+	// Leaver joins first: its 0→1 edge broadcasts USER_JOINED{leaver} only to the
+	// room-of-one (itself), so the watcher never sees a leaver-keyed JOIN frame —
+	// the only leaver presence frame the watcher can observe is the USER_LEFT below.
+	leaverSock, leaverConn := registerTestConn(ctx, hub, h, leaver)
+	watcherSock, watcherConn := registerTestConn(ctx, hub, h, watcher)
+	defer watcherSock.disconnect()
+	h.handleJoin(ctx, leaverConn, boardID)
+	h.handleJoin(ctx, watcherConn, boardID)
+
+	require.Eventually(t, func() bool {
+		return len(hub.ActiveUsers(boardID)) == 2
+	}, 2*time.Second, 10*time.Millisecond, "both users must be in the room before disconnect")
+
+	leaverSock.disconnect() // readPump Read returns io.EOF — no LEAVE_BOARD frame
+
+	// 1. Leaver removed from the room; only the watcher remains.
+	require.Eventually(t, func() bool {
+		return len(hub.ActiveUsers(boardID)) == 1
+	}, 2*time.Second, 10*time.Millisecond, "leaver must be removed from the room on disconnect")
+	assert.ElementsMatch(t, []uuid.UUID{watcher}, hub.ActiveUsers(boardID))
+
+	// 2. USER_LEFT{leaver} broadcast to the room — the watcher observes it.
+	require.Eventually(t, func() bool {
+		return findPresenceFrameByUser(watcherSock.msgs(), leaver) != nil
+	}, 2*time.Second, 10*time.Millisecond, "watcher must receive a leaver presence frame")
+	f := findPresenceFrameByUser(watcherSock.msgs(), leaver)
+	require.NotNil(t, f)
+	assert.Equal(t, realtime.FrameTypeUserLeft, f.Type, "leaver's presence frame must be USER_LEFT")
+	assert.Equal(t, boardID, f.BoardID)
+
+	// 3. Leaver's Done() is closed — the contract that unblocks ServeWS.
+	select {
+	case <-leaverConn.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("leaver conn.Done() not closed after disconnect")
+	}
 }
 
 func TestOnPresence_UnknownKind_NoBroadcast(t *testing.T) {

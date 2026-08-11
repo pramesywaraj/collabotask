@@ -710,7 +710,7 @@ Using `fakeSocket` + a mock `BoardAccessChecker`. `handleMessage` now takes `ctx
 - [ ] **`JOIN_BOARD` — duplicate (multi-tab):** second conn for same user → hub.Join called (second tab enters room) → 0→1 edge **not** fired (user already present) → no `USER_JOINED` broadcast; ACTIVE_USERS sent with correct snapshot (user appears once). _(Re-review #2: NOT implemented at handler layer — **hub-covered** by `TestPresence_JoinFires_OnFirstConnOnly` + `TestActiveUsers_MultiTabUserCountedOnce` + `TestOnPresence_Joined`; handler duplicate optional — R2.)_
 - [ ] **`LEAVE_BOARD`:** `handleLeave` → `hub.Leave` → if 1→0 edge, `USER_LEFT` broadcast to room.
 - [ ] **`LEAVE_BOARD` — multi-tab, not last:** hub.Leave called → 1→0 edge not fired → no `USER_LEFT` broadcast. _(Re-review #2: NOT implemented at handler layer — **hub-covered** by `TestPresence_LeaveFires_OnLastConnOnly` + `TestOnPresence_Left`; handler duplicate optional — R2.)_
-- [ ] ⚠️ **Disconnect (readPump EOF):** conn removed from all its rooms; 1→0 edges fire `USER_LEFT` for each; `conn.Done()` closed. _(Re-review #2: **OUTSTANDING — the one real end-to-end gap.** No test exercises the composed disconnect → teardown → `Done()` + `USER_LEFT` path. Write it — see [Code review #2 → R1](#code-review-2--resolution-re-review-2026-08-06) for a drop-in sketch.)_
+- [x] ⚠️ **Disconnect (readPump EOF):** conn removed from all its rooms; 1→0 edges fire `USER_LEFT` for each; `conn.Done()` closed. _(Re-review #2 R1 **RESOLVED 2026-08-06** — `TestServeWS_DisconnectEOF_RemovesConnAndBroadcastsUserLeft` in `ws_handler_test.go` exercises the composed disconnect → teardown → `Done()` + `USER_LEFT` path end-to-end; asserts room removal · `USER_LEFT` broadcast to a surviving watcher · `Done()` closed.)_
 - [ ] **Malformed frame:** `handleMessage` with non-JSON → discarded silently, no panic.
 - [ ] **Unknown frame type:** `handleMessage` with `{"type":"UNKNOWN"}` → discarded, no panic.
 
@@ -822,7 +822,7 @@ New tests follow `TESTING.md` (correct `mocks.NewMockBoardAccessChecker(t)` usag
 
 ### Action plan for the follow-up agent
 
-**R1 (do this) — write the disconnect-EOF handler test.** This is the one path nothing currently hits end-to-end: a socket dying (not a `LEAVE_BOARD` frame) driving `readPump` EOF → `onClose` → `unregisterConn` → `teardown` → `close(done)`, with the 1→0 edge emitting `USER_LEFT`. Reuse the helpers already in `ws_handler_test.go` (`newTestWSHandler`, `registerTestConn`, `stubSocket.disconnect()`, `findPresenceFrameByUser`).
+**R1 — RESOLVED 2026-08-06.** `TestServeWS_DisconnectEOF_RemovesConnAndBroadcastsUserLeft` (`ws_handler_test.go`) now exercises this path end-to-end: a socket dying (not a `LEAVE_BOARD` frame) driving `readPump` EOF → `onClose` → `unregisterConn` → `teardown` → `close(done)`, with the 1→0 edge emitting `USER_LEFT`. Handler suite 9 → 10, green under `-race`. Test was verified non-vacuous (mutating the expected frame type to `USER_JOINED` fails). Implementation notes vs. the sketch below: real helper signatures differ (`newTestWSHandler(t)` takes no `grantAll`; `findPresenceFrameByUser(msgs, want)` has no type arg) — the test sets explicit per-user `CheckViewAccess` expectations and orders **leaver-joins-first** so the watcher never sees a `USER_JOINED{leaver}`, leaving `USER_LEFT{leaver}` as the only leaver-keyed frame (type-asserted for safety).
 
 Sketch (`internal/delivery/http/handler/ws_handler_test.go`):
 ```go

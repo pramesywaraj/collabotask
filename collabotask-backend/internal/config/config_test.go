@@ -521,38 +521,32 @@ func TestWSOriginPatterns_EmptyOrigins(t *testing.T) {
 // Validate — CORS origin URL checks
 // ---------------------------------------------------------------------------
 
-func TestValidate_OriginMissingScheme_Fails(t *testing.T) {
-	originalOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
-	originalCreds := os.Getenv("CORS_ALLOW_CREDENTIALS")
-	defer func() {
-		restoreEnv("CORS_ALLOWED_ORIGINS", originalOrigins)
-		restoreEnv("CORS_ALLOW_CREDENTIALS", originalCreds)
-	}()
+func TestValidate_InvalidOrigin_Fails(t *testing.T) {
+	tests := []struct {
+		name   string
+		origin string // the single CORS origin that must be rejected (and echoed in the error)
+	}{
+		{"missing scheme", "notaurl"}, // no scheme → host is empty
+		{"scheme only", "https://"},   // scheme without host
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+			originalCreds := os.Getenv("CORS_ALLOW_CREDENTIALS")
+			defer func() {
+				restoreEnv("CORS_ALLOWED_ORIGINS", originalOrigins)
+				restoreEnv("CORS_ALLOW_CREDENTIALS", originalCreds)
+			}()
 
-	setRequiredEnvVars()
-	os.Setenv("CORS_ALLOW_CREDENTIALS", "false")
-	os.Setenv("CORS_ALLOWED_ORIGINS", "notaurl") // no scheme → host is empty
+			setRequiredEnvVars()
+			os.Setenv("CORS_ALLOW_CREDENTIALS", "false")
+			os.Setenv("CORS_ALLOWED_ORIGINS", tt.origin)
 
-	_, err := Load()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "notaurl")
-}
-
-func TestValidate_OriginSchemeOnly_Fails(t *testing.T) {
-	originalOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
-	originalCreds := os.Getenv("CORS_ALLOW_CREDENTIALS")
-	defer func() {
-		restoreEnv("CORS_ALLOWED_ORIGINS", originalOrigins)
-		restoreEnv("CORS_ALLOW_CREDENTIALS", originalCreds)
-	}()
-
-	setRequiredEnvVars()
-	os.Setenv("CORS_ALLOW_CREDENTIALS", "false")
-	os.Setenv("CORS_ALLOWED_ORIGINS", "https://") // scheme without host
-
-	_, err := Load()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "https://")
+			_, err := Load()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.origin)
+		})
+	}
 }
 
 // restoreEnv sets or unsets an env var based on whether the saved value is non-empty.

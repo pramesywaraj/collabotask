@@ -128,14 +128,17 @@ func (h *WSHandler) handleLeave(conn *realtime.Conn, boardID uuid.UUID) {
 // fine by contract — the client treats ACTIVE_USERS as an authoritative snapshot
 // (replace) and USER_JOINED/USER_LEFT as idempotent deltas, so a self-echo before
 // the snapshot is a no-op.
+// presenceFrameType maps a hub presence edge to its wire frame type. A kind with
+// no entry (e.g. an unrecognised PresenceKind) yields ok=false, which suppresses
+// the broadcast — replacing the old switch's default: return.
+var presenceFrameType = map[realtime.PresenceKind]realtime.FrameType{
+	realtime.PresenceJoined: realtime.FrameTypeUserJoined,
+	realtime.PresenceLeft:   realtime.FrameTypeUserLeft,
+}
+
 func (h *WSHandler) onPresence(boardID, userID uuid.UUID, kind realtime.PresenceKind) {
-	var frameType string
-	switch kind {
-	case realtime.PresenceJoined:
-		frameType = realtime.FrameTypeUserJoined
-	case realtime.PresenceLeft:
-		frameType = realtime.FrameTypeUserLeft
-	default:
+	frameType, ok := presenceFrameType[kind]
+	if !ok {
 		return
 	}
 	frame, _ := json.Marshal(realtime.UserPresenceFrame{
