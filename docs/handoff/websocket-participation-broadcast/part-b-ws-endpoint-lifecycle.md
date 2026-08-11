@@ -645,11 +645,14 @@ Regenerate after edits: `wire ./internal/injection/` (Wire resolves the `wsHandl
 
 ---
 
-## Client wire contract (Q2/Q3 — documentation, must also land in SRS §4.5/§5)
+## Client wire contract (Q2/Q3 — documentation) — ✅ Landed in SRS §5.3 on 2026-08-10
+
+> **RESOLVED 2026-08-10.** These four client-handling rules have been migrated into the
+> durable SRS — **[§5.3 "Client handling (presence & join frames)"](../../spesifications/001-software-specifications.md)** — adapted to SRS voice and sitting beside the §5.2 Broadcast rule / UC-20 (the mutation-frame analog). The SRS is now the source of truth the frontend build reads; the copy below is retained only as the origin record.
 
 These are **doc obligations, not code.** They protect the silent-drop (Q2) and
-edge-triggered-presence (Q3) decisions from a naive frontend. Carry them into SRS
-§4.5/§5 and the frontend contract:
+edge-triggered-presence (Q3) decisions from a naive frontend. Now recorded in SRS
+§5.3 and the frontend contract:
 
 1. **The board view gates on the REST kanban fetch, never on `ACTIVE_USERS`.** A denied
    `JOIN_BOARD` is silent; the authoritative 404/403 comes from `GET .../kanban` (same
