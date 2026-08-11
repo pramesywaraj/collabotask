@@ -11,5 +11,8 @@ type socket interface {
 	// A non-nil error signals closure; the error value is discarded by
 	// Part A (closure detection only — parsing lands in Part B).
 	Read(ctx context.Context) ([]byte, error)
+	// Ping sends a ping and blocks until the pong arrives or ctx is cancelled.
+	// Used by writePump to detect half-open connections.
+	Ping(ctx context.Context) error
 	Close(reason string) error
 }

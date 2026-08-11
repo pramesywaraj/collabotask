@@ -63,6 +63,10 @@ func (f *fakeSocket) Read(_ context.Context) ([]byte, error) {
 	return nil, err
 }
 
+func (f *fakeSocket) Ping(_ context.Context) error {
+	return nil
+}
+
 func (f *fakeSocket) Close(reason string) error {
 	f.mu.Lock()
 	f.closed = append(f.closed, reason)
@@ -139,7 +143,8 @@ func (r *presenceRecorder) reset() {
 func newHub(t *testing.T) (*realtime.Hub, *presenceRecorder) {
 	t.Helper()
 	rec := &presenceRecorder{}
-	h := realtime.NewHub(rec.record)
+	h := realtime.NewHub()
+	h.SetPresence(rec.record)
 	return h, rec
 }
 
@@ -147,7 +152,7 @@ func newHub(t *testing.T) (*realtime.Hub, *presenceRecorder) {
 // Always pair with defer fs.disconnect() to unblock the readPump on test exit.
 func registerConn(ctx context.Context, h *realtime.Hub, userID uuid.UUID) (*fakeSocket, *realtime.Conn) {
 	fs := newFakeSocket()
-	c := h.Register(ctx, userID, fs)
+	c := h.Register(ctx, userID, fs, nil)
 	return fs, c
 }
 
@@ -365,7 +370,7 @@ func TestBroadcast_SlowConsumer_IsDropped(t *testing.T) {
 		fs.disconnect()
 	})
 
-	slowConn := h.Register(ctx, userID, fs)
+	slowConn := h.Register(ctx, userID, fs, nil)
 	h.Join(boardID, slowConn)
 
 	// Flood with more messages than the buffer can hold (sendBufferSize=16).

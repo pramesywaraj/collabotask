@@ -632,6 +632,15 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 
 **Broadcast rule:** by default broadcast to all room members **including** the sender (so optimistic clients reconcile against the authoritative payload), except `ACTIVE_USERS` which is sent only to the joiner.
 
+### 5.3 Client handling (presence & join frames)
+
+The §5.2 Broadcast rule and UC-20 govern how a client reconciles **mutation** frames (dedupe against the authoritative REST response). The **presence / join** frames carry their own client obligations — settled during the step-④ build (ADR-009) and recorded here so the frontend treats them correctly:
+
+- **Gate the board view on the REST kanban fetch, never on `ACTIVE_USERS`.** A denied `JOIN_BOARD` is **silent** — no error frame (this preserves the 404-hide invariant, §2.2). The authoritative 403/404 comes from `GET .../kanban` (same `CheckViewAccess`, §4.5 UC-18). `ACTIVE_USERS` is a presence bonus on an already-granted view — never show a spinner waiting for it.
+- **`ACTIVE_USERS` is an authoritative full snapshot — apply as REPLACE**, even when presence state is already held. Never skip the snapshot because data already exists.
+- **`USER_JOINED` / `USER_LEFT` are idempotent deltas.** Adding an already-present user or removing an absent one is a no-op. Their ordering relative to the snapshot is **not** guaranteed (third-party joins race) — the `ACTIVE_USERS` snapshot is the source of truth.
+- **A client may receive `USER_JOINED` for itself** on its own 0→1 join (self-echo). It is an idempotent no-op — relevant only to suppress a self "joined" toast (`user.id == self`).
+
 ---
 
 ## 6. API Response DTOs (match existing code)

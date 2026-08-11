@@ -49,6 +49,8 @@ var (
 		ProvideBoardHandler,
 		ProvideColumnHandler,
 		ProvideCardHandler,
+		ProvideHub,
+		ProvideWSHandler,
 	)
 	RouterSet = wire.NewSet(ProvideRouter)
 	ServerSet = wire.NewSet(ProvideServer)

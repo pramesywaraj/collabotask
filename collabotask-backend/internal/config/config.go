@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strconv"
@@ -166,6 +167,22 @@ func Load() (*Config, error) {
 	return config, nil
 }
 
+// WSOriginPatterns derives host-only patterns for coder/websocket's OriginPatterns
+// from the CORS allowlist. CORS stores full origins (with scheme) for reflection;
+// websocket.Accept's OriginPatterns matches only the host part.
+// Called once at startup after Validate() ensures every origin is parseable.
+func (c *Config) WSOriginPatterns() []string {
+	patterns := make([]string, 0, len(c.CORS.AllowedOrigins))
+	for _, origin := range c.CORS.AllowedOrigins {
+		if origin == "*" {
+			continue // "*" has no host; cookie auth forbids it anyway (guarded in Validate)
+		}
+		u, _ := url.Parse(origin) // validated in Validate(); no error possible here
+		patterns = append(patterns, u.Host)
+	}
+	return patterns
+}
+
 func (c *Config) Validate() error {
 	if c.Database.Name == "" {
 		return fmt.Errorf("DB_NAME is required")
@@ -180,6 +197,18 @@ func (c *Config) Validate() error {
 
 	if c.CORS.AllowCredentials && slices.Contains(c.CORS.AllowedOrigins, "*") {
 		return fmt.Errorf("CORS_ALLOWED_ORIGINS must not contain * when CORS_ALLOW_CREDENTIALS is true")
+	}
+
+	// Fail-fast: unparseable CORS origin → WS origin pattern derivation would silently
+	// reject every cross-origin handshake. Mirrors the *+credentials guard above.
+	for _, origin := range c.CORS.AllowedOrigins {
+		if origin == "*" {
+			continue // already guarded above
+		}
+		u, err := url.Parse(origin)
+		if err != nil || u.Host == "" {
+			return fmt.Errorf("CORS_ALLOWED_ORIGINS: %q is not a valid origin URL (needs scheme + host)", origin)
+		}
 	}
 
 	validEnvs := map[string]bool{

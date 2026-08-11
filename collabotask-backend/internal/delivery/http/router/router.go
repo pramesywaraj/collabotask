@@ -20,6 +20,7 @@ type Config struct {
 	BoardHandler     *handler.BoardHandler
 	ColumnHandler    *handler.ColumnHandler
 	CardHandler      *handler.CardHandler
+	WSHandler        *handler.WSHandler
 }
 
 func New(cfg Config) *gin.Engine {
@@ -31,6 +32,14 @@ func New(cfg Config) *gin.Engine {
 	routes.Use(middleware.CSRF())
 
 	routes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// WebSocket — not under /api/v1; auth middleware aborts with 401 before upgrade
+	// on missing/invalid cookie, so the handler always has a valid userID.
+	ws := routes.Group("/ws")
+	ws.Use(middleware.Auth(&cfg.Cfg.Auth))
+	{
+		ws.GET("", cfg.WSHandler.ServeWS)
+	}
 
 	v1Routes := routes.Group("/api/v1")
 

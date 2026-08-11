@@ -21,6 +21,11 @@ var csrfSafeMethods = map[string]bool{
 // CSRF requires the X-CSRF-Protection header on all state-changing requests.
 // Paired with SameSite=Lax cookies and an explicit CORS allowlist, this closes
 // the cross-origin mutation vector for sibling-subdomain topologies.
+//
+// INVARIANT: do not extend CSRF checks to GET/HEAD/OPTIONS.
+// The WebSocket handshake is a GET; the browser WebSocket API cannot send
+// X-CSRF-Protection. Handshake CSWSH defense lives in OriginPatterns +
+// SameSite=Lax, not in this middleware. See ws_handler.go.
 func CSRF() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if csrfSafeMethods[c.Request.Method] {
