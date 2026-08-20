@@ -140,6 +140,7 @@ func TestDeleteCard(t *testing.T) {
 			t.Parallel()
 			d := newDeps(t)
 			d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
+			d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 			tt.setupMocks(d)
 
 			err := d.uc.DeleteCard(context.Background(), tt.input)

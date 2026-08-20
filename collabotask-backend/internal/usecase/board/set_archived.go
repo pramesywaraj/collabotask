@@ -63,6 +63,11 @@ func (bu *BoardUseCase) SetArchived(ctx context.Context, input SetArchivedInput)
 		Metadata:   map[string]any{},
 	})
 
+	bu.broadcaster.Broadcast(board.ID, common.BoardArchivedSet{
+		BoardID:  board.ID,
+		Archived: board.IsArchived,
+	})
+
 	return &SetArchivedOutput{
 		Board: board,
 	}, nil

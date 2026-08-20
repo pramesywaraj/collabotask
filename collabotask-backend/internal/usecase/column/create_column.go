@@ -41,6 +41,8 @@ func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInp
 		Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
 	})
 
+	cu.broadcaster.Broadcast(column.BoardID, common.ColumnCreated{Column: column})
+
 	return &CreateColumnOutput{
 		Column: column,
 	}, nil

@@ -290,3 +290,61 @@ No DB harness and no `-race` needed at this layer (usecase tests use the mock; t
 ## Done when (checkpoint)
 
 A card/column/board mutation issued over REST **appears live** in a joined room (manual: two clients, one joins via WS, the other mutates via REST → first sees the frame), and every usecase test asserts emission (and non-emission on no-op) via the mock `Broadcaster`. `go build ./...` + `go vet ./...` clean; mocks + `wire_gen.go` regenerated. Then a two-axis `/code-review` (Standards + Spec-vs-§5.2), same cadence as Parts A/B.
+
+---
+
+## Implementation log (2026-08-12)
+
+Faithfully implemented per the spec above. The following drifts occurred during the build:
+
+### Drift 1 — MockBroadcaster hand-written, not mockery-generated
+
+**Spec:** "add `Broadcaster: {}` under `collabotask/internal/usecase/common` in `.mockery.yaml`, then regenerate → `MockBroadcaster` lands in `internal/mocks/common_mocks.go`."
+
+**What happened:** `.mockery.yaml` was updated as specified, but the `mockery` CLI binary was not invoked. Instead `MockBroadcaster` was hand-written in `internal/mocks/common_mocks.go` following the exact same testify/mock pattern as the neighbouring `MockBoardAccessChecker`. The resulting mock is functionally identical to what `mockery` would generate; it passes all tests. The `.mockery.yaml` entry is in place so the next team member who runs `mockery` will overwrite with a generated version without any diff surprise.
+
+### Drift 2 — `wire_gen.go` manually updated, not `wire`-generated
+
+**Spec:** "Regenerate `wire_gen.go` (`go generate ./...` or `wire`)."
+
+**What happened:** The `wire` binary was not invoked. `wire_gen.go` was edited by hand to (a) add `hub := ProvideHub()` before the usecases so the singleton is shared with `ProvideWSHandler`, (b) add `broadcaster := ProvideBroadcaster(hub)`, and (c) pass `broadcaster` into all three usecase providers. The resulting file compiles clean (`go build ./...` + `go vet ./...`). Running `wire` in a future pass will regenerate it from the same `wire.go` declaration and produce an equivalent file.
+
+### Drift 3 — `MemberAdded` user sub-object built as `map[string]any`
+
+**Spec:** describes the payload as `{board_id, user:{id,email,name,avatar_url}, role}` without mandating which mapper to use.
+
+**What happened:** `response.BoardMemberToResponse` requires a composite `*entity.BoardMember` (which bundles `UserID`, `Role`, and nested `UserInfo`) but the `invite_member.go` broadcast site only has `*entity.User` + `entity.BoardRole` separately (from the `users` map and the `membersToAdd` loop). Constructing a synthetic `entity.BoardMember` just to pass to the mapper would be misleading; instead the adapter builds the user sub-object directly as a `map[string]any{"id":…,"email":…,"name":…,"avatar_url":…}`. **⚠ This turned out to be a wire-contract decision, not a neutral marshaling detail.** The map's `{id,email,name,avatar_url}` matches *no* REST DTO and diverges from the assignee shape `{id,name,avatar_url}` in the same adapter. Escalated to **P4** in the Aligned review below and resolved there (emit the full roster row `{id,email,name,avatar_url,joined_at}` via the roster mapper).
+
+### Drift 4 — test pointer-mutation trap in `TestUpdateColumnPositionBroadcast`
+
+Not a spec drift, but worth logging: the no-op subtest initially failed because the shared `col` pointer (`*entity.Column`) was mutated by the happy-path subtest (`column.Position = newPos` in the implementation modifies the pointed-to struct). Fixed by using a factory `newCol()` function (matching the pattern already used in the activity-contract tests). The activity tests passed originally because they predated the `Broadcast` call and their `col` pointer was independently established per test. Future test authors: **always use a factory for entity pointers that the implementation mutates in-place.**
+
+---
+
+## Aligned code review (2026-08-12)
+
+Reconciles three passes — the two-axis `/code-review`, the task-agent post-implementation review, and the spec-planner drift review — into one verdict. (The individual write-ups were collapsed here to keep this doc lean; no conclusion is lost.) Build is sound: `go build`/`go vet` clean, all broadcast + usecase tests green. **No blockers.** One wire-contract decision taken — **P4**.
+
+**Drifts 1–4 (see Implementation log):** 1, 2, 4 **accepted** — forced by environment/reality, done correctly and honestly disclosed. Verified against the code: `wire_gen.go` mints the `Hub` **once** and shares it between `ProvideBroadcaster` and `ProvideWSHandler` (no double-hub / empty-registry bug); the hand-written `MockBroadcaster` reproduces the mockery testify template. Drift 3 was the only substantive one → escalated to **P4**.
+
+### Findings (reconciled)
+
+| ID | Finding | Verdict / action |
+|---|---|---|
+| **P4** | `MEMBER_ADDED.user` is a bespoke `{id,email,name,avatar_url}` map — matches **no** REST DTO and differs from the assignee shape `{id,name,avatar_url}` in the same adapter (`broadcaster.go:98-104` vs `:140`). Drift-3's "identical to REST" claim is **false**. *(The original two-axis review under-called this as "harmless"; corrected here.)* | **Fix. Decision: emit the full roster row `{id,email,name,avatar_url,joined_at}`.** `joined_at` is **not available at the invite site today** — source it (set at the `CreateMany` insert / return the created `BoardMember` rows) and reuse the roster mapper instead of a hand-rolled map. Assignee keeps its own leaner `{id,name,avatar_url}` (genuinely a different context, so a *single* shared mapper is not the resolution). Pin the shape in **SRS §5.2**. |
+| **S2** | The 3 `*_broadcast_test.go` files use flat `t.Run` closures, not the `tests := []struct{…}` skeleton TESTING.md §"Sub-tests" mandates. *(Documented-standard breach; the original standards pass missed it — precedent: activity tests also deviate.)* | **Fix** — convert to table-driven. |
+| **P1** | `TestInviteMemberBroadcast` has 1- and 2-invitee happy paths but **no** all-already-members → no-broadcast subtest. *(Original spec pass wrongly marked this covered.)* | **Fix** — add the silence subtest (all `IsUserExists`→true, assert broadcaster not called). |
+| **P2** | No symmetric "already-unarchived → no broadcast" subtest in `TestSetArchivedBroadcast`. | Nice to fix. |
+| **S3** | `projectCardFields` / `projectBoardFields` duplicate one shape. | Nice to fix — extract one `projectFields(all, changed)` helper. |
+| — | `TestMarshal_UnknownEvent` carries dead scaffolding (unused stubs + `_ = common.Event(nil)`). *(Only the two-axis review caught this.)* | Nice to fix — delete. |
+| **P3** | `from_user_id` nullable not annotated in SRS §5.2. | Doc only — note it when pinning P4. |
+| **S1 / S4** | adapter's `delivery/http/response` import; unused `Evict*` methods. | **Not violations** — intentional (Decision C5 / C4). |
+| — | hand-written mock + hand-edited `wire_gen.go` (drifts 1–2). | **Accept** — housekeeping: run `mockery` + `wire` once to confirm byte-parity. |
+
+### Before-commit checklist (supersedes all earlier tables)
+
+- [ ] **P4** — full-roster-row user shape; source `joined_at` at the invite site; reuse the roster mapper; ratify SRS §5.2 (fold in P3's nullable `from_user_id` note there).
+- [ ] **S2** — convert the 3 broadcast test files to table-driven.
+- [ ] **P1** — add the duplicate-invite no-broadcast subtest.
+- [ ] **P2** — add the unarchive no-op subtest · **S3** — extract the projection helper · delete the dead `TestMarshal_UnknownEvent` scaffolding.
+- [ ] Housekeeping — run `mockery` + `wire`.

@@ -47,6 +47,11 @@ func (cu *ColumnUseCase) UpdateColumn(ctx context.Context, input UpdateColumnInp
 			EntityID:   column.ID,
 			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
 		})
+
+		cu.broadcaster.Broadcast(column.BoardID, common.ColumnUpdated{
+			ColumnID: column.ID,
+			Title:    column.Title,
+		})
 	}
 
 	return &UpdateColumnOutput{

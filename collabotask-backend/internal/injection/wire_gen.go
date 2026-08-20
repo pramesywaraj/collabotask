@@ -40,13 +40,14 @@ func InitializeApp() (*App, error) {
 	boardAccessChecker := ProvideBoardAccessChecker(boardRepository, boardMemberRepository, workspaceMemberRepository)
 	columnRepository := ProvideColumnRepository(db)
 	cardRepository := ProvideCardRepository(db)
-	boardUseCase := ProvideBoardUseCase(boardAccessChecker, boardRepository, boardMemberRepository, workspaceMemberRepository, userRepository, columnRepository, cardRepository, activityRepository)
-	boardHandler := ProvideBoardHandler(boardUseCase)
-	columnUseCase := ProvideColumnUseCase(columnRepository, boardAccessChecker, activityRepository)
-	columnHandler := ProvideColumnHandler(columnUseCase)
-	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker, boardMemberRepository, activityRepository)
-	cardHandler := ProvideCardHandler(cardUseCase)
 	hub := ProvideHub()
+	broadcaster := ProvideBroadcaster(hub)
+	boardUseCase := ProvideBoardUseCase(boardAccessChecker, boardRepository, boardMemberRepository, workspaceMemberRepository, userRepository, columnRepository, cardRepository, activityRepository, broadcaster)
+	boardHandler := ProvideBoardHandler(boardUseCase)
+	columnUseCase := ProvideColumnUseCase(columnRepository, boardAccessChecker, activityRepository, broadcaster)
+	columnHandler := ProvideColumnHandler(columnUseCase)
+	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker, boardMemberRepository, activityRepository, broadcaster)
+	cardHandler := ProvideCardHandler(cardUseCase)
 	wsHandler := ProvideWSHandler(config, hub, boardAccessChecker)
 	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler, boardHandler, columnHandler, cardHandler, wsHandler)
 	server := ProvideServer(config, engine)
@@ -92,6 +93,7 @@ var (
 		ProvideBoardAccessChecker,
 		ProvideColumnUseCase,
 		ProvideCardUseCase,
+		ProvideBroadcaster,
 	)
 	HandlerSet = wire.NewSet(
 		ProvideAuthHandler,

@@ -4,6 +4,7 @@ const (
 	createBoardMemberQuery = `
 		INSERT INTO board_members (board_id, user_id, role, joined_at)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+		RETURNING joined_at
 	`
 	// createBoardMemberIfAbsentQuery is idempotent: a returned row means the
 	// member was newly inserted; no row (ErrNoRows) means they were already a

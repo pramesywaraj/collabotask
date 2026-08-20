@@ -59,6 +59,7 @@ func TestCreateCardActivityLog(t *testing.T) {
 				a.UserID != nil && *a.UserID == requesterID &&
 				cardTitle == "Fix login bug"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		out, err := d.uc.CreateCard(context.Background(), input)
 		require.NoError(t, err)
@@ -69,6 +70,7 @@ func TestCreateCardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilCreate(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.CreateCard(context.Background(), input)
 		require.NoError(t, err)
@@ -114,6 +116,7 @@ func TestDeleteCardActivityLog(t *testing.T) {
 				a.UserID != nil && *a.UserID == requesterID &&
 				cardTitle == "Fix login bug"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.DeleteCard(context.Background(), input)
 		require.NoError(t, err)
@@ -123,6 +126,7 @@ func TestDeleteCardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilDelete(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.DeleteCard(context.Background(), input)
 		require.NoError(t, err)
@@ -174,6 +178,7 @@ func TestMoveCardActivityLog(t *testing.T) {
 				toColID == toColumnID.String() &&
 				toColTitle == "Done"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		out, err := d.uc.MoveCard(context.Background(), card.MoveCardInput{
 			BoardID:      boardID,
@@ -205,6 +210,7 @@ func TestMoveCardActivityLog(t *testing.T) {
 			return a.ActionType == entity.ActivityActionMoved &&
 				a.EntityType == entity.ActivityEntityCard
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.MoveCard(context.Background(), card.MoveCardInput{
 			BoardID:      boardID,
@@ -223,7 +229,7 @@ func TestMoveCardActivityLog(t *testing.T) {
 		// movedCard has same column and same position as existingCard
 		movedCard := &entity.Card{ID: cardID, ColumnID: fromColumnID, Title: "Fix login bug", Position: 1000}
 		d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(1000)).Return(movedCard, nil)
-		// activityRepo.Log must NOT be called — any unexpected call will fail the test
+		// activityRepo.Log and broadcaster.Broadcast must NOT be called — unexpected calls fail the test
 
 		_, err := d.uc.MoveCard(context.Background(), card.MoveCardInput{
 			BoardID:      boardID,
@@ -242,6 +248,7 @@ func TestMoveCardActivityLog(t *testing.T) {
 		movedCard := &entity.Card{ID: cardID, ColumnID: toColumnID, Title: "Fix login bug", Position: 2000}
 		d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(2000)).Return(movedCard, nil)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.MoveCard(context.Background(), card.MoveCardInput{
 			BoardID:      boardID,
@@ -291,6 +298,7 @@ func TestUpdateCardActivityLog(t *testing.T) {
 				cardTitle == "New Title" &&
 				len(changedFields) == 1 && changedFields[0] == "title"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateCard(context.Background(), card.UpdateCardInput{
 			BoardID:     boardID,
@@ -306,7 +314,7 @@ func TestUpdateCardActivityLog(t *testing.T) {
 		sameTitle := "Old Title"
 		d := newDeps(t)
 		setupUntilUpdate(d, newCard())
-		// No expectation on activityRepo.Log → unexpected call would fail test
+		// No expectation on activityRepo.Log or broadcaster.Broadcast — unexpected calls fail test
 
 		_, err := d.uc.UpdateCard(context.Background(), card.UpdateCardInput{
 			BoardID:     boardID,
@@ -322,6 +330,7 @@ func TestUpdateCardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilUpdate(d, newCard())
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateCard(context.Background(), card.UpdateCardInput{
 			BoardID:     boardID,

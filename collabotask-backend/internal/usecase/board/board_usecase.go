@@ -14,6 +14,7 @@ type BoardUseCase struct {
 	columnRepo          repository.ColumnRepository
 	cardRepo            repository.CardRepository
 	activityRepo        repository.ActivityRepository
+	broadcaster         common.Broadcaster
 }
 
 func NewBoardUseCase(
@@ -25,6 +26,7 @@ func NewBoardUseCase(
 	columnRepo repository.ColumnRepository,
 	cardRepo repository.CardRepository,
 	activityRepo repository.ActivityRepository,
+	broadcaster common.Broadcaster,
 ) *BoardUseCase {
 	return &BoardUseCase{
 		boardAccessChecker:  boardAccessChecker,
@@ -35,5 +37,6 @@ func NewBoardUseCase(
 		columnRepo:          columnRepo,
 		cardRepo:            cardRepo,
 		activityRepo:        activityRepo,
+		broadcaster:         broadcaster,
 	}
 }

@@ -47,6 +47,7 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 				boardTitle == "New Title" &&
 				len(changedFields) == 1 && changedFields[0] == "title"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
 			RequesterID: requesterID,
@@ -96,6 +97,7 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
 			RequesterID: requesterID,
@@ -125,6 +127,7 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 				visFrom == string(entity.BoardVisibilityWorkspace) &&
 				visTo == string(entity.BoardVisibilityPrivate)
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
 			RequesterID: requesterID,
@@ -163,6 +166,7 @@ func TestSetArchivedActivityLog(t *testing.T) {
 				a.EntityID == boardID &&
 				a.UserID != nil && *a.UserID == requesterID
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.SetArchived(context.Background(), board.SetArchivedInput{
 			RequesterID: requesterID,
@@ -181,6 +185,7 @@ func TestSetArchivedActivityLog(t *testing.T) {
 				a.ActionType == entity.ActivityActionUnarchived &&
 				a.EntityType == entity.ActivityEntityBoard
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.SetArchived(context.Background(), board.SetArchivedInput{
 			RequesterID: requesterID,
@@ -211,6 +216,7 @@ func TestSetArchivedActivityLog(t *testing.T) {
 		b := &entity.Board{ID: boardID, WorkspaceID: workspaceID, IsArchived: false}
 		setupBase(d, b)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.SetArchived(context.Background(), board.SetArchivedInput{
 			RequesterID: requesterID,
@@ -268,6 +274,7 @@ func TestTransferOwnershipActivityLog(t *testing.T) {
 				fromID == fromUserID.String() &&
 				toID == toUserID.String()
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.TransferOwnership(context.Background(), input)
 		require.NoError(t, err)
@@ -292,6 +299,7 @@ func TestTransferOwnershipActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilTransfer(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.TransferOwnership(context.Background(), input)
 		require.NoError(t, err)
@@ -444,6 +452,7 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 				a.UserID != nil && *a.UserID == requesterID &&
 				role == string(entity.BoardRoleMember)
 		})).Return(nil).Once()
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.InviteMember(context.Background(), board.InviteMemberInput{
 			RequesterID: requesterID,
@@ -476,6 +485,7 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 			return a.ActionType == entity.ActivityActionAdded && a.EntityType == entity.ActivityEntityMember &&
 				a.EntityID == userBID
 		})).Return(nil).Once()
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.InviteMember(context.Background(), board.InviteMemberInput{
 			RequesterID: requesterID,
@@ -495,6 +505,7 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 		d.boardMbrRepo.EXPECT().IsUserExists(mock.Anything, boardID, userAID).Return(false, nil)
 		d.boardMbrRepo.EXPECT().CreateMany(mock.Anything, mock.Anything).Return(nil)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.InviteMember(context.Background(), board.InviteMemberInput{
 			RequesterID: requesterID,

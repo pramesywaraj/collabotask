@@ -49,6 +49,11 @@ func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateC
 			EntityID:   column.ID,
 			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
 		})
+
+		cu.broadcaster.Broadcast(column.BoardID, common.ColumnMoved{
+			ColumnID: column.ID,
+			Position: newPos,
+		})
 	}
 
 	return &UpdateColumnPositionOutput{Column: column}, nil

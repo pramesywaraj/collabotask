@@ -20,6 +20,7 @@ packages:
       filename: common_mocks.go
     interfaces:
       BoardAccessChecker: {}
+      Broadcaster: {}
   collabotask/internal/usecase/auth:
     config:
       filename: auth_mocks.go

@@ -54,5 +54,11 @@ func (cru *CardUseCase) DeleteCard(ctx context.Context, input DeleteCardInput) e
 		EntityID:   input.CardID,
 		Metadata:   map[string]any{entity.ActivityMetaCardTitle: cardTitle},
 	})
+
+	cru.broadcaster.Broadcast(column.BoardID, common.CardDeleted{
+		CardID:   input.CardID,
+		ColumnID: input.ColumnID,
+	})
+
 	return nil
 }

@@ -58,7 +58,10 @@ func (bmr *boardMemberRepository) CreateMany(ctx context.Context, boardMembers [
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	for _, member := range boardMembers {
-		_, err := tx.Exec(ctx, createBoardMemberQuery, member.BoardID, member.UserID, member.Role)
+		// RETURNING joined_at so the DB-assigned timestamp flows back onto the
+		// struct — callers (e.g. invite broadcast) need the real join time.
+		err := tx.QueryRow(ctx, createBoardMemberQuery, member.BoardID, member.UserID, member.Role).
+			Scan(&member.JoinedAt)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
