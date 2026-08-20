@@ -157,6 +157,8 @@ func TestLeaveBoard(t *testing.T) {
 			t.Parallel()
 			d := newDeps(t)
 			d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
+			d.broadcaster.EXPECT().EvictUser(mock.Anything, mock.Anything, mock.Anything).Maybe()
+			d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 			tt.setupMocks(d)
 
 			err := d.uc.LeaveBoard(context.Background(), tt.input)

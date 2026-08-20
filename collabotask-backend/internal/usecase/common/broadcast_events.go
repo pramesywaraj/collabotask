@@ -62,6 +62,11 @@ type MemberAdded struct {
 	JoinedAt time.Time
 }
 
+type MemberRemoved struct {
+	BoardID uuid.UUID
+	UserID  uuid.UUID
+}
+
 type OwnershipTransferred struct {
 	BoardID    uuid.UUID
 	FromUserID *uuid.UUID
@@ -87,7 +92,8 @@ func (ColumnCreated) FrameType() FrameType      { return FrameColumnCreated }
 func (ColumnUpdated) FrameType() FrameType      { return FrameColumnUpdated }
 func (ColumnDeleted) FrameType() FrameType      { return FrameColumnDeleted }
 func (ColumnMoved) FrameType() FrameType        { return FrameColumnMoved }
-func (MemberAdded) FrameType() FrameType        { return FrameMemberAdded }
+func (MemberAdded) FrameType() FrameType         { return FrameMemberAdded }
+func (MemberRemoved) FrameType() FrameType       { return FrameMemberRemoved }
 func (OwnershipTransferred) FrameType() FrameType { return FrameOwnershipTransferred }
 func (BoardUpdated) FrameType() FrameType       { return FrameBoardUpdated }
 func (e BoardArchivedSet) FrameType() FrameType {

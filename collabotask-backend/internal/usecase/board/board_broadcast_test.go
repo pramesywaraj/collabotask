@@ -16,6 +16,7 @@ import (
 
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/domain/repository"
 	"collabotask/internal/usecase/board"
 	"collabotask/internal/usecase/common"
 )
@@ -229,6 +230,272 @@ func TestTransferOwnershipBroadcast(t *testing.T) {
 			tt.setupMocks(d)
 
 			err := d.uc.TransferOwnership(context.Background(), input)
+			require.NoError(t, err)
+		})
+	}
+}
+
+// --- RemoveMember (Part D) ---
+
+func TestRemoveMemberBroadcast(t *testing.T) {
+	workspaceID := uuid.New()
+	boardID := uuid.New()
+	requesterID := uuid.New()
+	targetID := uuid.New()
+	cardID := uuid.New()
+	colID := uuid.New()
+
+	existingBoard := &entity.Board{ID: boardID, WorkspaceID: workspaceID}
+	adminMember := &entity.WorkspaceMember{WorkspaceID: workspaceID, UserID: requesterID, Role: entity.WorkspaceRoleAdmin}
+
+	validInput := board.RemoveMemberInput{
+		RequesterID: requesterID,
+		WorkspaceID: workspaceID,
+		BoardID:     boardID,
+		UserID:      targetID,
+	}
+
+	wireAccess := func(d boardTestDeps) {
+		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
+		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).
+			Return(nil, domain.ErrBoardMemberNotFound)
+		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
+	}
+
+	tests := []struct {
+		name       string
+		setupMocks func(d boardTestDeps)
+	}{
+		{
+			name: "happy path — evict + MEMBER_REMOVED + CARD_UPDATED per cleared card (evict-first ordering)",
+			setupMocks: func(d boardTestDeps) {
+				wireAccess(d)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).
+					Return([]repository.AffectedCard{{CardID: cardID, ColumnID: colID}}, nil)
+
+				// 1. Evict target with non-empty reason (involuntary → ACCESS_REVOKED sent by adapter)
+				d.broadcaster.EXPECT().EvictUser(boardID, targetID, mock.MatchedBy(func(r string) bool {
+					return r != ""
+				}))
+				// 2. MEMBER_REMOVED broadcast to room
+				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
+					ev, ok := e.(common.MemberRemoved)
+					return ok && ev.BoardID == boardID && ev.UserID == targetID
+				}))
+				// 3. CARD_UPDATED for each cleared card (assigned_to: null)
+				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
+					ev, ok := e.(common.CardUpdated)
+					return ok && ev.Card.ID == cardID &&
+						len(ev.ChangedFields) == 1 && ev.ChangedFields[0] == "assigned_to" &&
+						ev.Assignee == nil
+				}))
+			},
+		},
+		{
+			name: "no affected cards — evict + MEMBER_REMOVED, no CARD_UPDATED",
+			setupMocks: func(d boardTestDeps) {
+				wireAccess(d)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).
+					Return(nil, nil)
+
+				d.broadcaster.EXPECT().EvictUser(boardID, targetID, mock.MatchedBy(func(r string) bool {
+					return r != ""
+				}))
+				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
+					_, ok := e.(common.MemberRemoved)
+					return ok
+				}))
+				// broadcaster.Broadcast not called for CARD_UPDATED
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := newDeps(t)
+			tt.setupMocks(d)
+
+			err := d.uc.RemoveMember(context.Background(), validInput)
+			require.NoError(t, err)
+		})
+	}
+}
+
+// --- LeaveBoard (Part D) ---
+
+func TestLeaveBoardBroadcast(t *testing.T) {
+	boardID := uuid.New()
+	requesterID := uuid.New()
+	cardID := uuid.New()
+
+	existingBoard := &entity.Board{ID: boardID}
+	boardMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleMember}
+
+	validInput := board.LeaveBoardInput{
+		RequesterID: requesterID,
+		BoardID:     boardID,
+	}
+
+	wireBase := func(d boardTestDeps) {
+		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
+		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
+	}
+
+	tests := []struct {
+		name       string
+		setupMocks func(d boardTestDeps)
+	}{
+		{
+			name: "voluntary leave — silent EvictUser (empty reason, no ACCESS_REVOKED)",
+			setupMocks: func(d boardTestDeps) {
+				wireBase(d)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).Return(nil, nil)
+				d.broadcaster.EXPECT().EvictUser(boardID, requesterID, "")
+				// no MEMBER_REMOVED (voluntary); no CARD_UPDATED (no cleared cards)
+			},
+		},
+		{
+			name: "voluntary leave with cleared cards — CARD_UPDATED per cleared card",
+			setupMocks: func(d boardTestDeps) {
+				wireBase(d)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).
+					Return([]repository.AffectedCard{{CardID: cardID}}, nil)
+				d.broadcaster.EXPECT().EvictUser(boardID, requesterID, "")
+				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
+					ev, ok := e.(common.CardUpdated)
+					return ok && ev.Card.ID == cardID &&
+						len(ev.ChangedFields) == 1 && ev.ChangedFields[0] == "assigned_to" &&
+						ev.Assignee == nil
+				}))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := newDeps(t)
+			tt.setupMocks(d)
+
+			err := d.uc.LeaveBoard(context.Background(), validInput)
+			require.NoError(t, err)
+		})
+	}
+}
+
+// --- UpdateBoard →PRIVATE flip (Part D) ---
+
+func TestUpdateBoardPrivateEviction(t *testing.T) {
+	workspaceID := uuid.New()
+	boardID := uuid.New()
+	requesterID := uuid.New()
+	memberID := uuid.New()
+	adminID := uuid.New()
+	nonMemberID := uuid.New()
+
+	wsMember := &entity.WorkspaceMember{WorkspaceID: workspaceID, UserID: requesterID, Role: entity.WorkspaceRoleAdmin}
+	boardMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleOwner}
+
+	wireAccess := func(d boardTestDeps, b *entity.Board) {
+		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(b, nil)
+		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
+		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
+		d.boardRepo.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
+		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
+	}
+
+	_ = nonMemberID // used indirectly via EvictExcept matcher
+
+	tests := []struct {
+		name       string
+		setupMocks func(d boardTestDeps)
+		input      board.UpdateBoardInput
+	}{
+		{
+			name: "WORKSPACE→PRIVATE flip — BOARD_UPDATED + EvictExcept with non-empty reason",
+			setupMocks: func(d boardTestDeps) {
+				wireAccess(d, &entity.Board{ID: boardID, WorkspaceID: workspaceID, Title: "Board",
+					Visibility: entity.BoardVisibilityWorkspace})
+
+				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
+					ev, ok := e.(common.BoardUpdated)
+					return ok && len(ev.ChangedFields) == 1 && ev.ChangedFields[0] == "visibility"
+				}))
+
+				// board members: member + admin (requester is also admin in workspace)
+				d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, boardID).Return([]*entity.BoardMember{
+					{BoardID: boardID, UserID: memberID, Role: entity.BoardRoleMember},
+					{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleOwner},
+				}, nil)
+				d.wsMbrRepo.EXPECT().GetMembersByWorkspace(mock.Anything, workspaceID).Return([]*entity.WorkspaceMember{
+					{WorkspaceID: workspaceID, UserID: adminID, Role: entity.WorkspaceRoleAdmin},
+					{WorkspaceID: workspaceID, UserID: nonMemberID, Role: entity.WorkspaceRoleMember},
+				}, nil)
+
+				// EvictExcept: allowed = board members + workspace admins; reason non-empty
+				d.broadcaster.EXPECT().EvictExcept(boardID, mock.MatchedBy(func(allowed []uuid.UUID) bool {
+					set := make(map[uuid.UUID]struct{})
+					for _, id := range allowed {
+						set[id] = struct{}{}
+					}
+					_, hasMember := set[memberID]
+					_, hasRequester := set[requesterID]
+					_, hasAdmin := set[adminID]
+					_, hasNonMember := set[nonMemberID]
+					return hasMember && hasRequester && hasAdmin && !hasNonMember
+				}), mock.MatchedBy(func(r string) bool { return r != "" }))
+			},
+			input: board.UpdateBoardInput{
+				RequesterID: requesterID,
+				BoardID:     boardID,
+				Visibility:  strPtr("PRIVATE"),
+			},
+		},
+		{
+			name: "PRIVATE→WORKSPACE flip — BOARD_UPDATED broadcast, no EvictExcept",
+			setupMocks: func(d boardTestDeps) {
+				wireAccess(d, &entity.Board{ID: boardID, WorkspaceID: workspaceID, Title: "Board",
+					Visibility: entity.BoardVisibilityPrivate})
+
+				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
+					ev, ok := e.(common.BoardUpdated)
+					return ok && len(ev.ChangedFields) == 1 && ev.ChangedFields[0] == "visibility"
+				}))
+				// EvictExcept NOT called (access only widens)
+			},
+			input: board.UpdateBoardInput{
+				RequesterID: requesterID,
+				BoardID:     boardID,
+				Visibility:  strPtr("WORKSPACE"),
+			},
+		},
+		{
+			name: "title-only update — no EvictExcept",
+			setupMocks: func(d boardTestDeps) {
+				wireAccess(d, &entity.Board{ID: boardID, WorkspaceID: workspaceID, Title: "Old",
+					Visibility: entity.BoardVisibilityWorkspace})
+
+				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
+					ev, ok := e.(common.BoardUpdated)
+					return ok && len(ev.ChangedFields) == 1 && ev.ChangedFields[0] == "title"
+				}))
+				// EvictExcept NOT called
+			},
+			input: board.UpdateBoardInput{
+				RequesterID: requesterID,
+				BoardID:     boardID,
+				Title:       strPtr("New Title"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := newDeps(t)
+			tt.setupMocks(d)
+
+			_, err := d.uc.UpdateBoard(context.Background(), tt.input)
 			require.NoError(t, err)
 		})
 	}

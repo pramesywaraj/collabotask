@@ -228,6 +228,32 @@ func TestMarshal_MemberAdded(t *testing.T) {
 	assert.JSONEq(t, string(wantJSON), string(gotJSON))
 }
 
+func TestMarshal_MemberRemoved(t *testing.T) {
+	boardID := uuid.New()
+	userID := uuid.New()
+
+	ev := common.MemberRemoved{BoardID: boardID, UserID: userID}
+	raw, err := marshal(ev)
+	require.NoError(t, err)
+
+	ft, payload := unmarshalEnvelope(t, raw)
+	assert.Equal(t, "MEMBER_REMOVED", ft)
+	assert.Equal(t, boardID.String(), payload["board_id"])
+	assert.Equal(t, userID.String(), payload["user_id"])
+}
+
+func TestBuildAccessRevoked(t *testing.T) {
+	boardID := uuid.New()
+
+	raw, err := buildAccessRevoked(boardID, "removed_from_board")
+	require.NoError(t, err)
+
+	ft, payload := unmarshalEnvelope(t, raw)
+	assert.Equal(t, "ACCESS_REVOKED", ft)
+	assert.Equal(t, boardID.String(), payload["board_id"])
+	assert.Equal(t, "removed_from_board", payload["reason"])
+}
+
 func TestMarshal_OwnershipTransferred_NilFromUser(t *testing.T) {
 	boardID := uuid.New()
 	toUserID := uuid.New()

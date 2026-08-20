@@ -17,10 +17,14 @@ const (
 	FrameColumnDeleted FrameType = "COLUMN_DELETED"
 	FrameColumnMoved   FrameType = "COLUMN_MOVED"
 	FrameMemberAdded          FrameType = "MEMBER_ADDED"
+	FrameMemberRemoved        FrameType = "MEMBER_REMOVED"
 	FrameOwnershipTransferred FrameType = "OWNERSHIP_TRANSFERRED"
 	FrameBoardUpdated         FrameType = "BOARD_UPDATED"
 	FrameBoardArchived        FrameType = "BOARD_ARCHIVED"
 	FrameBoardUnarchived      FrameType = "BOARD_UNARCHIVED"
+	// FrameAccessRevoked is sent only to the evicted connection (not broadcast to the room).
+	// A non-empty reason in EvictUser/EvictExcept triggers this. Voluntary leaves pass "".
+	FrameAccessRevoked FrameType = "ACCESS_REVOKED"
 )
 
 // Event is a typed realtime mutation event. Concrete structs live in

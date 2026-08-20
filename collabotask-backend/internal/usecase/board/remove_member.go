@@ -45,8 +45,7 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 		return domain.ErrBoardPermissionDenied
 	}
 
-	// TODO(ws, step ④): broadcast CARD_UPDATED for the returned affected cards.
-	_, err = bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.UserID)
+	affectedCards, err := bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.UserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrBoardMemberNotFound) {
 			return domain.ErrBoardMemberNotFound
@@ -61,6 +60,20 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 		EntityID:   input.UserID,
 		Metadata:   map[string]any{entity.ActivityMetaSource: "board"},
 	})
+
+	// Evict-first ordering (§4.5 UC-19b): evict → MEMBER_REMOVED → CARD_UPDATED per cleared card.
+	// Non-empty reason → adapter sends ACCESS_REVOKED to the evicted user before teardown.
+	bu.broadcaster.EvictUser(input.BoardID, input.UserID, "removed_from_board")
+	bu.broadcaster.Broadcast(input.BoardID, common.MemberRemoved{
+		BoardID: input.BoardID,
+		UserID:  input.UserID,
+	})
+	for _, card := range affectedCards {
+		bu.broadcaster.Broadcast(input.BoardID, common.CardUpdated{
+			Card:          &entity.Card{ID: card.CardID},
+			ChangedFields: []string{"assigned_to"},
+		})
+	}
 
 	return nil
 }
