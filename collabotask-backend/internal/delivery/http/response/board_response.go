@@ -44,6 +44,18 @@ type BoardMemberResponse struct {
 	JoinedAt  time.Time        `json:"joined_at"`
 }
 
+// BoardMemberUserResponse is the added-member user object carried in the
+// MEMBER_ADDED realtime frame (SRS §5.2): the roster row minus role, which is a
+// sibling field in that frame. Kept here so the wire shape lives with the other
+// DTOs rather than as an inline map in the realtime adapter.
+type BoardMemberUserResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Email     string    `json:"email"`
+	Name      string    `json:"name"`
+	AvatarURL *string   `json:"avatar_url"`
+	JoinedAt  time.Time `json:"joined_at"`
+}
+
 type BoardDetailResponse struct {
 	BoardResponse
 
@@ -102,6 +114,18 @@ func BoardMemberToResponse(member board.BoardMember) BoardMemberResponse {
 		AvatarURL: member.AvatarURL,
 		Role:      member.Role,
 		JoinedAt:  member.JoinedAt,
+	}
+}
+
+// BoardMemberUserToResponse builds the MEMBER_ADDED user object from a user and
+// the join timestamp assigned at insert time.
+func BoardMemberUserToResponse(u *entity.User, joinedAt time.Time) BoardMemberUserResponse {
+	return BoardMemberUserResponse{
+		ID:        u.ID,
+		Email:     u.Email,
+		Name:      u.Name,
+		AvatarURL: u.AvatarURL,
+		JoinedAt:  joinedAt,
 	}
 }
 

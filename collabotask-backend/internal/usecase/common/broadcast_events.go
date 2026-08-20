@@ -1,6 +1,8 @@
 package common
 
 import (
+	"time"
+
 	"collabotask/internal/domain/entity"
 
 	"github.com/google/uuid"
@@ -54,9 +56,10 @@ type ColumnMoved struct {
 // Board
 
 type MemberAdded struct {
-	BoardID uuid.UUID
-	User    *entity.User
-	Role    entity.BoardRole
+	BoardID  uuid.UUID
+	User     *entity.User
+	Role     entity.BoardRole
+	JoinedAt time.Time
 }
 
 type OwnershipTransferred struct {

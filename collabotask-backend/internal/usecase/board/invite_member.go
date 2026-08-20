@@ -97,9 +97,10 @@ func (bu *BoardUseCase) InviteMember(ctx context.Context, input InviteMemberInpu
 		})
 
 		bu.broadcaster.Broadcast(input.BoardID, common.MemberAdded{
-			BoardID: input.BoardID,
-			User:    users[m.UserID],
-			Role:    m.Role,
+			BoardID:  input.BoardID,
+			User:     users[m.UserID],
+			Role:     m.Role,
+			JoinedAt: m.JoinedAt,
 		})
 	}
 

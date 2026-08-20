@@ -96,15 +96,9 @@ func marshal(e common.Event) ([]byte, error) {
 			"position":  ev.Position,
 		}
 	case common.MemberAdded:
-		userPayload := map[string]any{
-			"id":         ev.User.ID,
-			"email":      ev.User.Email,
-			"name":       ev.User.Name,
-			"avatar_url": ev.User.AvatarURL,
-		}
 		payload = map[string]any{
 			"board_id": ev.BoardID,
-			"user":     userPayload,
+			"user":     response.BoardMemberUserToResponse(ev.User, ev.JoinedAt),
 			"role":     ev.Role,
 		}
 	case common.OwnershipTransferred:
@@ -130,36 +124,33 @@ func marshal(e common.Event) ([]byte, error) {
 }
 
 // projectCardFields builds the changed-subset map from a CardUpdated event.
-// Only keys listed in ChangedFields are included; the values come from
-// CardToResponse so the shape matches the REST DTO exactly (Decision C3).
+// Values come from CardToResponse so the shape matches the REST DTO (Decision C3).
 func projectCardFields(ev common.CardUpdated) map[string]any {
 	r := response.CardToResponse(ev.Card, ev.Assignee)
-	all := map[string]any{
+	return projectFields(map[string]any{
 		"title":       r.Title,
 		"description": r.Description,
 		"assigned_to": r.AssignedTo,
 		"due_date":    r.DueDate,
-	}
-	out := make(map[string]any, len(ev.ChangedFields))
-	for _, f := range ev.ChangedFields {
-		if v, ok := all[f]; ok {
-			out[f] = v
-		}
-	}
-	return out
+	}, ev.ChangedFields)
 }
 
 // projectBoardFields builds the changed-subset map from a BoardUpdated event.
 func projectBoardFields(ev common.BoardUpdated) map[string]any {
 	r := response.BoardToResponse(ev.Board)
-	all := map[string]any{
+	return projectFields(map[string]any{
 		"title":            r.Title,
 		"description":      r.Description,
 		"background_color": r.BackgroundColor,
 		"visibility":       r.Visibility,
-	}
-	out := make(map[string]any, len(ev.ChangedFields))
-	for _, f := range ev.ChangedFields {
+	}, ev.ChangedFields)
+}
+
+// projectFields returns the subset of all whose keys are listed in changed —
+// honouring §5.2's `fields:{…}` "changed subset only" rule (Decision C3).
+func projectFields(all map[string]any, changed []string) map[string]any {
+	out := make(map[string]any, len(changed))
+	for _, f := range changed {
 		if v, ok := all[f]; ok {
 			out[f] = v
 		}

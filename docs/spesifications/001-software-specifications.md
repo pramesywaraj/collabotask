@@ -616,9 +616,9 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 | `USER_LEFT` | `{ board_id, user_id, timestamp }` | UC-10, UC-18 |
 | `ACTIVE_USERS` | `{ board_id, users:[{id,name,avatar_url,joined_at}] }` | sent to joiner (UC-19) |
 | `ACCESS_REVOKED` | `{ board_id, reason }` | sent to an **involuntarily** evicted connection (UC-19b) — removal or WORKSPACE→PRIVATE flip. Voluntary leaves evict silently. |
-| `MEMBER_ADDED` | `{ board_id, user{…}, role }` | UC-11 |
+| `MEMBER_ADDED` | `{ board_id, user{id,email,name,avatar_url,joined_at}, role }` | UC-11 |
 | `MEMBER_REMOVED` | `{ board_id, user_id }` | UC-12d |
-| `OWNERSHIP_TRANSFERRED` | `{ board_id, from_user_id, to_user_id }` | UC-12e |
+| `OWNERSHIP_TRANSFERRED` | `{ board_id, from_user_id, to_user_id }` (`from_user_id` may be `null` — orphan-safe transfer) | UC-12e |
 | `BOARD_UPDATED` | `{ board_id, fields:{…} }` | UC-12b |
 | `BOARD_ARCHIVED` / `BOARD_UNARCHIVED` | `{ board_id }` | UC-12c |
 | `COLUMN_CREATED` | `{ column{ id,board_id,title,position } }` | UC-13 |

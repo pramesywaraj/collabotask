@@ -202,13 +202,15 @@ func TestMarshal_ColumnMoved(t *testing.T) {
 func TestMarshal_MemberAdded(t *testing.T) {
 	boardID := uuid.New()
 	userID := uuid.New()
+	joinedAt := time.Now().UTC()
 
 	user := &entity.User{ID: userID, Email: "alice@example.com", Name: "Alice", AvatarURL: nil}
 
 	ev := common.MemberAdded{
-		BoardID: boardID,
-		User:    user,
-		Role:    entity.BoardRoleMember,
+		BoardID:  boardID,
+		User:     user,
+		Role:     entity.BoardRoleMember,
+		JoinedAt: joinedAt,
 	}
 	raw, err := marshal(ev)
 	require.NoError(t, err)
@@ -218,11 +220,12 @@ func TestMarshal_MemberAdded(t *testing.T) {
 	assert.Equal(t, boardID.String(), payload["board_id"])
 	assert.Equal(t, string(entity.BoardRoleMember), payload["role"])
 
-	userMap, ok := payload["user"].(map[string]any)
-	require.True(t, ok)
-	assert.Equal(t, userID.String(), userMap["id"])
-	assert.Equal(t, "alice@example.com", userMap["email"])
-	assert.Equal(t, "Alice", userMap["name"])
+	// user object matches BoardMemberUserToResponse byte-for-byte: the roster row
+	// minus role (id, email, name, avatar_url, joined_at). role stays a sibling.
+	wantUser := response.BoardMemberUserToResponse(user, joinedAt)
+	wantJSON, _ := json.Marshal(wantUser)
+	gotJSON, _ := json.Marshal(payload["user"])
+	assert.JSONEq(t, string(wantJSON), string(gotJSON))
 }
 
 func TestMarshal_OwnershipTransferred_NilFromUser(t *testing.T) {
@@ -323,16 +326,7 @@ func TestMarshal_BoardArchivedSet_Unarchived(t *testing.T) {
 // --- Error cases ---
 
 func TestMarshal_UnknownEvent_ReturnsError(t *testing.T) {
-	type unknownEvent struct{}
-	// unknownEvent doesn't implement Event — test using a hand-rolled stub
-	// that satisfies the interface but is not handled.
-	type stubEvent struct{}
-	_ = common.Event(nil) // just to import the package
-
-	// We can't easily test the default branch without an unregistered type
-	// because marshal is unexported. Use a type assertion trick: cast a struct
-	// that implements Event (we'll define a local one) and call marshal.
-	// Simplest: verify the error message format via a compile-time safe wrapper.
+	// dummyUnknownEvent implements Event but has no marshal arm → default branch.
 	_, err := marshal(dummyUnknownEvent{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown event")
