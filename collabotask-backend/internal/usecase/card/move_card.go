@@ -89,6 +89,13 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 				entity.ActivityMetaToColumnTitle:   toColumn.Title,
 			},
 		})
+
+		cru.broadcaster.Broadcast(fromColumn.BoardID, common.CardMoved{
+			CardID:       input.CardID,
+			FromColumnID: oldColumnID,
+			ToColumnID:   movedCard.ColumnID,
+			Position:     movedCard.Position,
+		})
 	}
 
 	return &MoveCardOutput{

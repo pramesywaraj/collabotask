@@ -79,6 +79,8 @@ func (cru *CardUseCase) CreateCard(ctx context.Context, input CreateCardInput) (
 		Metadata:   map[string]any{entity.ActivityMetaCardTitle: card.Title},
 	})
 
+	cru.broadcaster.Broadcast(column.BoardID, common.CardCreated{Card: card, Assignee: assignee})
+
 	return &CreateCardOutput{
 		Card:     card,
 		Assignee: assignee,

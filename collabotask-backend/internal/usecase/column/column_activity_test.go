@@ -50,6 +50,7 @@ func TestCreateColumnActivityLog(t *testing.T) {
 				a.UserID != nil && *a.UserID == requesterID &&
 				colTitle == "Backlog"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		out, err := d.uc.CreateColumn(context.Background(), input)
 		require.NoError(t, err)
@@ -60,6 +61,7 @@ func TestCreateColumnActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilCreate(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.CreateColumn(context.Background(), input)
 		require.NoError(t, err)
@@ -100,6 +102,7 @@ func TestDeleteColumnActivityLog(t *testing.T) {
 				a.UserID != nil && *a.UserID == requesterID &&
 				colTitle == "Backlog"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.DeleteColumn(context.Background(), input)
 		require.NoError(t, err)
@@ -109,6 +112,7 @@ func TestDeleteColumnActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilDelete(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.DeleteColumn(context.Background(), input)
 		require.NoError(t, err)
@@ -143,6 +147,7 @@ func TestUpdateColumnActivityLog(t *testing.T) {
 				a.UserID != nil && *a.UserID == requesterID &&
 				colTitle == "New Title"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		out, err := d.uc.UpdateColumn(context.Background(), column.UpdateColumnInput{
 			BoardID:     boardID,
@@ -157,7 +162,7 @@ func TestUpdateColumnActivityLog(t *testing.T) {
 	t.Run("no-op silence — same title → Log NOT called", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilUpdate(d, "Same Title", "Same Title")
-		// No expectation on activityRepo.Log → unexpected call fails the test
+		// No expectation on activityRepo.Log or broadcaster.Broadcast — unexpected calls fail the test
 
 		_, err := d.uc.UpdateColumn(context.Background(), column.UpdateColumnInput{
 			BoardID:     boardID,
@@ -172,6 +177,7 @@ func TestUpdateColumnActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupUntilUpdate(d, "Old Title", "New Title")
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateColumn(context.Background(), column.UpdateColumnInput{
 			BoardID:     boardID,
@@ -214,6 +220,7 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 				a.UserID != nil && *a.UserID == requesterID &&
 				colTitle == "Backlog"
 		})).Return(nil)
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		out, err := d.uc.UpdateColumnPosition(context.Background(), column.UpdateColumnPositionInput{
 			BoardID:     boardID,
@@ -230,7 +237,7 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 		setupBase(d)
 		// UpdatePosition returns the SAME value as the column's current position.
 		d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(1000)).Return(float64(1000), nil)
-		// activityRepo.Log must NOT be called
+		// activityRepo.Log and broadcaster.Broadcast must NOT be called
 
 		_, err := d.uc.UpdateColumnPosition(context.Background(), column.UpdateColumnPositionInput{
 			BoardID:     boardID,
@@ -246,6 +253,7 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 		setupBase(d)
 		d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(2000)).Return(float64(2000), nil)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateColumnPosition(context.Background(), column.UpdateColumnPositionInput{
 			BoardID:     boardID,
@@ -260,7 +268,7 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(2000)).Return(float64(0), domain.ErrColumnNotFound)
-		// No Log expectation
+		// No Log or Broadcast expectation
 
 		_, err := d.uc.UpdateColumnPosition(context.Background(), column.UpdateColumnPositionInput{
 			BoardID:     boardID,

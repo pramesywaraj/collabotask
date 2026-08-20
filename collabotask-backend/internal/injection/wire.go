@@ -41,6 +41,7 @@ var (
 		ProvideBoardAccessChecker,
 		ProvideColumnUseCase,
 		ProvideCardUseCase,
+		ProvideBroadcaster,
 	)
 	HandlerSet = wire.NewSet(
 		ProvideAuthHandler,

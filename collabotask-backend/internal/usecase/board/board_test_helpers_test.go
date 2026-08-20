@@ -16,6 +16,7 @@ type boardTestDeps struct {
 	columnRepo   *mocks.MockColumnRepository
 	cardRepo     *mocks.MockCardRepository
 	activityRepo *mocks.MockActivityRepository
+	broadcaster  *mocks.MockBroadcaster
 	uc           *board.BoardUseCase
 }
 
@@ -30,6 +31,7 @@ func newDeps(t *testing.T) boardTestDeps {
 		columnRepo:   mocks.NewMockColumnRepository(t),
 		cardRepo:     mocks.NewMockCardRepository(t),
 		activityRepo: mocks.NewMockActivityRepository(t),
+		broadcaster:  mocks.NewMockBroadcaster(t),
 	}
 	d.uc = board.NewBoardUseCase(
 		d.checker,
@@ -40,6 +42,7 @@ func newDeps(t *testing.T) boardTestDeps {
 		d.columnRepo,
 		d.cardRepo,
 		d.activityRepo,
+		d.broadcaster,
 	)
 	return d
 }

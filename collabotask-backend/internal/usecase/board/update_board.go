@@ -114,6 +114,11 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 			EntityID:   board.ID,
 			Metadata:   meta,
 		})
+
+		bu.broadcaster.Broadcast(board.ID, common.BoardUpdated{
+			Board:         board,
+			ChangedFields: changedFields,
+		})
 	}
 
 	return &UpdateBoardOutput{

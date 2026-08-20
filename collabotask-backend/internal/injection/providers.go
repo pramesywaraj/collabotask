@@ -10,6 +10,7 @@ import (
 	infraauth "collabotask/internal/infrastructure/auth"
 	"collabotask/internal/infrastructure/database"
 	"collabotask/internal/realtime"
+	"collabotask/internal/realtime/broadcast"
 	"collabotask/internal/repository/postgres"
 	"collabotask/internal/server"
 	"collabotask/internal/usecase/auth"
@@ -76,6 +77,9 @@ func ProvideWorkspaceUseCase(
 ) *workspace.WorkspaceUseCase {
 	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo, activityRepo)
 }
+func ProvideBroadcaster(hub *realtime.Hub) common.Broadcaster {
+	return broadcast.NewHubBroadcaster(hub)
+}
 func ProvideBoardUseCase(
 	boardAccessChecker common.BoardAccessChecker,
 	boardRepo repository.BoardRepository,
@@ -85,15 +89,17 @@ func ProvideBoardUseCase(
 	columnRepo repository.ColumnRepository,
 	cardRepo repository.CardRepository,
 	activityRepo repository.ActivityRepository,
+	broadcaster common.Broadcaster,
 ) *board.BoardUseCase {
-	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo, activityRepo)
+	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo, activityRepo, broadcaster)
 }
 func ProvideColumnUseCase(
 	columnRepo repository.ColumnRepository,
 	boardAccessChecker common.BoardAccessChecker,
 	activityRepo repository.ActivityRepository,
+	broadcaster common.Broadcaster,
 ) *column.ColumnUseCase {
-	return column.NewColumnUseCase(columnRepo, boardAccessChecker, activityRepo)
+	return column.NewColumnUseCase(columnRepo, boardAccessChecker, activityRepo, broadcaster)
 }
 func ProvideCardUseCase(
 	cardRepo repository.CardRepository,
@@ -102,8 +108,9 @@ func ProvideCardUseCase(
 	boardAccessChecker common.BoardAccessChecker,
 	boardMemberRepo repository.BoardMemberRepository,
 	activityRepo repository.ActivityRepository,
+	broadcaster common.Broadcaster,
 ) *card.CardUseCase {
-	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker, boardMemberRepo, activityRepo)
+	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker, boardMemberRepo, activityRepo, broadcaster)
 }
 
 // Common use cases

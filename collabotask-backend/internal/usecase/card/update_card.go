@@ -125,6 +125,12 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 				entity.ActivityMetaChangedFields: changedFields,
 			},
 		})
+
+		cru.broadcaster.Broadcast(column.BoardID, common.CardUpdated{
+			Card:          card,
+			Assignee:      assignee,
+			ChangedFields: changedFields,
+		})
 	}
 
 	return &UpdateCardOutput{

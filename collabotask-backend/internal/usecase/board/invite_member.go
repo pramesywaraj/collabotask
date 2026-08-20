@@ -95,6 +95,12 @@ func (bu *BoardUseCase) InviteMember(ctx context.Context, input InviteMemberInpu
 			EntityID:   m.UserID,
 			Metadata:   map[string]any{entity.ActivityMetaRole: string(m.Role)},
 		})
+
+		bu.broadcaster.Broadcast(input.BoardID, common.MemberAdded{
+			BoardID: input.BoardID,
+			User:    users[m.UserID],
+			Role:    m.Role,
+		})
 	}
 
 	return nil

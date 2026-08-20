@@ -40,7 +40,6 @@ func (bu *BoardUseCase) TransferOwnership(ctx context.Context, input TransferOwn
 		return nil
 	}
 
-	// TODO(ws, step ④): broadcast OWNERSHIP_TRANSFERRED { board_id, from_user_id, to_user_id } via WebSocket.
 	fromUserID, err := bu.boardMemberRepo.TransferOwnership(ctx, input.BoardID, input.ToUserID)
 	if err != nil {
 		return fmt.Errorf("failed to transfer ownership: %w", err)
@@ -56,6 +55,12 @@ func (bu *BoardUseCase) TransferOwnership(ctx context.Context, input TransferOwn
 		EntityType: entity.ActivityEntityBoard,
 		EntityID:   input.BoardID,
 		Metadata:   meta,
+	})
+
+	bu.broadcaster.Broadcast(input.BoardID, common.OwnershipTransferred{
+		BoardID:    input.BoardID,
+		FromUserID: fromUserID,
+		ToUserID:   input.ToUserID,
 	})
 
 	return nil

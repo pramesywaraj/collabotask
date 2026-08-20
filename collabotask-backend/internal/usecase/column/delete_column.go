@@ -43,5 +43,8 @@ func (cu *ColumnUseCase) DeleteColumn(ctx context.Context, input DeleteColumnInp
 		EntityID:   column.ID,
 		Metadata:   map[string]any{entity.ActivityMetaColumnTitle: colTitle},
 	})
+
+	cu.broadcaster.Broadcast(column.BoardID, common.ColumnDeleted{ColumnID: column.ID})
+
 	return nil
 }
