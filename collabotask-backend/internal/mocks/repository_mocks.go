@@ -762,6 +762,74 @@ func (_c *MockBoardRepository_CreateWithOwner_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// GetBoardIDsByWorkspace provides a mock function for the type MockBoardRepository
+func (_mock *MockBoardRepository) GetBoardIDsByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	ret := _mock.Called(ctx, workspaceID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetBoardIDsByWorkspace")
+	}
+
+	var r0 []uuid.UUID
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]uuid.UUID, error)); ok {
+		return returnFunc(ctx, workspaceID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID) []uuid.UUID); ok {
+		r0 = returnFunc(ctx, workspaceID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uuid.UUID)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = returnFunc(ctx, workspaceID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockBoardRepository_GetBoardIDsByWorkspace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBoardIDsByWorkspace'
+type MockBoardRepository_GetBoardIDsByWorkspace_Call struct {
+	*mock.Call
+}
+
+// GetBoardIDsByWorkspace is a helper method to define mock.On call
+//   - ctx context.Context
+//   - workspaceID uuid.UUID
+func (_e *MockBoardRepository_Expecter) GetBoardIDsByWorkspace(ctx any, workspaceID any) *MockBoardRepository_GetBoardIDsByWorkspace_Call {
+	return &MockBoardRepository_GetBoardIDsByWorkspace_Call{Call: _e.mock.On("GetBoardIDsByWorkspace", ctx, workspaceID)}
+}
+
+func (_c *MockBoardRepository_GetBoardIDsByWorkspace_Call) Run(run func(ctx context.Context, workspaceID uuid.UUID)) *MockBoardRepository_GetBoardIDsByWorkspace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBoardRepository_GetBoardIDsByWorkspace_Call) Return(uUIDs []uuid.UUID, err error) *MockBoardRepository_GetBoardIDsByWorkspace_Call {
+	_c.Call.Return(uUIDs, err)
+	return _c
+}
+
+func (_c *MockBoardRepository_GetBoardIDsByWorkspace_Call) RunAndReturn(run func(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)) *MockBoardRepository_GetBoardIDsByWorkspace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByID provides a mock function for the type MockBoardRepository
 func (_mock *MockBoardRepository) GetByID(ctx context.Context, boardID uuid.UUID) (*entity.Board, error) {
 	ret := _mock.Called(ctx, boardID)

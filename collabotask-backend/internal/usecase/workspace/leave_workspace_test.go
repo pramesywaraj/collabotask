@@ -123,13 +123,18 @@ func TestLeaveWorkspace(t *testing.T) {
 
 			wsRepo := mocks.NewMockWorkspaceRepository(t)
 			wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
+			boardRepo := mocks.NewMockBoardRepository(t)
 			userRepo := mocks.NewMockUserRepository(t)
 			activityRepo := mocks.NewMockActivityRepository(t)
+			broadcaster := mocks.NewMockBroadcaster(t)
 			activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
+			boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+			broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
+			broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 			tt.setupMocks(wsRepo, wsMemberRepo)
 
-			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, userRepo, activityRepo)
+			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
 			err := uc.LeaveWorkspace(context.Background(), tt.input)
 
 			if tt.wantErr != nil {

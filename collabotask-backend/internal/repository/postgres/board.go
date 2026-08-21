@@ -250,6 +250,28 @@ func (br *boardRepository) GetUserBoardsInWorkspace(ctx context.Context, workspa
 	return boards, nil
 }
 
+func (br *boardRepository) GetBoardIDsByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := br.db.Query(ctx, getBoardIDsByWorkspaceQuery, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query board ids in workspace: %w", err)
+	}
+	defer rows.Close()
+
+	boardIDs := make([]uuid.UUID, 0, defaultBoardCaps)
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("failed to scan board id: %w", err)
+		}
+		boardIDs = append(boardIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating board ids in workspace: %w", err)
+	}
+
+	return boardIDs, nil
+}
+
 func (br *boardRepository) SetArchived(ctx context.Context, boardID uuid.UUID, archived bool) error {
 	result, err := br.db.Exec(
 		ctx,

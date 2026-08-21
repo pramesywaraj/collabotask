@@ -34,9 +34,10 @@ const (
 type EvictReason string
 
 const (
-	EvictReasonSilent       EvictReason = ""                   // voluntary leave (UC-10, UC-06c)
-	EvictReasonRemoved      EvictReason = "removed_from_board" // UC-12d remove_member
-	EvictReasonBoardPrivate EvictReason = "board_made_private" // UC-12b →PRIVATE flip
+	EvictReasonSilent               EvictReason = ""                       // voluntary leave (UC-10, UC-06c)
+	EvictReasonRemoved              EvictReason = "removed_from_board"     // UC-12d remove_member
+	EvictReasonBoardPrivate         EvictReason = "board_made_private"     // UC-12b →PRIVATE flip
+	EvictReasonRemovedFromWorkspace EvictReason = "removed_from_workspace" // UC-06 workspace remove_member
 )
 
 // Event is a typed realtime mutation event. Concrete structs live in

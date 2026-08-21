@@ -47,5 +47,8 @@ func (wu *WorkspaceUseCase) RemoveMember(ctx context.Context, input RemoveMember
 		})
 	}
 
+	// Involuntary removal → ACCESS_REVOKED per board (UC-06, §4.5 UC-19b).
+	wu.fanOutParticipationCascade(ctx, input.WorkspaceID, input.UserID, result, common.EvictReasonRemovedFromWorkspace)
+
 	return nil
 }

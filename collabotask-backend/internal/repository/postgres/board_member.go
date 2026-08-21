@@ -192,6 +192,7 @@ func (bmr *boardMemberRepository) RemoveWithParticipationCascade(ctx context.Con
 		if err := rows.Scan(&card.CardID, &card.ColumnID); err != nil {
 			return nil, fmt.Errorf("failed to scan affected card: %w", err)
 		}
+		card.BoardID = boardID // board is the known param — keep AffectedCard fully populated
 		affected = append(affected, card)
 	}
 	if err := rows.Err(); err != nil {
