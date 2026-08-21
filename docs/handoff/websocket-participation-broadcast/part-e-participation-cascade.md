@@ -255,3 +255,41 @@ index.md ledger C parks a `gofmt -w ./...` cleanup for **after Part E lands** (7
 **Tests:** adapter eviction (2, real hub + stub socket, `-race` stable ×5); workspace broadcast-contract (7 subtests: happy, board-list-error fallback, cascade-error, silent leave); existing 13 workspace constructor sites updated (`.Maybe()` broadcaster/boardRepo in the two fan-out files + activity tests). **`go build` / `go vet` clean; `go test -race ./...` = 596 pass; no new gofmt debt.**
 
 **Next:** two-axis `/code-review` (this doc + index §5/§7 + SRS §4.5/§5.2). On pass → ④ complete; then update index map + `## Now` + memory, and run the ledger-C `gofmt` sweep. Manual two-client smoke remains pending on the same local DB-env friction noted for Parts C/D (not a code issue).
+
+---
+
+## Code-review findings — 2026-08-21 (two-axis `/code-review`)
+
+**Verdict: clean of P0/P1.** Validation green (`go build` ✅ / `go vet` ✅ / `go test -race ./...` = 596 pass). Standards axis: 0 hard violations, 2 duplication judgement calls. Spec axis: **5/5 invariants PASS** (evict-first ordering; superset-evict / subset-broadcast; remove→`ACCESS_REVOKED` vs leave→silent; `CARD_UPDATED` routed by `card.BoardID` set on both cascade paths; best-effort board-list fallback). One trivial spec deviation. All outstanding items are P2 polish.
+
+### P0 / P1
+
+None.
+
+### P2 — Standards
+
+**S1 — Duplicated Code: the cleared-card fan-out loop (judgement call).**
+`fanOutParticipationCascade` (`usecase/workspace/util.go`) and `broadcastClearedCards` (`usecase/board/utils.go`) now hold two copies of the same `[]AffectedCard → CARD_UPDATED{Card:{ID}, ChangedFields:["assigned_to"]}` mapping. Only difference is routing: the board version targets one fixed room, the workspace version routes per `card.BoardID`.
+- *How to address:* extract a shared helper into `usecase/common` that takes a `Broadcast(boardID, event)` closure (or the `common.Broadcaster`) plus `[]repository.AffectedCard` and emits the `CardUpdated` events, routing each card by its own `BoardID` (the single-board caller passes cards that all carry the same `BoardID`). Both usecases call it.
+- *Or defer:* the two loops differ in routing and live in different layers; leaving them is defensible. If deferring, note it against the ⑤ integrity pass (which already reopens this cascade code) rather than growing a third copy.
+
+**S2 — Duplicated test setup: the `.Maybe()` stub block (judgement call).**
+The 3-line block (`GetBoardIDsByWorkspace` / `EvictUserFromRooms` / `Broadcast` all `.Maybe()`) is copy-pasted verbatim into ~7 subtests across `workspace_activity_test.go`, `leave_workspace_test.go`, `remove_member_test.go`. The new `workspace_broadcast_test.go` already models the clean fix (`newWSBroadcastDeps`).
+- *How to address:* lift a shared setup helper (mirroring `newWSBroadcastDeps`) that wires the broadcaster + boardRepo `.Maybe()` stubs, and have the activity/member tests use it.
+- *Or defer:* these are pre-existing test bodies getting a minimal constructor retrofit; inline stubs are a defensible low-churn choice.
+
+### P2 — Spec
+
+**P1-doc — Missing fallback log line (trivial deviation).**
+Plan line 184/195 prescribed *"log-swallow and fall back to `result.AffectedBoardIDs`"*, but `fanOutParticipationCascade` swallows the `GetBoardIDsByWorkspace` error **silently** (comment only, no log). This is inconsistent with the adapter's other best-effort paths (`ACCESS_REVOKED` / marshal errors do `log.Error`).
+- *How to address:* add a `log.Error`/structured warn in the error branch of `fanOutParticipationCascade` before assigning the fallback — e.g. log `workspaceID` + the wrapped error, noting the eviction set fell back to member-boards (watcher edge may be missed). Keeps the "never fail the mutation" contract while making the degraded path observable.
+
+### Disposition
+
+None blocked merge. **All three resolved 2026-08-21** (revised after grilling the defer rationale — S1's "⑤ reopens it" reasoning didn't hold: ⑤ touches the *produce* side of `AffectedCard`, the duplication was on the *emit* side; and the dup was the exact copy Part D's review tried to prevent):
+
+- **P1-doc ✅** — `fanOutParticipationCascade` now logs the `GetBoardIDsByWorkspace` fallback (`log.Error … "(swallowed)"`, mirroring `WriteActivity`) before degrading to `AffectedBoardIDs`. Workspace package gained the `zerolog/log` import.
+- **S1 ✅** — extracted `common.BroadcastClearedCards(b Broadcaster, cards)` routing each card by `card.BoardID`; both the board cascade (`board/remove_member.go`, `leave_board.go`) and the workspace cascade (`workspace/util.go`) now call it. Removed `BoardUseCase.broadcastClearedCards`. Board broadcast tests updated to set `AffectedCard.BoardID` in mock returns (production always populates it; the old fixed-`boardID` routing masked the gap).
+- **S2 ✅** — lifted `stubBroadcastMocks(boardRepo, broadcaster)` (in `workspace_broadcast_test.go`); the 6 copies in `workspace_activity_test.go` + 1 each in `remove_member_test.go` / `leave_workspace_test.go` now call it.
+
+Validation after fixes: `go build` / `go vet` clean; `go test -race ./...` green.
