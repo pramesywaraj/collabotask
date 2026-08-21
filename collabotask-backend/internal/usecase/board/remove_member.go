@@ -68,7 +68,7 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 		BoardID: input.BoardID,
 		UserID:  input.UserID,
 	})
-	bu.broadcastClearedCards(input.BoardID, affectedCards)
+	common.BroadcastClearedCards(bu.broadcaster, affectedCards)
 
 	return nil
 }

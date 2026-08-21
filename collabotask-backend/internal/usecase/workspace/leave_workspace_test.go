@@ -128,9 +128,7 @@ func TestLeaveWorkspace(t *testing.T) {
 			activityRepo := mocks.NewMockActivityRepository(t)
 			broadcaster := mocks.NewMockBroadcaster(t)
 			activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
-			boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
-			broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
-			broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+			stubBroadcastMocks(boardRepo, broadcaster)
 
 			tt.setupMocks(wsRepo, wsMemberRepo)
 

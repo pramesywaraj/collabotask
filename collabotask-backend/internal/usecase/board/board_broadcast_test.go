@@ -273,7 +273,7 @@ func TestRemoveMemberBroadcast(t *testing.T) {
 			setupMocks: func(d boardTestDeps) {
 				wireAccess(d)
 				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).
-					Return([]repository.AffectedCard{{CardID: cardID, ColumnID: colID}}, nil)
+					Return([]repository.AffectedCard{{CardID: cardID, ColumnID: colID, BoardID: boardID}}, nil)
 
 				// 1. Evict target with non-empty reason (involuntary → ACCESS_REVOKED sent by adapter)
 				d.broadcaster.EXPECT().EvictUser(boardID, targetID, mock.MatchedBy(func(r common.EvictReason) bool {
@@ -397,7 +397,7 @@ func TestLeaveBoardBroadcast(t *testing.T) {
 			setupMocks: func(d boardTestDeps) {
 				wireBase(d)
 				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).
-					Return([]repository.AffectedCard{{CardID: cardID}}, nil)
+					Return([]repository.AffectedCard{{CardID: cardID, BoardID: boardID}}, nil)
 				d.broadcaster.EXPECT().EvictUser(boardID, requesterID, common.EvictReasonSilent)
 				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
 					ev, ok := e.(common.CardUpdated)

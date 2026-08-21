@@ -60,7 +60,7 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 	// Voluntary leave: evict silently (EvictReasonSilent → no ACCESS_REVOKED).
 	// USER_LEFT presence event covers the room via the hub's onPresence callback.
 	bu.broadcaster.EvictUser(input.BoardID, input.RequesterID, common.EvictReasonSilent)
-	bu.broadcastClearedCards(input.BoardID, affectedCards)
+	common.BroadcastClearedCards(bu.broadcaster, affectedCards)
 
 	return nil
 }

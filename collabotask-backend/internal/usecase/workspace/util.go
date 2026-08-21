@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
-	"collabotask/internal/domain/entity"
 	"collabotask/internal/domain/repository"
 	"collabotask/internal/usecase/common"
 )
@@ -42,8 +42,13 @@ func (wu *WorkspaceUseCase) fanOutParticipationCascade(
 ) {
 	boardIDs, err := wu.boardRepo.GetBoardIDsByWorkspace(ctx, workspaceID)
 	if err != nil {
-		// Fallback: still evicts every member-board; only the rare
-		// workspace-visible-watcher edge is missed. Never fail the mutation.
+		// Best-effort fallback: evict over member-boards so removal still tears down
+		// every board X held membership on; only the rare workspace-visible-watcher
+		// edge is missed. Log the degraded path (mirrors WriteActivity's swallow);
+		// never fail the mutation — it already committed.
+		log.Error().Err(err).
+			Str("workspace_id", workspaceID.String()).
+			Msg("realtime: workspace board-id lookup failed; eviction fell back to member-boards (swallowed)")
 		boardIDs = result.AffectedBoardIDs
 	}
 	wu.broadcaster.EvictUserFromRooms(userID, boardIDs, reason)
@@ -54,10 +59,5 @@ func (wu *WorkspaceUseCase) fanOutParticipationCascade(
 			UserID:  userID,
 		})
 	}
-	for _, card := range result.AffectedCards {
-		wu.broadcaster.Broadcast(card.BoardID, common.CardUpdated{
-			Card:          &entity.Card{ID: card.CardID},
-			ChangedFields: []string{"assigned_to"},
-		})
-	}
+	common.BroadcastClearedCards(wu.broadcaster, result.AffectedCards)
 }

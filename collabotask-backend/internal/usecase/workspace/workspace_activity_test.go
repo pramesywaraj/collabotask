@@ -44,9 +44,7 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
-		boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
-		broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
-		broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		stubBroadcastMocks(boardRepo, broadcaster)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(ws, nil)
@@ -85,9 +83,7 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
-		boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
-		broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
-		broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		stubBroadcastMocks(boardRepo, broadcaster)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(ws, nil)
@@ -108,9 +104,7 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
-		boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
-		broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
-		broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		stubBroadcastMocks(boardRepo, broadcaster)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(ws, nil)
@@ -156,9 +150,7 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
-		boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
-		broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
-		broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		stubBroadcastMocks(boardRepo, broadcaster)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(
@@ -189,9 +181,7 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
-		boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
-		broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
-		broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		stubBroadcastMocks(boardRepo, broadcaster)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(
@@ -211,9 +201,7 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
-		boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
-		broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
-		broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		stubBroadcastMocks(boardRepo, broadcaster)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(

@@ -48,6 +48,16 @@ func newWSBroadcastDeps(t *testing.T) wsBroadcastDeps {
 	}
 }
 
+// stubBroadcastMocks wires permissive (.Maybe()) expectations for the participation-
+// cascade fan-out on tests that do NOT assert broadcasts (activity / guard tests) —
+// so the fan-out can run without unexpected-call failures. Broadcast-contract tests
+// set exact expectations via newWSBroadcastDeps instead.
+func stubBroadcastMocks(boardRepo *mocks.MockBoardRepository, broadcaster *mocks.MockBroadcaster) {
+	boardRepo.EXPECT().GetBoardIDsByWorkspace(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	broadcaster.EXPECT().EvictUserFromRooms(mock.Anything, mock.Anything, mock.Anything).Maybe()
+	broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+}
+
 // --- RemoveMember (UC-06, involuntary → ACCESS_REVOKED) ---
 
 func TestRemoveMemberBroadcast(t *testing.T) {
