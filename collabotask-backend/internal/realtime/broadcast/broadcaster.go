@@ -33,40 +33,40 @@ func (b *HubBroadcaster) Broadcast(boardID uuid.UUID, e common.Event) {
 	b.hub.Broadcast(boardID, msg)
 }
 
-// EvictUser evicts all connections of userID from boardID. A non-empty reason
+// EvictUser evicts all connections of userID from boardID. A non-silent reason
 // triggers an ACCESS_REVOKED frame to the target before teardown (involuntary).
-// An empty reason is a silent voluntary eviction (e.g. leave_board).
-func (b *HubBroadcaster) EvictUser(boardID, userID uuid.UUID, reason string) {
-	if reason != "" {
-		b.sendAccessRevoked(boardID, &userID, reason)
+// EvictReasonSilent is a voluntary eviction (e.g. leave_board).
+func (b *HubBroadcaster) EvictUser(boardID, userID uuid.UUID, reason common.EvictReason) {
+	if reason != common.EvictReasonSilent {
+		b.sendAccessRevoked(boardID, userID, reason)
 	}
-	b.hub.EvictUser(boardID, userID, reason)
+	b.hub.EvictUser(boardID, userID, string(reason))
 }
 
-// EvictExcept evicts every user in boardID not in allowed. A non-empty reason
+// EvictExcept evicts every user in boardID not in allowed. A non-silent reason
 // triggers ACCESS_REVOKED to each evicted user before teardown.
-func (b *HubBroadcaster) EvictExcept(boardID uuid.UUID, allowed []uuid.UUID, reason string) {
-	if reason != "" {
+func (b *HubBroadcaster) EvictExcept(boardID uuid.UUID, allowed []uuid.UUID, reason common.EvictReason) {
+	if reason != common.EvictReasonSilent {
 		allowSet := make(map[uuid.UUID]struct{}, len(allowed))
 		for _, id := range allowed {
 			allowSet[id] = struct{}{}
 		}
 		for _, userID := range b.hub.ActiveUsers(boardID) {
 			if _, ok := allowSet[userID]; !ok {
-				b.sendAccessRevoked(boardID, &userID, reason)
+				b.sendAccessRevoked(boardID, userID, reason)
 			}
 		}
 	}
-	b.hub.EvictExcept(boardID, allowed, reason)
+	b.hub.EvictExcept(boardID, allowed, string(reason))
 }
 
-func (b *HubBroadcaster) EvictUserFromRooms(userID uuid.UUID, boardIDs []uuid.UUID, reason string) {
-	b.hub.EvictUserFromRooms(userID, boardIDs, reason)
+func (b *HubBroadcaster) EvictUserFromRooms(userID uuid.UUID, boardIDs []uuid.UUID, reason common.EvictReason) {
+	b.hub.EvictUserFromRooms(userID, boardIDs, string(reason))
 }
 
 // sendAccessRevoked marshals and enqueues an ACCESS_REVOKED frame to a specific
-// user in a room (if userID non-nil) or logs and swallows on marshal failure.
-func (b *HubBroadcaster) sendAccessRevoked(boardID uuid.UUID, userID *uuid.UUID, reason string) {
+// user in a room. Swallows marshal errors (logs + returns).
+func (b *HubBroadcaster) sendAccessRevoked(boardID uuid.UUID, userID uuid.UUID, reason common.EvictReason) {
 	msg, err := buildAccessRevoked(boardID, reason)
 	if err != nil {
 		log.Error().Err(err).
@@ -74,15 +74,15 @@ func (b *HubBroadcaster) sendAccessRevoked(boardID uuid.UUID, userID *uuid.UUID,
 			Msg("realtime: failed to build ACCESS_REVOKED (swallowed)")
 		return
 	}
-	b.hub.BroadcastToUser(boardID, *userID, msg)
+	b.hub.BroadcastToUser(boardID, userID, msg)
 }
 
-func buildAccessRevoked(boardID uuid.UUID, reason string) ([]byte, error) {
+func buildAccessRevoked(boardID uuid.UUID, reason common.EvictReason) ([]byte, error) {
 	return json.Marshal(envelope{
 		Type: common.FrameAccessRevoked,
 		Payload: map[string]any{
 			"board_id": boardID,
-			"reason":   reason,
+			"reason":   string(reason),
 		},
 	})
 }

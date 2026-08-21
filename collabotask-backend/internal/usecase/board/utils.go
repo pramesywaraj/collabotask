@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/domain/repository"
+	"collabotask/internal/usecase/common"
 
 	"github.com/google/uuid"
 )
@@ -40,5 +42,17 @@ func (bu *BoardUseCase) evictNonAllowed(ctx context.Context, board *entity.Board
 			allowed = append(allowed, m.UserID)
 		}
 	}
-	bu.broadcaster.EvictExcept(board.ID, allowed, "board_made_private")
+	bu.broadcaster.EvictExcept(board.ID, allowed, common.EvictReasonBoardPrivate)
+}
+
+// broadcastClearedCards broadcasts CARD_UPDATED{assigned_to:null} for every
+// card whose assignment was cleared by a participation cascade. Called after
+// eviction so the departing user is already removed from the room.
+func (bu *BoardUseCase) broadcastClearedCards(boardID uuid.UUID, cards []repository.AffectedCard) {
+	for _, card := range cards {
+		bu.broadcaster.Broadcast(boardID, common.CardUpdated{
+			Card:          &entity.Card{ID: card.CardID},
+			ChangedFields: []string{"assigned_to"},
+		})
+	}
 }

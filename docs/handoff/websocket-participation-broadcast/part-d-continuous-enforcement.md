@@ -30,14 +30,21 @@ Part D adds **board-scoped eviction** to three existing usecase mutations that w
 
 ## New artifacts
 
-### `common/broadcaster.go` — two new frame type constants
+### `common/broadcaster.go` — new frame type constants + `EvictReason` type
 
 ```go
 FrameMemberRemoved  FrameType = "MEMBER_REMOVED"
 FrameAccessRevoked  FrameType = "ACCESS_REVOKED"
+
+type EvictReason string
+const (
+    EvictReasonSilent       EvictReason = ""                   // voluntary — no ACCESS_REVOKED
+    EvictReasonRemoved      EvictReason = "removed_from_board" // UC-12d
+    EvictReasonBoardPrivate EvictReason = "board_made_private" // UC-12b →PRIVATE flip
+)
 ```
 
-`ACCESS_REVOKED` is sent **only to the evicted user** (targeted, not room-broadcast). A non-empty `reason` in `EvictUser`/`EvictExcept` triggers it; voluntary leaves pass `""`.
+`ACCESS_REVOKED` is sent **only to the evicted user** (targeted, not room-broadcast). `EvictReasonSilent` skips it; any other constant triggers it. `EvictReason` is threaded through the `Broadcaster` interface so call sites use named constants, not magic strings. Part E adds its workspace-removal reason constant here.
 
 ### `common/broadcast_events.go` — `MemberRemoved` event struct
 
@@ -124,13 +131,14 @@ The `affectedCards` slice comes from the `RemoveWithParticipationCascade` return
 | `TestMarshal_MemberRemoved` | `{type:"MEMBER_REMOVED", payload:{board_id, user_id}}` wire shape |
 | `TestBuildAccessRevoked` | `{type:"ACCESS_REVOKED", payload:{board_id, reason}}` envelope |
 
-### New usecase broadcast-contract tests (3 functions)
+### New usecase broadcast-contract tests (4 functions)
 `internal/usecase/board/board_broadcast_test.go`
 
 | Test | Subtests | Key assertions |
 |---|---|---|
-| `TestRemoveMemberBroadcast` | happy path, cascade-error-skips-broadcast | evict-first ordering; `EvictUser` with non-empty reason; `Broadcast(MemberRemoved)`; `Broadcast(CardUpdated)` per cleared card |
-| `TestLeaveBoardBroadcast` | success | `EvictUser` called with empty reason (no `ACCESS_REVOKED`) |
+| `TestRemoveMemberBroadcast` | happy path, no affected cards | evict-first ordering; `EvictUser` with non-silent reason; `Broadcast(MemberRemoved)`; `Broadcast(CardUpdated)` per cleared card |
+| `TestRemoveMemberCascadeError` | cascade error | cascade error → no `EvictUser`, no broadcast (return before realtime calls) |
+| `TestLeaveBoardBroadcast` | silent leave, cleared-cards leave, cascade error | `EvictUser` with `EvictReasonSilent`; `CARD_UPDATED` per cleared card; cascade error → no broadcast |
 | `TestUpdateBoardPrivateEviction` | WORKSPACE→PRIVATE flip, PRIVATE→WORKSPACE flip, title-only update | `EvictExcept` called iff flipping to PRIVATE; `GetMembersByBoard` + `GetMembersByWorkspace` fetched for allowed list |
 
 ### Existing test fixes
@@ -151,3 +159,48 @@ Part E (`WorkspaceUseCase` + cascade fan-out) depends on:
 - The evict-first ordering convention (established here) — E follows the same rule across boards
 
 Part E does **not** need any new hub primitives beyond `EvictUserFromRooms` (already in the port, hub-implemented in Part A).
+
+Part E's workspace-removal reason constant (`EvictReasonWorkspaceRemoved` or similar) slots into `common/broadcaster.go` alongside the Part D constants. The `broadcastClearedCards` helper in `board/utils.go` is shared — Part E calls it per affected board.
+
+
+---
+
+## Review findings (2026-08-21 `/code-review`, two-axis)
+
+Two-axis review against this doc + index §5/§7 + ADR-009 + SRS §4.5/§5.2. **Verdict: spec-faithful, builds/vets clean, 244 affected tests pass — 0 hard standards violations, 0 material spec gaps.** The items below are refactors/cleanups, not blockers. **Do the two pre-Part-E actions before starting Part E** so E inherits the clean shape instead of copying the rough one.
+
+### Pre-Part-E actions (do these first)
+
+1. **Extract the CARD_UPDATED cascade fan-out into a shared helper** *(Duplicated Code — highest priority).*
+   `leave_board.go` and `remove_member.go` contain the identical loop:
+   ```go
+   for _, card := range affectedCards {
+       bu.broadcaster.Broadcast(input.BoardID, common.CardUpdated{
+           Card:          &entity.Card{ID: card.CardID},
+           ChangedFields: []string{"assigned_to"},
+       })
+   }
+   ```
+   Part E's workspace-cascade fan-out is the **third** copy of this exact shape (per §7 / the deferral table). Extract e.g. `bu.broadcastClearedCards(boardID uuid.UUID, cards []AffectedCard)` on the board usecase now and call it from both existing sites; Part E then calls the same helper per affected board instead of hand-rolling copy #3. This turns a looming three-site divergence into one definition.
+
+2. **Type the eviction `reason`** *(Primitive Obsession).*
+   `reason string` carries a load-bearing invariant — `""` ⇒ silent (no `ACCESS_REVOKED`), non-empty ⇒ involuntary (frame sent) — enforced only by scattered `if reason != ""` checks and the magic literals `"removed_from_board"` / `"board_made_private"` at call sites. The sibling `FrameType` constants are already centralized in `broadcaster.go`; `reason` should be too. Introduce a small type so the contract lives in the type system, not prose:
+   ```go
+   type EvictReason string
+   const (
+       EvictReasonSilent       EvictReason = ""                    // voluntary leave — no ACCESS_REVOKED
+       EvictReasonRemoved      EvictReason = "removed_from_board"
+       EvictReasonBoardPrivate EvictReason = "board_made_private"
+   )
+   ```
+   Thread it through `EvictUser`/`EvictExcept`/`sendAccessRevoked` and the three call sites. Part E's workspace-removal reason then slots in as one more constant. *(Judgement call — no repo rule mandates it; recommended because eviction triggers keep multiplying.)*
+
+### Optional cleanups (any time)
+
+3. **`sendAccessRevoked` pointer param is Speculative Generality.** Signature is `sendAccessRevoked(boardID, userID *uuid.UUID, reason)`, but every caller passes `&userID` (never nil) and the body unconditionally dereferences `*userID`. The doc-comment's "(if non-nil)" branch does not exist. Change to a value param `userID uuid.UUID` and drop the `&`.
+
+4. **Rename/complete the `TestRemoveMemberBroadcast` cascade subtest** *(cosmetic — spec axis).* This doc (Testing table) names the second subtest **"cascade-error-skips-broadcast"**, but the implemented subtest is **"no affected cards — evict + MEMBER_REMOVED, no CARD_UPDATED"** (it asserts the empty-cascade path, not a cascade-*error* path). The code is correct either way — both usecases `return err` before any broadcast when the cascade errors — but that early-return path currently has no test. Either rename this doc's line to match the implemented subtest, or add the genuine cascade-error subtest (preferred: the error path deserves coverage). Not a behaviour gap.
+
+### Noted, no action
+
+- **`EvictUserFromRooms` is a pure hub passthrough** on `HubBroadcaster`, asymmetric with `EvictUser`/`EvictExcept` (which now do adapter-side `ACCESS_REVOKED` work). This is **intentional** — it was declared in Part C for Part E to wire up; Part E adds the adapter-side fan-out logic. Flagged only so E doesn't mistake the passthrough for the finished shape.

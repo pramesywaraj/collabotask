@@ -62,18 +62,13 @@ func (bu *BoardUseCase) RemoveMember(ctx context.Context, input RemoveMemberInpu
 	})
 
 	// Evict-first ordering (§4.5 UC-19b): evict → MEMBER_REMOVED → CARD_UPDATED per cleared card.
-	// Non-empty reason → adapter sends ACCESS_REVOKED to the evicted user before teardown.
-	bu.broadcaster.EvictUser(input.BoardID, input.UserID, "removed_from_board")
+	// Non-silent reason → adapter sends ACCESS_REVOKED to the evicted user before teardown.
+	bu.broadcaster.EvictUser(input.BoardID, input.UserID, common.EvictReasonRemoved)
 	bu.broadcaster.Broadcast(input.BoardID, common.MemberRemoved{
 		BoardID: input.BoardID,
 		UserID:  input.UserID,
 	})
-	for _, card := range affectedCards {
-		bu.broadcaster.Broadcast(input.BoardID, common.CardUpdated{
-			Card:          &entity.Card{ID: card.CardID},
-			ChangedFields: []string{"assigned_to"},
-		})
-	}
+	bu.broadcastClearedCards(input.BoardID, affectedCards)
 
 	return nil
 }

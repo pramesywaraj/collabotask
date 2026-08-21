@@ -57,15 +57,10 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 		Metadata:   map[string]any{entity.ActivityMetaSource: "board"},
 	})
 
-	// Voluntary leave: evict silently (empty reason → no ACCESS_REVOKED).
+	// Voluntary leave: evict silently (EvictReasonSilent → no ACCESS_REVOKED).
 	// USER_LEFT presence event covers the room via the hub's onPresence callback.
-	bu.broadcaster.EvictUser(input.BoardID, input.RequesterID, "")
-	for _, card := range affectedCards {
-		bu.broadcaster.Broadcast(input.BoardID, common.CardUpdated{
-			Card:          &entity.Card{ID: card.CardID},
-			ChangedFields: []string{"assigned_to"},
-		})
-	}
+	bu.broadcaster.EvictUser(input.BoardID, input.RequesterID, common.EvictReasonSilent)
+	bu.broadcastClearedCards(input.BoardID, affectedCards)
 
 	return nil
 }

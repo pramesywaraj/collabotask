@@ -245,7 +245,7 @@ func TestMarshal_MemberRemoved(t *testing.T) {
 func TestBuildAccessRevoked(t *testing.T) {
 	boardID := uuid.New()
 
-	raw, err := buildAccessRevoked(boardID, "removed_from_board")
+	raw, err := buildAccessRevoked(boardID, common.EvictReasonRemoved)
 	require.NoError(t, err)
 
 	ft, payload := unmarshalEnvelope(t, raw)

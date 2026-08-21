@@ -7,6 +7,7 @@ package board_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -275,8 +276,8 @@ func TestRemoveMemberBroadcast(t *testing.T) {
 					Return([]repository.AffectedCard{{CardID: cardID, ColumnID: colID}}, nil)
 
 				// 1. Evict target with non-empty reason (involuntary → ACCESS_REVOKED sent by adapter)
-				d.broadcaster.EXPECT().EvictUser(boardID, targetID, mock.MatchedBy(func(r string) bool {
-					return r != ""
+				d.broadcaster.EXPECT().EvictUser(boardID, targetID, mock.MatchedBy(func(r common.EvictReason) bool {
+					return r != common.EvictReasonSilent
 				}))
 				// 2. MEMBER_REMOVED broadcast to room
 				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
@@ -299,8 +300,8 @@ func TestRemoveMemberBroadcast(t *testing.T) {
 				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).
 					Return(nil, nil)
 
-				d.broadcaster.EXPECT().EvictUser(boardID, targetID, mock.MatchedBy(func(r string) bool {
-					return r != ""
+				d.broadcaster.EXPECT().EvictUser(boardID, targetID, mock.MatchedBy(func(r common.EvictReason) bool {
+					return r != common.EvictReasonSilent
 				}))
 				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
 					_, ok := e.(common.MemberRemoved)
@@ -320,6 +321,40 @@ func TestRemoveMemberBroadcast(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+// --- LeaveBoard cascade-error (Part D review) ---
+
+func TestRemoveMemberCascadeError(t *testing.T) {
+	workspaceID := uuid.New()
+	boardID := uuid.New()
+	requesterID := uuid.New()
+	targetID := uuid.New()
+
+	existingBoard := &entity.Board{ID: boardID, WorkspaceID: workspaceID}
+	adminMember := &entity.WorkspaceMember{WorkspaceID: workspaceID, UserID: requesterID, Role: entity.WorkspaceRoleAdmin}
+
+	validInput := board.RemoveMemberInput{
+		RequesterID: requesterID,
+		WorkspaceID: workspaceID,
+		BoardID:     boardID,
+		UserID:      targetID,
+	}
+
+	t.Run("cascade error — no EvictUser, no broadcast", func(t *testing.T) {
+		d := newDeps(t)
+		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
+		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).
+			Return(nil, domain.ErrBoardMemberNotFound)
+		d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).
+			Return(nil, errors.New("db error"))
+		// broadcaster must NOT be called when the cascade errors (return before broadcast)
+
+		err := d.uc.RemoveMember(context.Background(), validInput)
+		require.Error(t, err)
+		require.ErrorContains(t, err, "failed to remove member from board")
+	})
 }
 
 // --- LeaveBoard (Part D) ---
@@ -345,6 +380,7 @@ func TestLeaveBoardBroadcast(t *testing.T) {
 
 	tests := []struct {
 		name       string
+		wantErr    bool
 		setupMocks func(d boardTestDeps)
 	}{
 		{
@@ -352,7 +388,7 @@ func TestLeaveBoardBroadcast(t *testing.T) {
 			setupMocks: func(d boardTestDeps) {
 				wireBase(d)
 				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).Return(nil, nil)
-				d.broadcaster.EXPECT().EvictUser(boardID, requesterID, "")
+				d.broadcaster.EXPECT().EvictUser(boardID, requesterID, common.EvictReasonSilent)
 				// no MEMBER_REMOVED (voluntary); no CARD_UPDATED (no cleared cards)
 			},
 		},
@@ -362,13 +398,23 @@ func TestLeaveBoardBroadcast(t *testing.T) {
 				wireBase(d)
 				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).
 					Return([]repository.AffectedCard{{CardID: cardID}}, nil)
-				d.broadcaster.EXPECT().EvictUser(boardID, requesterID, "")
+				d.broadcaster.EXPECT().EvictUser(boardID, requesterID, common.EvictReasonSilent)
 				d.broadcaster.EXPECT().Broadcast(boardID, mock.MatchedBy(func(e common.Event) bool {
 					ev, ok := e.(common.CardUpdated)
 					return ok && ev.Card.ID == cardID &&
 						len(ev.ChangedFields) == 1 && ev.ChangedFields[0] == "assigned_to" &&
 						ev.Assignee == nil
 				}))
+			},
+		},
+		{
+			name:    "cascade error — no EvictUser, no broadcast",
+			wantErr: true,
+			setupMocks: func(d boardTestDeps) {
+				wireBase(d)
+				d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).
+					Return(nil, errors.New("db error"))
+				// broadcaster must NOT be called when the cascade errors
 			},
 		},
 	}
@@ -379,6 +425,10 @@ func TestLeaveBoardBroadcast(t *testing.T) {
 			tt.setupMocks(d)
 
 			err := d.uc.LeaveBoard(context.Background(), validInput)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 		})
 	}
@@ -444,7 +494,7 @@ func TestUpdateBoardPrivateEviction(t *testing.T) {
 					_, hasAdmin := set[adminID]
 					_, hasNonMember := set[nonMemberID]
 					return hasMember && hasRequester && hasAdmin && !hasNonMember
-				}), mock.MatchedBy(func(r string) bool { return r != "" }))
+				}), mock.MatchedBy(func(r common.EvictReason) bool { return r != common.EvictReasonSilent }))
 			},
 			input: board.UpdateBoardInput{
 				RequesterID: requesterID,
