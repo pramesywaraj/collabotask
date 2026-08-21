@@ -41,6 +41,11 @@ NOW      docs capture (this handoff, ADR-009, SRS §4.5/§5, CLAUDE.md, memory)
 - Build `OriginPatterns` from `CORS.AllowedOrigins` via `url.Parse().Host`; **fail-fast** on unparseable origin.
 - Add the CSRF-GET invariant comment to [`csrf.go`](../../../collabotask-backend/internal/delivery/http/middleware/csrf.go); handshake CSWSH defense lives in `OriginPatterns` + `SameSite=Lax`.
 
+**C. Pre-existing gofmt debt — one sweep after realtime (Parts A–E) is done. NOT blocking.**
+- Surfaced by the Part D re-review (2026-08-21): `gofmt -l internal/` flags 7 files. **All pre-existing** — verified dirty at merge base `3d81716`, none introduced by Part D (the one gofmt miss Part D *did* introduce, `broadcast_events.go`, was fixed in `b6d7747`).
+- Files: `realtime/broadcast/broadcaster_test.go`, `usecase/board/board_activity_test.go` (both happen to be in Part D's diff but were already dirty), plus untouched `delivery/http/handler/ws_handler_test.go`, `domain/entity/activity.go`, `domain/sentinel_errors.go`, `delivery/http/response/workspace_response.go`, `usecase/board/transfer_ownership_test.go`.
+- **Why defer, not now:** cosmetic only — `go build` / `go vet` / all tests pass; not a Part E prerequisite. Fixing untouched files mid-Part-E would pull unrelated churn into feature diffs. Do it as a **single `gofmt -w ./...` commit once Part E lands**, so all formatting churn is isolated in one place. Consider adding a CI `gofmt` check afterward to stop recurrence.
+
 ---
 
 ## The settled design (condensed)
