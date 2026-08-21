@@ -33,16 +33,58 @@ func (b *HubBroadcaster) Broadcast(boardID uuid.UUID, e common.Event) {
 	b.hub.Broadcast(boardID, msg)
 }
 
-func (b *HubBroadcaster) EvictUser(boardID, userID uuid.UUID, reason string) {
-	b.hub.EvictUser(boardID, userID, reason)
+// EvictUser evicts all connections of userID from boardID. A non-silent reason
+// triggers an ACCESS_REVOKED frame to the target before teardown (involuntary).
+// EvictReasonSilent is a voluntary eviction (e.g. leave_board).
+func (b *HubBroadcaster) EvictUser(boardID, userID uuid.UUID, reason common.EvictReason) {
+	if reason != common.EvictReasonSilent {
+		b.sendAccessRevoked(boardID, userID, reason)
+	}
+	b.hub.EvictUser(boardID, userID, string(reason))
 }
 
-func (b *HubBroadcaster) EvictExcept(boardID uuid.UUID, allowed []uuid.UUID, reason string) {
-	b.hub.EvictExcept(boardID, allowed, reason)
+// EvictExcept evicts every user in boardID not in allowed. A non-silent reason
+// triggers ACCESS_REVOKED to each evicted user before teardown.
+func (b *HubBroadcaster) EvictExcept(boardID uuid.UUID, allowed []uuid.UUID, reason common.EvictReason) {
+	if reason != common.EvictReasonSilent {
+		allowSet := make(map[uuid.UUID]struct{}, len(allowed))
+		for _, id := range allowed {
+			allowSet[id] = struct{}{}
+		}
+		for _, userID := range b.hub.ActiveUsers(boardID) {
+			if _, ok := allowSet[userID]; !ok {
+				b.sendAccessRevoked(boardID, userID, reason)
+			}
+		}
+	}
+	b.hub.EvictExcept(boardID, allowed, string(reason))
 }
 
-func (b *HubBroadcaster) EvictUserFromRooms(userID uuid.UUID, boardIDs []uuid.UUID, reason string) {
-	b.hub.EvictUserFromRooms(userID, boardIDs, reason)
+func (b *HubBroadcaster) EvictUserFromRooms(userID uuid.UUID, boardIDs []uuid.UUID, reason common.EvictReason) {
+	b.hub.EvictUserFromRooms(userID, boardIDs, string(reason))
+}
+
+// sendAccessRevoked marshals and enqueues an ACCESS_REVOKED frame to a specific
+// user in a room. Swallows marshal errors (logs + returns).
+func (b *HubBroadcaster) sendAccessRevoked(boardID uuid.UUID, userID uuid.UUID, reason common.EvictReason) {
+	msg, err := buildAccessRevoked(boardID, reason)
+	if err != nil {
+		log.Error().Err(err).
+			Str("board_id", boardID.String()).
+			Msg("realtime: failed to build ACCESS_REVOKED (swallowed)")
+		return
+	}
+	b.hub.BroadcastToUser(boardID, userID, msg)
+}
+
+func buildAccessRevoked(boardID uuid.UUID, reason common.EvictReason) ([]byte, error) {
+	return json.Marshal(envelope{
+		Type: common.FrameAccessRevoked,
+		Payload: map[string]any{
+			"board_id": boardID,
+			"reason":   string(reason),
+		},
+	})
 }
 
 type envelope struct {
@@ -100,6 +142,11 @@ func marshal(e common.Event) ([]byte, error) {
 			"board_id": ev.BoardID,
 			"user":     response.BoardMemberUserToResponse(ev.User, ev.JoinedAt),
 			"role":     ev.Role,
+		}
+	case common.MemberRemoved:
+		payload = map[string]any{
+			"board_id": ev.BoardID,
+			"user_id":  ev.UserID,
 		}
 	case common.OwnershipTransferred:
 		payload = map[string]any{

@@ -128,6 +128,9 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 				visTo == string(entity.BoardVisibilityPrivate)
 		})).Return(nil)
 		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, mock.Anything).Maybe().Return(nil, nil)
+		d.wsMbrRepo.EXPECT().GetMembersByWorkspace(mock.Anything, mock.Anything).Maybe().Return(nil, nil)
+		d.broadcaster.EXPECT().EvictExcept(mock.Anything, mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
 			RequesterID: requesterID,
@@ -530,6 +533,7 @@ func TestLeaveBoardActivityLog(t *testing.T) {
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(b, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(regularMember, nil)
 		d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).Return([]repository.AffectedCard{}, nil)
+		d.broadcaster.EXPECT().EvictUser(mock.Anything, mock.Anything, mock.Anything).Maybe()
 	}
 
 	input := board.LeaveBoardInput{
@@ -581,6 +585,8 @@ func TestBoardRemoveMemberActivityLog(t *testing.T) {
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(ownerBoardMember, nil)
 		d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, targetID).Return([]repository.AffectedCard{}, nil)
+		d.broadcaster.EXPECT().EvictUser(mock.Anything, mock.Anything, mock.Anything).Maybe()
+		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 	}
 
 	input := board.RemoveMemberInput{

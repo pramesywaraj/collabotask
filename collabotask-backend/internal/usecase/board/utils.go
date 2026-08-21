@@ -1,7 +1,13 @@
 package board
 
 import (
+	"context"
+
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/domain/repository"
+	"collabotask/internal/usecase/common"
+
+	"github.com/google/uuid"
 )
 
 // canAdministerBoard reports whether the requester may administer the board:
@@ -12,4 +18,41 @@ import (
 func canAdministerBoard(boardMember *entity.BoardMember, workspaceMember *entity.WorkspaceMember) bool {
 	return (boardMember != nil && !boardMember.IsEmpty() && boardMember.IsOwner()) ||
 		(workspaceMember != nil && !workspaceMember.IsEmpty() && workspaceMember.IsAdmin())
+}
+
+// evictNonAllowed evicts connected users who are not board members or workspace
+// admins after a WORKSPACE→PRIVATE visibility flip (§4.5 UC-19b). Best-effort:
+// on repo failure it swallows and skips eviction rather than failing the mutation.
+func (bu *BoardUseCase) evictNonAllowed(ctx context.Context, board *entity.Board) {
+	members, err := bu.boardMemberRepo.GetMembersByBoard(ctx, board.ID)
+	if err != nil {
+		return
+	}
+	wsMembers, err := bu.workspaceMemberRepo.GetMembersByWorkspace(ctx, board.WorkspaceID)
+	if err != nil {
+		return
+	}
+
+	allowed := make([]uuid.UUID, 0, len(members)+len(wsMembers))
+	for _, m := range members {
+		allowed = append(allowed, m.UserID)
+	}
+	for _, m := range wsMembers {
+		if m.IsAdmin() {
+			allowed = append(allowed, m.UserID)
+		}
+	}
+	bu.broadcaster.EvictExcept(board.ID, allowed, common.EvictReasonBoardPrivate)
+}
+
+// broadcastClearedCards broadcasts CARD_UPDATED{assigned_to:null} for every
+// card whose assignment was cleared by a participation cascade. Called after
+// eviction so the departing user is already removed from the room.
+func (bu *BoardUseCase) broadcastClearedCards(boardID uuid.UUID, cards []repository.AffectedCard) {
+	for _, card := range cards {
+		bu.broadcaster.Broadcast(boardID, common.CardUpdated{
+			Card:          &entity.Card{ID: card.CardID},
+			ChangedFields: []string{"assigned_to"},
+		})
+	}
 }

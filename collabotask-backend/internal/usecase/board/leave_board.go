@@ -41,8 +41,7 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 		return domain.ErrBoardOwnerCannotLeave
 	}
 
-	// TODO(ws, step ④): broadcast CARD_UPDATED for the returned affected cards.
-	_, err = bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.RequesterID)
+	affectedCards, err := bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.RequesterID)
 	if err != nil {
 		if errors.Is(err, domain.ErrBoardMemberNotFound) {
 			return domain.ErrBoardMemberNotFound
@@ -57,6 +56,11 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 		EntityID:   input.RequesterID,
 		Metadata:   map[string]any{entity.ActivityMetaSource: "board"},
 	})
+
+	// Voluntary leave: evict silently (EvictReasonSilent → no ACCESS_REVOKED).
+	// USER_LEFT presence event covers the room via the hub's onPresence callback.
+	bu.broadcaster.EvictUser(input.BoardID, input.RequesterID, common.EvictReasonSilent)
+	bu.broadcastClearedCards(input.BoardID, affectedCards)
 
 	return nil
 }

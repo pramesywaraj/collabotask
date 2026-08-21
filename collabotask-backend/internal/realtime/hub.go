@@ -88,6 +88,18 @@ func (h *Hub) ActiveUsers(boardID uuid.UUID) []uuid.UUID {
 	return activeUserIDs(h.rooms[boardID])
 }
 
+// BroadcastToUser sends msg to all connections of userID in boardID's room.
+// Used to deliver ACCESS_REVOKED to a specific user before evicting them.
+func (h *Hub) BroadcastToUser(boardID, userID uuid.UUID, msg []byte) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if room := h.rooms[boardID]; room != nil {
+		for _, c := range room[userID] {
+			c.Send(msg)
+		}
+	}
+}
+
 // Broadcast sends msg to every Conn in boardID's room.
 // A full send buffer drops that Conn (slow-consumer policy). The lock is
 // released before any socket write; non-blocking sends only under RLock.

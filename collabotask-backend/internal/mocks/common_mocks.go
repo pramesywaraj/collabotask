@@ -335,7 +335,7 @@ func (_c *MockBroadcaster_Broadcast_Call) RunAndReturn(run func(boardID uuid.UUI
 }
 
 // EvictExcept provides a mock function for the type MockBroadcaster
-func (_mock *MockBroadcaster) EvictExcept(boardID uuid.UUID, allowed []uuid.UUID, reason string) {
+func (_mock *MockBroadcaster) EvictExcept(boardID uuid.UUID, allowed []uuid.UUID, reason common.EvictReason) {
 	_mock.Called(boardID, allowed, reason)
 	return
 }
@@ -348,12 +348,12 @@ type MockBroadcaster_EvictExcept_Call struct {
 // EvictExcept is a helper method to define mock.On call
 //   - boardID uuid.UUID
 //   - allowed []uuid.UUID
-//   - reason string
+//   - reason common.EvictReason
 func (_e *MockBroadcaster_Expecter) EvictExcept(boardID any, allowed any, reason any) *MockBroadcaster_EvictExcept_Call {
 	return &MockBroadcaster_EvictExcept_Call{Call: _e.mock.On("EvictExcept", boardID, allowed, reason)}
 }
 
-func (_c *MockBroadcaster_EvictExcept_Call) Run(run func(boardID uuid.UUID, allowed []uuid.UUID, reason string)) *MockBroadcaster_EvictExcept_Call {
+func (_c *MockBroadcaster_EvictExcept_Call) Run(run func(boardID uuid.UUID, allowed []uuid.UUID, reason common.EvictReason)) *MockBroadcaster_EvictExcept_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
@@ -363,9 +363,9 @@ func (_c *MockBroadcaster_EvictExcept_Call) Run(run func(boardID uuid.UUID, allo
 		if args[1] != nil {
 			arg1 = args[1].([]uuid.UUID)
 		}
-		var arg2 string
+		var arg2 common.EvictReason
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(common.EvictReason)
 		}
 		run(
 			arg0,
@@ -381,13 +381,13 @@ func (_c *MockBroadcaster_EvictExcept_Call) Return() *MockBroadcaster_EvictExcep
 	return _c
 }
 
-func (_c *MockBroadcaster_EvictExcept_Call) RunAndReturn(run func(boardID uuid.UUID, allowed []uuid.UUID, reason string)) *MockBroadcaster_EvictExcept_Call {
+func (_c *MockBroadcaster_EvictExcept_Call) RunAndReturn(run func(boardID uuid.UUID, allowed []uuid.UUID, reason common.EvictReason)) *MockBroadcaster_EvictExcept_Call {
 	_c.Run(run)
 	return _c
 }
 
 // EvictUser provides a mock function for the type MockBroadcaster
-func (_mock *MockBroadcaster) EvictUser(boardID uuid.UUID, userID uuid.UUID, reason string) {
+func (_mock *MockBroadcaster) EvictUser(boardID uuid.UUID, userID uuid.UUID, reason common.EvictReason) {
 	_mock.Called(boardID, userID, reason)
 	return
 }
@@ -400,12 +400,12 @@ type MockBroadcaster_EvictUser_Call struct {
 // EvictUser is a helper method to define mock.On call
 //   - boardID uuid.UUID
 //   - userID uuid.UUID
-//   - reason string
+//   - reason common.EvictReason
 func (_e *MockBroadcaster_Expecter) EvictUser(boardID any, userID any, reason any) *MockBroadcaster_EvictUser_Call {
 	return &MockBroadcaster_EvictUser_Call{Call: _e.mock.On("EvictUser", boardID, userID, reason)}
 }
 
-func (_c *MockBroadcaster_EvictUser_Call) Run(run func(boardID uuid.UUID, userID uuid.UUID, reason string)) *MockBroadcaster_EvictUser_Call {
+func (_c *MockBroadcaster_EvictUser_Call) Run(run func(boardID uuid.UUID, userID uuid.UUID, reason common.EvictReason)) *MockBroadcaster_EvictUser_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
@@ -415,9 +415,9 @@ func (_c *MockBroadcaster_EvictUser_Call) Run(run func(boardID uuid.UUID, userID
 		if args[1] != nil {
 			arg1 = args[1].(uuid.UUID)
 		}
-		var arg2 string
+		var arg2 common.EvictReason
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(common.EvictReason)
 		}
 		run(
 			arg0,
@@ -433,13 +433,13 @@ func (_c *MockBroadcaster_EvictUser_Call) Return() *MockBroadcaster_EvictUser_Ca
 	return _c
 }
 
-func (_c *MockBroadcaster_EvictUser_Call) RunAndReturn(run func(boardID uuid.UUID, userID uuid.UUID, reason string)) *MockBroadcaster_EvictUser_Call {
+func (_c *MockBroadcaster_EvictUser_Call) RunAndReturn(run func(boardID uuid.UUID, userID uuid.UUID, reason common.EvictReason)) *MockBroadcaster_EvictUser_Call {
 	_c.Run(run)
 	return _c
 }
 
 // EvictUserFromRooms provides a mock function for the type MockBroadcaster
-func (_mock *MockBroadcaster) EvictUserFromRooms(userID uuid.UUID, boardIDs []uuid.UUID, reason string) {
+func (_mock *MockBroadcaster) EvictUserFromRooms(userID uuid.UUID, boardIDs []uuid.UUID, reason common.EvictReason) {
 	_mock.Called(userID, boardIDs, reason)
 	return
 }
@@ -452,12 +452,12 @@ type MockBroadcaster_EvictUserFromRooms_Call struct {
 // EvictUserFromRooms is a helper method to define mock.On call
 //   - userID uuid.UUID
 //   - boardIDs []uuid.UUID
-//   - reason string
+//   - reason common.EvictReason
 func (_e *MockBroadcaster_Expecter) EvictUserFromRooms(userID any, boardIDs any, reason any) *MockBroadcaster_EvictUserFromRooms_Call {
 	return &MockBroadcaster_EvictUserFromRooms_Call{Call: _e.mock.On("EvictUserFromRooms", userID, boardIDs, reason)}
 }
 
-func (_c *MockBroadcaster_EvictUserFromRooms_Call) Run(run func(userID uuid.UUID, boardIDs []uuid.UUID, reason string)) *MockBroadcaster_EvictUserFromRooms_Call {
+func (_c *MockBroadcaster_EvictUserFromRooms_Call) Run(run func(userID uuid.UUID, boardIDs []uuid.UUID, reason common.EvictReason)) *MockBroadcaster_EvictUserFromRooms_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 uuid.UUID
 		if args[0] != nil {
@@ -467,9 +467,9 @@ func (_c *MockBroadcaster_EvictUserFromRooms_Call) Run(run func(userID uuid.UUID
 		if args[1] != nil {
 			arg1 = args[1].([]uuid.UUID)
 		}
-		var arg2 string
+		var arg2 common.EvictReason
 		if args[2] != nil {
-			arg2 = args[2].(string)
+			arg2 = args[2].(common.EvictReason)
 		}
 		run(
 			arg0,
@@ -485,7 +485,7 @@ func (_c *MockBroadcaster_EvictUserFromRooms_Call) Return() *MockBroadcaster_Evi
 	return _c
 }
 
-func (_c *MockBroadcaster_EvictUserFromRooms_Call) RunAndReturn(run func(userID uuid.UUID, boardIDs []uuid.UUID, reason string)) *MockBroadcaster_EvictUserFromRooms_Call {
+func (_c *MockBroadcaster_EvictUserFromRooms_Call) RunAndReturn(run func(userID uuid.UUID, boardIDs []uuid.UUID, reason common.EvictReason)) *MockBroadcaster_EvictUserFromRooms_Call {
 	_c.Run(run)
 	return _c
 }

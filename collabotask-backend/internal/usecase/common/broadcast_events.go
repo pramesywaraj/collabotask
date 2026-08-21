@@ -62,6 +62,11 @@ type MemberAdded struct {
 	JoinedAt time.Time
 }
 
+type MemberRemoved struct {
+	BoardID uuid.UUID
+	UserID  uuid.UUID
+}
+
 type OwnershipTransferred struct {
 	BoardID    uuid.UUID
 	FromUserID *uuid.UUID
@@ -79,17 +84,18 @@ type BoardArchivedSet struct {
 	Archived bool
 }
 
-func (CardCreated) FrameType() FrameType        { return FrameCardCreated }
-func (CardMoved) FrameType() FrameType          { return FrameCardMoved }
-func (CardUpdated) FrameType() FrameType        { return FrameCardUpdated }
-func (CardDeleted) FrameType() FrameType        { return FrameCardDeleted }
-func (ColumnCreated) FrameType() FrameType      { return FrameColumnCreated }
-func (ColumnUpdated) FrameType() FrameType      { return FrameColumnUpdated }
-func (ColumnDeleted) FrameType() FrameType      { return FrameColumnDeleted }
-func (ColumnMoved) FrameType() FrameType        { return FrameColumnMoved }
-func (MemberAdded) FrameType() FrameType        { return FrameMemberAdded }
+func (CardCreated) FrameType() FrameType          { return FrameCardCreated }
+func (CardMoved) FrameType() FrameType            { return FrameCardMoved }
+func (CardUpdated) FrameType() FrameType          { return FrameCardUpdated }
+func (CardDeleted) FrameType() FrameType          { return FrameCardDeleted }
+func (ColumnCreated) FrameType() FrameType        { return FrameColumnCreated }
+func (ColumnUpdated) FrameType() FrameType        { return FrameColumnUpdated }
+func (ColumnDeleted) FrameType() FrameType        { return FrameColumnDeleted }
+func (ColumnMoved) FrameType() FrameType          { return FrameColumnMoved }
+func (MemberAdded) FrameType() FrameType          { return FrameMemberAdded }
+func (MemberRemoved) FrameType() FrameType        { return FrameMemberRemoved }
 func (OwnershipTransferred) FrameType() FrameType { return FrameOwnershipTransferred }
-func (BoardUpdated) FrameType() FrameType       { return FrameBoardUpdated }
+func (BoardUpdated) FrameType() FrameType         { return FrameBoardUpdated }
 func (e BoardArchivedSet) FrameType() FrameType {
 	if e.Archived {
 		return FrameBoardArchived

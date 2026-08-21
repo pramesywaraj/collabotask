@@ -543,6 +543,72 @@ func TestEvictUserFromRooms_EvictsAcrossBoards(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Slice 6 — BroadcastToUser (targeted delivery before eviction)
+// ---------------------------------------------------------------------------
+
+func TestBroadcastToUser_DeliversOnlyToTargetUser(t *testing.T) {
+	ctx := context.Background()
+	h, _ := newHub(t)
+	boardID := uuid.New()
+	target, bystander := uuid.New(), uuid.New()
+
+	fsT, cT := registerConn(ctx, h, target)
+	fsB, cB := registerConn(ctx, h, bystander)
+	defer fsT.disconnect()
+	defer fsB.disconnect()
+
+	h.Join(boardID, cT)
+	h.Join(boardID, cB)
+
+	msg := []byte(`{"type":"ACCESS_REVOKED"}`)
+	h.BroadcastToUser(boardID, target, msg)
+
+	require.Eventually(t, func() bool {
+		return len(fsT.writtenMsgs()) == 1
+	}, 2*time.Second, 10*time.Millisecond)
+
+	assert.Equal(t, msg, fsT.writtenMsgs()[0])
+	time.Sleep(20 * time.Millisecond)
+	assert.Empty(t, fsB.writtenMsgs(), "bystander must not receive targeted message")
+}
+
+func TestBroadcastToUser_MultiTab_AllConnsReceive(t *testing.T) {
+	ctx := context.Background()
+	h, _ := newHub(t)
+	boardID := uuid.New()
+	userID := uuid.New()
+
+	fs1, c1 := registerConn(ctx, h, userID)
+	fs2, c2 := registerConn(ctx, h, userID)
+	defer fs1.disconnect()
+	defer fs2.disconnect()
+
+	h.Join(boardID, c1)
+	h.Join(boardID, c2)
+
+	msg := []byte(`{"type":"ACCESS_REVOKED"}`)
+	h.BroadcastToUser(boardID, userID, msg)
+
+	require.Eventually(t, func() bool {
+		return len(fs1.writtenMsgs()) == 1 && len(fs2.writtenMsgs()) == 1
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestBroadcastToUser_UnknownBoard_IsNoop(t *testing.T) {
+	ctx := context.Background()
+	h, _ := newHub(t)
+	userID := uuid.New()
+
+	fs, _ := registerConn(ctx, h, userID)
+	defer fs.disconnect()
+
+	// no Join → no room → should not panic
+	h.BroadcastToUser(uuid.New(), userID, []byte(`{}`))
+	time.Sleep(20 * time.Millisecond)
+	assert.Empty(t, fs.writtenMsgs())
+}
+
+// ---------------------------------------------------------------------------
 // Race sanity
 // ---------------------------------------------------------------------------
 

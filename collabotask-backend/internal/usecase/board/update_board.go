@@ -119,6 +119,13 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 			Board:         board,
 			ChangedFields: changedFields,
 		})
+
+		// WORKSPACE→PRIVATE flip: evict connected users who lost access (§4.5 UC-19b).
+		// Allowed = board members ∪ workspace admins (break-glass). Non-empty reason
+		// triggers ACCESS_REVOKED to each evicted user via the adapter.
+		if board.Visibility == entity.BoardVisibilityPrivate && oldVisibility != "" {
+			bu.evictNonAllowed(ctx, board)
+		}
 	}
 
 	return &UpdateBoardOutput{

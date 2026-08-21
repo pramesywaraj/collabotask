@@ -122,7 +122,8 @@ func TestUpdateBoard(t *testing.T) {
 			name:  "boardRepo.Update fails → wrapped error",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				b := *existingBoard
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(&b, nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
 				d.boardRepo.EXPECT().Update(mock.Anything, mock.Anything).Return(errors.New("db error"))
@@ -204,6 +205,9 @@ func TestUpdateBoard(t *testing.T) {
 			d := newDeps(t)
 			d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 			d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+			d.boardMbrRepo.EXPECT().GetMembersByBoard(mock.Anything, mock.Anything).Maybe().Return(nil, nil)
+			d.wsMbrRepo.EXPECT().GetMembersByWorkspace(mock.Anything, mock.Anything).Maybe().Return(nil, nil)
+			d.broadcaster.EXPECT().EvictExcept(mock.Anything, mock.Anything, mock.Anything).Maybe()
 			tt.setupMocks(d)
 
 			out, err := d.uc.UpdateBoard(context.Background(), tt.input)
