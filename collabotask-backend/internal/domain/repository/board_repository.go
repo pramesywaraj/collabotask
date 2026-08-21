@@ -12,5 +12,10 @@ type BoardRepository interface {
 	Update(ctx context.Context, board *entity.Board) error
 	GetByID(ctx context.Context, boardID uuid.UUID) (*entity.Board, error)
 	GetUserBoardsInWorkspace(ctx context.Context, workspaceID, userID uuid.UUID) ([]*entity.BoardListItem, error)
+	// GetBoardIDsByWorkspace returns the IDs of every board in the workspace
+	// (archived included). The participation-cascade fan-out uses it to evict a
+	// removed user from all workspace board rooms — including WORKSPACE-visible
+	// boards they watched without joining (not captured by AffectedBoardIDs).
+	GetBoardIDsByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)
 	SetArchived(ctx context.Context, boardID uuid.UUID, archived bool) error
 }

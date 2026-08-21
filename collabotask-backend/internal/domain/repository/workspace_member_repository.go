@@ -7,11 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// AffectedCard carries the card and column IDs cleared by a participation cascade.
-// Returned even when nothing broadcasts yet so step ④ is a pure add (wire broadcast, no repo change).
+// AffectedCard carries the card, column, and board IDs cleared by a participation
+// cascade. BoardID routes the CARD_UPDATED broadcast to the right room — required
+// by the workspace cascade, whose cleared cards span multiple boards (Part E).
 type AffectedCard struct {
 	CardID   uuid.UUID
 	ColumnID uuid.UUID
+	BoardID  uuid.UUID
 }
 
 // WorkspaceCascadeResult holds the entities affected by a workspace-member

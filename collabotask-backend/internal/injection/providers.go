@@ -72,10 +72,12 @@ func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) 
 func ProvideWorkspaceUseCase(
 	workspaceRepo repository.WorkspaceRepository,
 	workspaceMemberRepo repository.WorkspaceMemberRepository,
+	boardRepo repository.BoardRepository,
 	userRepo repository.UserRepository,
 	activityRepo repository.ActivityRepository,
+	broadcaster common.Broadcaster,
 ) *workspace.WorkspaceUseCase {
-	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, userRepo, activityRepo)
+	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
 }
 func ProvideBroadcaster(hub *realtime.Hub) common.Broadcaster {
 	return broadcast.NewHubBroadcaster(hub)

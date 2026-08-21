@@ -60,7 +60,15 @@ func (b *HubBroadcaster) EvictExcept(boardID uuid.UUID, allowed []uuid.UUID, rea
 	b.hub.EvictExcept(boardID, allowed, string(reason))
 }
 
+// EvictUserFromRooms evicts userID from every listed board. A non-silent reason
+// triggers a targeted ACCESS_REVOKED per board before teardown (each carrying its
+// own board_id). Sending to a board the user is not in is a harmless no-op.
 func (b *HubBroadcaster) EvictUserFromRooms(userID uuid.UUID, boardIDs []uuid.UUID, reason common.EvictReason) {
+	if reason != common.EvictReasonSilent {
+		for _, boardID := range boardIDs {
+			b.sendAccessRevoked(boardID, userID, reason)
+		}
+	}
 	b.hub.EvictUserFromRooms(userID, boardIDs, string(reason))
 }
 

@@ -64,4 +64,12 @@ const (
 		WHERE id = $1
 		RETURNING id, workspace_id, title, description, created_by, is_archived, background_color, visibility, created_at, updated_at
 	`
+	// getBoardIDsByWorkspaceQuery lists every board id in a workspace (archived
+	// included). Used by the participation-cascade fan-out to evict a removed user
+	// from all workspace board rooms — including WORKSPACE-visible boards they
+	// watched without joining (not captured by AffectedBoardIDs). Evicting a room
+	// the user is not in is a harmless no-op.
+	getBoardIDsByWorkspaceQuery = `
+		SELECT id FROM boards WHERE workspace_id = $1
+	`
 )

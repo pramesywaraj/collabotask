@@ -615,9 +615,9 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 | `USER_JOINED` | `{ board_id, user{id,name,avatar_url}, timestamp }` | UC-09, UC-18 |
 | `USER_LEFT` | `{ board_id, user_id, timestamp }` | UC-10, UC-18 |
 | `ACTIVE_USERS` | `{ board_id, users:[{id,name,avatar_url,joined_at}] }` | sent to joiner (UC-19) |
-| `ACCESS_REVOKED` | `{ board_id, reason }` | sent to an **involuntarily** evicted connection (UC-19b) — removal or WORKSPACE→PRIVATE flip. Voluntary leaves evict silently. |
+| `ACCESS_REVOKED` | `{ board_id, reason }` | sent to an **involuntarily** evicted connection (UC-19b) — board removal (UC-12d), workspace removal (UC-06), or WORKSPACE→PRIVATE flip (UC-12b). Voluntary leaves evict silently. |
 | `MEMBER_ADDED` | `{ board_id, user{id,email,name,avatar_url,joined_at}, role }` | UC-11 |
-| `MEMBER_REMOVED` | `{ board_id, user_id }` | UC-12d |
+| `MEMBER_REMOVED` | `{ board_id, user_id }` | UC-12d; workspace cascade (UC-06/06c) |
 | `OWNERSHIP_TRANSFERRED` | `{ board_id, from_user_id, to_user_id }` (`from_user_id` may be `null` — orphan-safe transfer) | UC-12e |
 | `BOARD_UPDATED` | `{ board_id, fields:{…} }` | UC-12b |
 | `BOARD_ARCHIVED` / `BOARD_UNARCHIVED` | `{ board_id }` | UC-12c |
@@ -627,7 +627,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 | `COLUMN_MOVED` | `{ column_id, position }` | UC-13d |
 | `CARD_CREATED` | `{ card{…} }` | UC-14 |
 | `CARD_MOVED` | `{ card_id, from_column_id, to_column_id, position }` | UC-15 |
-| `CARD_UPDATED` | `{ card_id, fields:{…} }` | UC-16 |
+| `CARD_UPDATED` | `{ card_id, fields:{…} }` | UC-16; participation cascade unassign (UC-10/12d board, UC-06/06c workspace) |
 | `CARD_DELETED` | `{ card_id, column_id }` | UC-17 |
 
 **Broadcast rule:** by default broadcast to all room members **including** the sender (so optimistic clients reconcile against the authoritative payload), except `ACTIVE_USERS` which is sent only to the joiner.

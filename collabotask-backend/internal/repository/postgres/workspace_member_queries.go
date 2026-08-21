@@ -47,6 +47,6 @@ const (
 		FROM columns col
 		JOIN boards b ON col.board_id = b.id
 		WHERE c.column_id = col.id AND b.workspace_id = $1 AND c.assigned_to = $2
-		RETURNING c.id, c.column_id
+		RETURNING c.id, c.column_id, b.id
 	`
 )

@@ -210,7 +210,7 @@ func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.
 	var affectedCards []repository.AffectedCard
 	for cardRows.Next() {
 		var card repository.AffectedCard
-		if err := cardRows.Scan(&card.CardID, &card.ColumnID); err != nil {
+		if err := cardRows.Scan(&card.CardID, &card.ColumnID, &card.BoardID); err != nil {
 			return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to scan affected card: %w", err)
 		}
 		affectedCards = append(affectedCards, card)

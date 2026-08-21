@@ -57,5 +57,8 @@ func (wu *WorkspaceUseCase) LeaveWorkspace(ctx context.Context, input LeaveWorks
 		})
 	}
 
+	// Voluntary leave → silent eviction (UC-06c); rooms learn via USER_LEFT.
+	wu.fanOutParticipationCascade(ctx, input.WorkspaceID, input.RequesterID, result, common.EvictReasonSilent)
+
 	return nil
 }
