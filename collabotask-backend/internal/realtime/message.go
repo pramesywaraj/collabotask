@@ -12,13 +12,6 @@ const (
 	MsgTypeLeaveBoard MsgType = "LEAVE_BOARD"
 )
 
-// IncomingMessage is the minimal envelope for client → server frames.
-// Unmarshal only; validate BoardID before acting.
-type IncomingMessage struct {
-	Type    MsgType   `json:"type"`
-	BoardID uuid.UUID `json:"board_id"`
-}
-
 // FrameType identifies an outgoing server → client frame. Named for the same
 // compiler-safety reason as MsgType.
 type FrameType string
@@ -30,15 +23,40 @@ const (
 	FrameTypeUserLeft    FrameType = "USER_LEFT"
 )
 
-// ActiveUsersFrame is sent to the joining conn only on JOIN_BOARD success.
-type ActiveUsersFrame struct {
-	Type    FrameType   `json:"type"`
-	BoardID uuid.UUID   `json:"board_id"`
-	UserIDs []uuid.UUID `json:"user_ids"`
+// PresenceUser carries the profile fields embedded in presence frames (ADR-014).
+// AvatarURL is nil when the user has no avatar set.
+type PresenceUser struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	AvatarURL *string   `json:"avatar_url"`
 }
 
-// UserPresenceFrame is broadcast to the room on a 0→1 (USER_JOINED) or 1→0 (USER_LEFT) edge.
-type UserPresenceFrame struct {
+// IncomingMessage is the minimal envelope for client → server frames.
+// Unmarshal only; validate BoardID before acting.
+type IncomingMessage struct {
+	Type    MsgType   `json:"type"`
+	BoardID uuid.UUID `json:"board_id"`
+}
+
+// ActiveUsersFrame is sent to the joining conn only on JOIN_BOARD success.
+// Users carries the enriched profiles of every connected user in the room.
+type ActiveUsersFrame struct {
+	Type    FrameType      `json:"type"`
+	BoardID uuid.UUID      `json:"board_id"`
+	Users   []PresenceUser `json:"users"`
+}
+
+// UserJoinedFrame is broadcast to the room on a 0→1 presence edge.
+// User carries the enriched profile of the joining user (ADR-014).
+type UserJoinedFrame struct {
+	Type    FrameType    `json:"type"`
+	BoardID uuid.UUID    `json:"board_id"`
+	User    PresenceUser `json:"user"`
+}
+
+// UserLeftFrame is broadcast to the room on a 1→0 presence edge.
+// Stays thin — removal keys on user_id; no profile needed to drop an avatar.
+type UserLeftFrame struct {
 	Type    FrameType `json:"type"`
 	BoardID uuid.UUID `json:"board_id"`
 	UserID  uuid.UUID `json:"user_id"`

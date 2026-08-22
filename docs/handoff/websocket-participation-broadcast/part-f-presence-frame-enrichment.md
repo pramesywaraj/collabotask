@@ -1,7 +1,7 @@
 # Part F — Presence Frame Enrichment (post-④ refinement)
 
 **Date:** 2026-08-22
-**Status:** **Planning handoff — nothing built yet.** Contract docs done (ADR-014, SRS §5.2/§5.3/§4.5); code pending.
+**Status:** **Built + reviewed ✅ 2026-08-22.** Contract docs (ADR-014, SRS §5.2/§5.3/§4.5) + implementation done; two-axis `/code-review` clean, `go test -race ./...` green. Staged, not committed.
 **Design source:** [ADR-014](../../architecture/adr/adr-014-presence-frame-enrichment.md) (decision + rationale), SRS §5.2/§5.3/§4.5 (the wire contract). Born from the **④ two-axis `/code-review`** (base `dda8215`) — Spec-axis finding #5 (presence frames diverged from §5.2 + the SRS contradicted itself).
 
 > **This does not reopen ④'s completion.** Parts A–E stand as built. This is a small, self-contained refinement of the presence payload that the ④ review surfaced. It reopens only the Part-B presence seam (frame shapes + the `handleJoin`/`onPresence` build sites), not the hub, eviction, or the `Broadcaster` port.
@@ -60,5 +60,5 @@ users, err := h.userRepo.GetByIds(ctx, []uuid.UUID{userID})
 ## Build status & definition of done
 
 - **Docs:** ADR-014 + SRS §5.2/§5.3/§4.5 ✅ 2026-08-22. `ACCESS_REVOKED.reason` enum pinned (#6) ✅.
-- **Code:** ⏳ not started.
-- **Done when:** rich frames shipped per the checklist, `go build`/`go vet`/`go test -race ./...` green, `gofmt -l` clean, then CLAUDE.md `## Now` + memory `[[websocket-participation-broadcast-design]]` updated to note the enrichment.
+- **Code:** ✅ **built 2026-08-22** — 5 files: `message.go` (added `PresenceUser`; rich `ActiveUsersFrame`/`UserJoinedFrame`; thin `UserLeftFrame`; replaced the `presenceFrameType` map with an explicit JOIN/LEFT switch since the payloads now diverge), `ws_handler.go` (`enrichUsers`/`enrichSingleUser` best-effort swallow + `userRepo` dep), `ProvideWSHandler` + regenerated `wire_gen.go`, `ws_handler_test.go`. **Two-axis `/code-review` clean — 0 hard-standards, 0 spec findings** (3 trivial judgement calls, none changed). `go build`/`go vet`/`gofmt -l` clean; `go test -race ./...` all green. All 6 test-checklist items covered.
+- **Done:** ✅ CLAUDE.md `## Now` + memory `[[websocket-participation-broadcast-design]]` updated. Implementation staged, not committed (awaiting review).

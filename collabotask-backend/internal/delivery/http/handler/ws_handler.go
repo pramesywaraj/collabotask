@@ -7,12 +7,15 @@ import (
 	"time"
 
 	"collabotask/internal/delivery/http/middleware"
+	"collabotask/internal/domain/entity"
+	"collabotask/internal/domain/repository"
 	"collabotask/internal/realtime"
 	"collabotask/internal/usecase/common"
 
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 // WSHandler upgrades HTTP → WebSocket and drives the room lifecycle.
@@ -21,13 +24,15 @@ import (
 type WSHandler struct {
 	hub            *realtime.Hub
 	access         common.BoardAccessChecker
+	userRepo       repository.UserRepository
 	originPatterns []string
 }
 
-func NewWSHandler(hub *realtime.Hub, access common.BoardAccessChecker, originPatterns []string) *WSHandler {
+func NewWSHandler(hub *realtime.Hub, access common.BoardAccessChecker, userRepo repository.UserRepository, originPatterns []string) *WSHandler {
 	h := &WSHandler{
 		hub:            hub,
 		access:         access,
+		userRepo:       userRepo,
 		originPatterns: originPatterns,
 	}
 	hub.SetPresence(h.onPresence) // once, at startup, before any conn registers
@@ -106,10 +111,13 @@ func (h *WSHandler) handleJoin(ctx context.Context, conn *realtime.Conn, boardID
 		return // denied or timed out — silently ignore
 	}
 	snapshot := h.hub.Join(boardID, conn)
+	// Enrich the snapshot with profiles; piggybacks the CheckViewAccess round-trip
+	// already in this bounded context window (ADR-014).
+	users := h.enrichUsers(ctx, snapshot)
 	frame, _ := json.Marshal(realtime.ActiveUsersFrame{
 		Type:    realtime.FrameTypeActiveUsers,
 		BoardID: boardID,
-		UserIDs: snapshot,
+		Users:   users,
 	})
 	conn.Send(frame) // send ACTIVE_USERS to the joining conn only
 }
@@ -121,30 +129,86 @@ func (h *WSHandler) handleLeave(conn *realtime.Conn, boardID uuid.UUID) {
 }
 
 // onPresence is the Hub's edge callback. Called outside the hub lock.
-// Broadcasts USER_JOINED or USER_LEFT to the room (including the joining user's other tabs).
+// Broadcasts USER_JOINED (rich) or USER_LEFT (thin) to the room.
 //
 // Ordering note: on a 0→1 join this fires INSIDE hub.Join, so the joiner receives
 // USER_JOINED{self} on its own channel BEFORE handleJoin sends ACTIVE_USERS. That's
 // fine by contract — the client treats ACTIVE_USERS as an authoritative snapshot
 // (replace) and USER_JOINED/USER_LEFT as idempotent deltas, so a self-echo before
 // the snapshot is a no-op.
-// presenceFrameType maps a hub presence edge to its wire frame type. A kind with
-// no entry (e.g. an unrecognised PresenceKind) yields ok=false, which suppresses
-// the broadcast — replacing the old switch's default: return.
-var presenceFrameType = map[realtime.PresenceKind]realtime.FrameType{
-	realtime.PresenceJoined: realtime.FrameTypeUserJoined,
-	realtime.PresenceLeft:   realtime.FrameTypeUserLeft,
+func (h *WSHandler) onPresence(boardID, userID uuid.UUID, kind realtime.PresenceKind) {
+	switch kind {
+	case realtime.PresenceJoined:
+		// One bounded, best-effort GetByIds per 0→1 edge (ADR-014: honest added cost,
+		// low-frequency). Can't reuse handleJoin's context — this is a hub-wide callback.
+		ctx, cancel := context.WithTimeout(context.Background(), dbJoinCheckTimeout)
+		defer cancel()
+		user := h.enrichSingleUser(ctx, userID)
+		frame, _ := json.Marshal(realtime.UserJoinedFrame{
+			Type:    realtime.FrameTypeUserJoined,
+			BoardID: boardID,
+			User:    user,
+		})
+		h.hub.Broadcast(boardID, frame)
+
+	case realtime.PresenceLeft:
+		// USER_LEFT stays thin — removal keys on user_id; no profile needed (ADR-014).
+		frame, _ := json.Marshal(realtime.UserLeftFrame{
+			Type:    realtime.FrameTypeUserLeft,
+			BoardID: boardID,
+			UserID:  userID,
+		})
+		h.hub.Broadcast(boardID, frame)
+	}
 }
 
-func (h *WSHandler) onPresence(boardID, userID uuid.UUID, kind realtime.PresenceKind) {
-	frameType, ok := presenceFrameType[kind]
-	if !ok {
-		return
+// enrichUsers maps a slice of user IDs to PresenceUser profiles via a single
+// GetByIds call. Best-effort: on lookup error it logs, swallows, and returns
+// degraded entries (ID only). Missing IDs in a partial map are skipped silently.
+func (h *WSHandler) enrichUsers(ctx context.Context, ids []uuid.UUID) []realtime.PresenceUser {
+	if len(ids) == 0 {
+		return nil
 	}
-	frame, _ := json.Marshal(realtime.UserPresenceFrame{
-		Type:    frameType,
-		BoardID: boardID,
-		UserID:  userID,
-	})
-	h.hub.Broadcast(boardID, frame)
+	userMap, err := h.userRepo.GetByIds(ctx, ids)
+	if err != nil {
+		log.Error().Err(err).Msg("presence ACTIVE_USERS enrichment failed (swallowed)")
+		out := make([]realtime.PresenceUser, len(ids))
+		for i, id := range ids {
+			out[i] = realtime.PresenceUser{ID: id}
+		}
+		return out
+	}
+	out := make([]realtime.PresenceUser, 0, len(ids))
+	for _, id := range ids {
+		u, ok := userMap[id]
+		if !ok {
+			continue // partial map: skip missing entry, not a nil-deref
+		}
+		out = append(out, presenceUserFrom(u))
+	}
+	return out
+}
+
+// enrichSingleUser fetches the profile for one user ID. Best-effort: on lookup
+// error or missing result it logs and returns a degraded entry (ID only).
+func (h *WSHandler) enrichSingleUser(ctx context.Context, userID uuid.UUID) realtime.PresenceUser {
+	userMap, err := h.userRepo.GetByIds(ctx, []uuid.UUID{userID})
+	if err != nil {
+		log.Error().Err(err).Str("user_id", userID.String()).
+			Msg("presence USER_JOINED enrichment failed (swallowed)")
+		return realtime.PresenceUser{ID: userID}
+	}
+	u, ok := userMap[userID]
+	if !ok {
+		return realtime.PresenceUser{ID: userID}
+	}
+	return presenceUserFrom(u)
+}
+
+func presenceUserFrom(u *entity.User) realtime.PresenceUser {
+	return realtime.PresenceUser{
+		ID:        u.ID,
+		Name:      u.Name,
+		AvatarURL: u.AvatarURL,
+	}
 }

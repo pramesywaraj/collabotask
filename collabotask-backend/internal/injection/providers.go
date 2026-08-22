@@ -154,8 +154,9 @@ func ProvideWSHandler(
 	cfg *config.Config,
 	hub *realtime.Hub,
 	access common.BoardAccessChecker,
+	userRepo repository.UserRepository,
 ) *handler.WSHandler {
-	return handler.NewWSHandler(hub, access, cfg.WSOriginPatterns())
+	return handler.NewWSHandler(hub, access, userRepo, cfg.WSOriginPatterns())
 }
 
 // Router
