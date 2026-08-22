@@ -34,14 +34,14 @@ func TestMarshal_CardCreated(t *testing.T) {
 	assigneeID := uuid.New()
 
 	card := &entity.Card{
-		ID:       cardID,
-		ColumnID: colID,
-		Title:    "Fix bug",
-		Position: 1000,
+		ID:         cardID,
+		ColumnID:   colID,
+		Title:      "Fix bug",
+		Position:   1000,
 		AssignedTo: &assigneeID,
-		CreatedBy: userID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedBy:  userID,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
 	assignee := &entity.User{ID: assigneeID, Name: "Alice", AvatarURL: nil}
 
@@ -88,9 +88,9 @@ func TestMarshal_CardUpdated_OnlyChangedFields(t *testing.T) {
 	userID := uuid.New()
 
 	card := &entity.Card{
-		ID:       cardID,
-		ColumnID: colID,
-		Title:    "New Title",
+		ID:        cardID,
+		ColumnID:  colID,
+		Title:     "New Title",
 		CreatedBy: userID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),

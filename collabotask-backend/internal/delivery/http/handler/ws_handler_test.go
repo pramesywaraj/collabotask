@@ -52,7 +52,7 @@ func (s *stubSocket) Read(_ context.Context) ([]byte, error) {
 }
 
 func (s *stubSocket) Ping(_ context.Context) error { return nil }
-func (s *stubSocket) Close(_ string) error          { return nil }
+func (s *stubSocket) Close(_ string) error         { return nil }
 
 // disconnect unblocks the readPump (simulates remote close).
 func (s *stubSocket) disconnect() {
