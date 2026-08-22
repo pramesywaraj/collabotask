@@ -116,6 +116,18 @@ Each part is a natural PR-sized checkpoint. Write its `part-x-*.md` detail file 
 
 ---
 
+## Post-④ refinement — Presence frame enrichment (F)
+
+Surfaced by the **④ two-axis `/code-review`** (base `dda8215`, Spec finding #5): the presence frames diverged from §5.2 and the SRS contradicted itself (§4.5 said `user_ids`, §5.2 said `users:[{…}]`). Decision — **enrich presence server-side** so a workspace-visible watcher / break-glass admin (connected but *not* in the board roster) still renders.
+
+| Part | Builds | Status | Depends on |
+|---|---|---|---|
+| **F — Presence frame enrichment** | rich `ACTIVE_USERS`/`USER_JOINED` (`{id,name,avatar_url}`) + thin `USER_LEFT`; enrich in `ws_handler` via `UserRepository.GetByIds`; hub stays byte-dumb | **Docs ✅ 2026-08-22** (ADR-014, SRS §5.2/§5.3/§4.5; `ACCESS_REVOKED.reason` enum pinned); **code ⏳** → [part-f](./part-f-presence-frame-enrichment.md) | B |
+
+Does **not** change ④'s COMPLETE status — a self-contained payload refinement (ADR-014), not new ④ scope.
+
+---
+
 ## Optimization notes — problems most likely to appear as usage / the app grows
 Not Phase-1 work. Recorded so they aren't forgotten; each is feasible behind the current design.
 
@@ -131,6 +143,7 @@ Deferred as premature (note only): proactive disconnect-on-hidden-tab (only at l
 
 ## References
 - **[ADR-009](../../architecture/adr/adr-009-websocket-realtime-layer.md)** — WebSocket realtime layer decisions + rationale.
+- **[ADR-014](../../architecture/adr/adr-014-presence-frame-enrichment.md)** — presence frame enrichment (Part F); supersedes ADR-009's thin-presence payload decision.
 - **ADR-008** — auth-cookie migration (③.5), written after its grilling session.
 - **SRS §4.5 / §5** — the settled realtime + message contract (incl. `ACCESS_REVOKED`, eviction rules, multi-connection presence).
 - Memory: `[[websocket-participation-broadcast-design]]`, `[[auth-cookie-migration-prereq]]`, `[[activities-logging-best-effort-then-atomic]]`.

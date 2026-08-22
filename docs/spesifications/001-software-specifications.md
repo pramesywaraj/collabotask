@@ -536,7 +536,7 @@ WHERE id=$card RETURNING *;
 
 #### UC-19: Presence (multi-connection, edge-triggered)
 - Server keeps in-memory rooms **keyed by user with a *set* of connections**: `map[board_id] → map[user_id] → {conn_id → connection}` (supersedes the earlier single-connection sketch — correct under multi-tab/device and reconnect; ADR-009).
-- Presence is **edge-triggered**: `USER_JOINED` fires only on a user's **0→1** connection edge in a room, `USER_LEFT` only on **1→0**; broadcasts fan out to **all** of a user's connections. `ACTIVE_USERS` (sent to the joiner) lists **distinct connected user_ids** — built from the in-memory room, never the DB roster (presence = who's connected, not who's a member).
+- Presence is **edge-triggered**: `USER_JOINED` fires only on a user's **0→1** connection edge in a room, `USER_LEFT` only on **1→0**; broadcasts fan out to **all** of a user's connections. `ACTIVE_USERS` (sent to the joiner) lists the **distinct connected users** — the connection *set* comes from the in-memory room (presence = who's connected, not who's a member), which the handler then **enriches** with each user's `{id,name,avatar_url}` (ADR-014) so a workspace-visible watcher or break-glass admin *not* in the client's board roster still renders. `USER_JOINED` carries the same `user{}` object; `USER_LEFT` is `user_id`-only (removal keys on ID).
 
 #### UC-19b: Continuous Access Enforcement (instant eviction)
 - Access is enforced **continuously, not just at join.** When a connection loses access it is **evicted immediately** from the affected room(s) via one of three hub primitives:
@@ -612,10 +612,10 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 ### 5.2 Server → Clients (broadcast to board room)
 | Type | Payload (key fields) | Emitted by |
 | --- | --- | --- |
-| `USER_JOINED` | `{ board_id, user{id,name,avatar_url}, timestamp }` | UC-09, UC-18 |
-| `USER_LEFT` | `{ board_id, user_id, timestamp }` | UC-10, UC-18 |
-| `ACTIVE_USERS` | `{ board_id, users:[{id,name,avatar_url,joined_at}] }` | sent to joiner (UC-19) |
-| `ACCESS_REVOKED` | `{ board_id, reason }` | sent to an **involuntarily** evicted connection (UC-19b) — board removal (UC-12d), workspace removal (UC-06), or WORKSPACE→PRIVATE flip (UC-12b). Voluntary leaves evict silently. |
+| `USER_JOINED` | `{ board_id, user{id,name,avatar_url} }` | UC-09, UC-18 |
+| `USER_LEFT` | `{ board_id, user_id }` | UC-10, UC-18 |
+| `ACTIVE_USERS` | `{ board_id, users:[{id,name,avatar_url}] }` | sent to joiner (UC-19) |
+| `ACCESS_REVOKED` | `{ board_id, reason }` — `reason ∈ { "removed_from_board", "board_made_private", "removed_from_workspace" }` (closed set; source of truth `common.EvictReason`). A **silent/voluntary** eviction sends **no** frame, so `reason` is never empty on the wire. | sent to an **involuntarily** evicted connection (UC-19b) — board removal (UC-12d), workspace removal (UC-06), or WORKSPACE→PRIVATE flip (UC-12b). Voluntary leaves evict silently. |
 | `MEMBER_ADDED` | `{ board_id, user{id,email,name,avatar_url,joined_at}, role }` | UC-11 |
 | `MEMBER_REMOVED` | `{ board_id, user_id }` | UC-12d; workspace cascade (UC-06/06c) |
 | `OWNERSHIP_TRANSFERRED` | `{ board_id, from_user_id, to_user_id }` (`from_user_id` may be `null` — orphan-safe transfer) | UC-12e |
@@ -640,6 +640,7 @@ The §5.2 Broadcast rule and UC-20 govern how a client reconciles **mutation** f
 - **`ACTIVE_USERS` is an authoritative full snapshot — apply as REPLACE**, even when presence state is already held. Never skip the snapshot because data already exists.
 - **`USER_JOINED` / `USER_LEFT` are idempotent deltas.** Adding an already-present user or removing an absent one is a no-op. Their ordering relative to the snapshot is **not** guaranteed (third-party joins race) — the `ACTIVE_USERS` snapshot is the source of truth.
 - **A client may receive `USER_JOINED` for itself** on its own 0→1 join (self-echo). It is an idempotent no-op — relevant only to suppress a self "joined" toast (`user.id == self`).
+- **Presence frames carry the user profile inline** — `ACTIVE_USERS.users[]` and `USER_JOINED.user` each hold `{id,name,avatar_url}`, enriched server-side (ADR-014). Render presence straight from the frame; do **not** look the user up in the board roster (a workspace-visible watcher or break-glass admin may be connected without being a board member). `USER_LEFT` carries only `user_id` — match it against the present set by ID.
 
 ---
 
