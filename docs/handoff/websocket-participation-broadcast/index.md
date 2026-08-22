@@ -122,7 +122,7 @@ Surfaced by the **④ two-axis `/code-review`** (base `dda8215`, Spec finding #5
 
 | Part | Builds | Status | Depends on |
 |---|---|---|---|
-| **F — Presence frame enrichment** | rich `ACTIVE_USERS`/`USER_JOINED` (`{id,name,avatar_url}`) + thin `USER_LEFT`; enrich in `ws_handler` via `UserRepository.GetByIds`; hub stays byte-dumb | **Docs ✅ 2026-08-22** (ADR-014, SRS §5.2/§5.3/§4.5; `ACCESS_REVOKED.reason` enum pinned); **code ⏳** → [part-f](./part-f-presence-frame-enrichment.md) | B |
+| **F — Presence frame enrichment** | rich `ACTIVE_USERS`/`USER_JOINED` (`{id,name,avatar_url}`) + thin `USER_LEFT`; enrich in `ws_handler` via `UserRepository.GetByIds`; hub stays byte-dumb | **Built + reviewed ✅ 2026-08-22** — two-axis `/code-review` clean (0 hard-standards, 0 spec findings); `go build`/`vet`/`gofmt -l` clean, `go test -race ./...` green. Docs: ADR-014, SRS §5.2/§5.3/§4.5, `ACCESS_REVOKED.reason` enum pinned. → [part-f](./part-f-presence-frame-enrichment.md) | B |
 
 Does **not** change ④'s COMPLETE status — a self-contained payload refinement (ADR-014), not new ④ scope.
 

@@ -48,7 +48,7 @@ func InitializeApp() (*App, error) {
 	columnHandler := ProvideColumnHandler(columnUseCase)
 	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker, boardMemberRepository, activityRepository, broadcaster)
 	cardHandler := ProvideCardHandler(cardUseCase)
-	wsHandler := ProvideWSHandler(config, hub, boardAccessChecker)
+	wsHandler := ProvideWSHandler(config, hub, boardAccessChecker, userRepository)
 	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler, boardHandler, columnHandler, cardHandler, wsHandler)
 	server := ProvideServer(config, engine)
 	v := ProvideCleanup(db)
