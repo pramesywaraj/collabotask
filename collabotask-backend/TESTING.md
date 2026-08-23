@@ -341,10 +341,16 @@ The error branches are where bugs hide. The happy path is often the least valuab
 ## Running Tests
 
 ```bash
-# All tests
+# Unit tests only (fast, no Docker)
+go test ./internal/...
+
+# Integration tests only (requires Docker running)
+go test ./tests/integration/...
+
+# Both
 go test ./...
 
-# A specific package
+# A specific unit test package
 go test ./internal/usecase/board/...
 
 # With verbose output
@@ -352,6 +358,69 @@ go test -v ./internal/usecase/board/...
 
 # Regenerate mocks after changing an interface
 mockery
+```
+
+---
+
+## Integration Tests (Repository Layer)
+
+The repository layer (`internal/repository/postgres/`) is not unit tested — it talks directly to Postgres. Integration tests live in `tests/integration/` and run against a real PG16 database. See [ADR-015](../docs/architecture/adr/adr-015-integration-test-harness.md) for all design decisions.
+
+### How it works
+
+Running `go test ./tests/integration/...` is all you need. The harness:
+
+1. Starts a `postgres:16-alpine` container via **testcontainers-go** (requires Docker running)
+2. Runs all migrations via **golang-migrate**
+3. Executes all tests
+4. Tears the container down on exit
+
+No manual `docker-compose up`, no env vars, no port conflicts.
+
+### Structure
+
+```
+tests/
+└── integration/
+    ├── testutil/
+    │   ├── harness.go     ← NewTestDB (called from TestMain), TruncateAll
+    │   └── fixtures.go    ← createTestUser, createTestWorkspace, …
+    ├── board_repo_test.go
+    ├── card_repo_test.go
+    └── …
+```
+
+### Conventions
+
+| Rule | Detail |
+|---|---|
+| Container lifecycle | One container per package via `TestMain` — startup cost paid once |
+| Test isolation | Call `t.Cleanup(func() { testutil.TruncateAll(t, pool) })` at the top of each test |
+| Fixtures | Use `testutil.createTest*` helpers to seed prerequisite rows |
+| Package | `package integration_test` — external test package |
+
+### Structure of a Repository Integration Test
+
+```go
+var testPool *pgxpool.Pool
+
+func TestMain(m *testing.M) {
+    pool, terminate := testutil.NewTestDB()
+    testPool = pool
+    code := m.Run()
+    terminate()
+    os.Exit(code)
+}
+
+func TestBoardRepository_CreateWithOwner(t *testing.T) {
+    t.Cleanup(func() { testutil.TruncateAll(t, testPool) })
+
+    user := testutil.CreateTestUser(t, testPool)
+    ws   := testutil.CreateTestWorkspace(t, testPool, user.ID)
+
+    repo := postgres.NewBoardRepository(testPool)
+    // … test body
+}
 ```
 
 ## Check Unit Tests Coverage
