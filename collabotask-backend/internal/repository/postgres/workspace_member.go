@@ -181,6 +181,29 @@ func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.
 		return repository.WorkspaceCascadeResult{}, domain.ErrMemberNotFound
 	}
 
+	// Unassign cards BEFORE deleting board memberships. The composite FK
+	// (fk_cards_assignee_board_member) fires ON DELETE SET NULL when a board_member
+	// row is removed — collecting cards after the board-membership delete would yield
+	// an empty list. Both queries are independent on (workspace_id, user_id).
+	cardRows, err := tx.Query(ctx, unassignCardsForUserQuery, workspaceID, userID)
+	if err != nil {
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to unassign cards: %w", err)
+	}
+	defer cardRows.Close()
+
+	var affectedCards []repository.AffectedCard
+	for cardRows.Next() {
+		var card repository.AffectedCard
+		if err := cardRows.Scan(&card.CardID, &card.ColumnID, &card.BoardID); err != nil {
+			return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to scan affected card: %w", err)
+		}
+		affectedCards = append(affectedCards, card)
+	}
+	if err := cardRows.Err(); err != nil {
+		return repository.WorkspaceCascadeResult{}, fmt.Errorf("error iterating affected cards: %w", err)
+	}
+	cardRows.Close()
+
 	// Capture the board IDs the user was a member of before deleting the rows.
 	boardRows, err := tx.Query(ctx, deleteBoardMembershipsForUserQuery, workspaceID, userID)
 	if err != nil {
@@ -198,25 +221,6 @@ func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.
 	}
 	if err := boardRows.Err(); err != nil {
 		return repository.WorkspaceCascadeResult{}, fmt.Errorf("error iterating affected board ids: %w", err)
-	}
-	boardRows.Close()
-
-	cardRows, err := tx.Query(ctx, unassignCardsForUserQuery, workspaceID, userID)
-	if err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to unassign cards: %w", err)
-	}
-	defer cardRows.Close()
-
-	var affectedCards []repository.AffectedCard
-	for cardRows.Next() {
-		var card repository.AffectedCard
-		if err := cardRows.Scan(&card.CardID, &card.ColumnID, &card.BoardID); err != nil {
-			return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to scan affected card: %w", err)
-		}
-		affectedCards = append(affectedCards, card)
-	}
-	if err := cardRows.Err(); err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("error iterating affected cards: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

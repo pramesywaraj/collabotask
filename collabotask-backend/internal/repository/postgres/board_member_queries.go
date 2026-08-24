@@ -55,11 +55,10 @@ const (
 		DELETE FROM board_members WHERE board_id = $1 AND user_id = $2
 	`
 	// unassignBoardCardsForUserQuery clears card assignments for a user leaving a board.
-	// Uses columns.board_id so no board join is needed on the cards table.
+	// Uses cards.board_id directly (denormalized in migration 000009).
 	unassignBoardCardsForUserQuery = `
 		UPDATE cards c SET assigned_to = NULL
-		FROM columns col
-		WHERE c.column_id = col.id AND col.board_id = $1 AND c.assigned_to = $2
+		WHERE c.board_id = $1 AND c.assigned_to = $2
 		RETURNING c.id, c.column_id
 	`
 )

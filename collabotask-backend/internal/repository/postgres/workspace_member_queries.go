@@ -42,11 +42,13 @@ const (
 		WHERE bm.board_id = b.id AND b.workspace_id = $1 AND bm.user_id = $2
 		RETURNING bm.board_id
 	`
+	// unassignCardsForUserQuery clears card assignments for a user leaving a workspace.
+	// Uses cards.board_id directly (denormalized in migration 000009) to avoid the
+	// columns join; still needs the boards join to scope by workspace.
 	unassignCardsForUserQuery = `
 		UPDATE cards c SET assigned_to = NULL
-		FROM columns col
-		JOIN boards b ON col.board_id = b.id
-		WHERE c.column_id = col.id AND b.workspace_id = $1 AND c.assigned_to = $2
-		RETURNING c.id, c.column_id, b.id
+		FROM boards b
+		WHERE c.board_id = b.id AND b.workspace_id = $1 AND c.assigned_to = $2
+		RETURNING c.id, c.column_id, c.board_id
 	`
 )

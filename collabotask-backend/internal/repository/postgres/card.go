@@ -30,6 +30,7 @@ func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error 
 		ctx,
 		createCardQuery,
 		card.ColumnID,
+		card.BoardID,
 		card.Title,
 		card.Description,
 		card.Position,
@@ -39,6 +40,7 @@ func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error 
 	).Scan(
 		&card.ID,
 		&card.ColumnID,
+		&card.BoardID,
 		&card.Title,
 		&card.Description,
 		&card.Position,
@@ -50,10 +52,12 @@ func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error 
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
-
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
 				return domain.ErrConstraintViolation
+			}
+			if pgErr.Code == "23503" && pgErr.ConstraintName == "fk_cards_assignee_board_member" {
+				return domain.ErrAssigneeNotBoardMember
 			}
 		}
 		return fmt.Errorf("failed to create card: %w", err)
@@ -82,6 +86,7 @@ func (cdr *cardRepository) Update(ctx context.Context, card *entity.Card) error 
 	).Scan(
 		&card.ID,
 		&card.ColumnID,
+		&card.BoardID,
 		&card.Title,
 		&card.Description,
 		&card.Position,
@@ -94,6 +99,10 @@ func (cdr *cardRepository) Update(ctx context.Context, card *entity.Card) error 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrCardNotFound
+		}
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "fk_cards_assignee_board_member" {
+			return domain.ErrAssigneeNotBoardMember
 		}
 		return fmt.Errorf("failed to update card: %w", err)
 	}
@@ -128,6 +137,7 @@ func (cdr *cardRepository) GetByID(ctx context.Context, cardID uuid.UUID) (*enti
 	).Scan(
 		&card.ID,
 		&card.ColumnID,
+		&card.BoardID,
 		&card.Title,
 		&card.Description,
 		&card.Position,
@@ -165,6 +175,7 @@ func (cdr *cardRepository) GetCardsByColumn(ctx context.Context, columnID uuid.U
 		err := rows.Scan(
 			&card.ID,
 			&card.ColumnID,
+			&card.BoardID,
 			&card.Title,
 			&card.Description,
 			&card.Position,
@@ -228,6 +239,7 @@ func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toCol
 	err = tx.QueryRow(ctx, moveCardQuery, toColumnID, toPosition, cardID).Scan(
 		&moved.ID,
 		&moved.ColumnID,
+		&moved.BoardID,
 		&moved.Title,
 		&moved.Description,
 		&moved.Position,
