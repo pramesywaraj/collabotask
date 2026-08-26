@@ -131,3 +131,50 @@ No new sentinel, no new mapper entry — `ErrAssigneeNotBoardMember` already map
 ## Suggested skills
 - **tdd** — integration test #3 (reorder regression) red→green first.
 - **code-review** (two-axis) — after: verify the reorder in both cascades, the constraint-name-scoped error mapping, and that no membership gate leaked anywhere new.
+
+---
+
+## Post-implementation review — 2026-08-25
+
+Two-axis `/code-review` of the committed implementation (`af30ed4`, range `af30ed4~1...af30ed4`).
+
+**Verdict:** Standards axis clean (0 hard documented-standard violations); Spec axis faithful — every settled decision (1–6 above) is present and correct, the reorder is verified in **both** cascade paths, the constraint-name-scoped error mapping is on both `Create` and `Update`, and **both app guards are kept**. The implementation makes sense and solves the problem. Findings below are tagged by action; only F1 and F2 are follow-ups.
+
+### F1 — [Action: add before closing ⑤] Migration-cleanup path is untested (Test #4 dropped)
+
+**Finding.** Of the five tests in §Tests, #4 (migration cleanup) was not implemented. `up.sql` step 4 (null pre-existing violators + `RAISE NOTICE` the count) has **no coverage**, because the harness always migrates a *clean* DB — the violator-nulling branch never runs. Tests #1 (invariant on write), #2 (FK auto-cascade), #3 (board+workspace broadcast-list after reorder) all exist, plus an extra `TestAssigneeFKInvariant_ConstraintName` that protects the error mapping (justified, not scope creep).
+
+Not a correctness bug — the branch only fires on legacy pre-step-③ dirty data, and nulling an unreachable assignee is the correct end state — but it is the one real gap.
+
+**Solution.** Add integration test #4: on a fresh container, seed a card whose `assigned_to` is a non-member of its board **before** migration 000009 runs, migrate up, then assert (a) that row's `assigned_to` is now `NULL` and (b) the composite FK installed successfully. Add before formally closing the FK step.
+
+### F2 — [Action: apply now] Redundant explicit `rows.Close()` — YAGNI / Speculative Generality
+
+**Finding.** Both cascades pair a `defer <rows>.Close()` (needed — closes the rows on the early error-return paths) with a **second, explicit** `<rows>.Close()` right before the next statement on the same `tx`:
+- `board_member.go:197` — before `tx.Exec(deleteBoardMemberForCascadeQuery, …)`
+- `workspace_member.go:205` — before `tx.Query(deleteBoardMembershipsForUserQuery, …)`
+
+The explicit close is **functionally redundant today**: a pgx transaction runs on one connection with one active query at a time, and `rows.Next()` auto-closes the rows when the loop drains (returns `false`), freeing the connection before the next query. Neither loop has an early `break`/mid-iteration `return`, so auto-close always fires. The only justification for the explicit call is defensiveness against a *future* edit that adds a `break` (which would skip auto-close and make the next query fail with `conn busy`) — a hypothetical need, i.e. **YAGNI**. If that edit ever lands, it should carry its own `rows.Close()`.
+
+Note `boardRows` in the same workspace function (`workspace_member.go:212`) already uses the **defer-only** pattern — so dropping the explicit closes makes all three row-iterations consistent.
+
+**Solution (decided).** Drop the explicit `<rows>.Close()` at `board_member.go:197` and `workspace_member.go:205`; keep the `defer`. (Rejected alternative: keep it *with* a one-line comment documenting pgx's one-active-query-per-connection contract — a comment is what would earn a redundant line its place, but for now we drop rather than future-proof.)
+
+### F3 — [Optional] Duplicated scan-into-`[]AffectedCard` loop
+
+The `for rows.Next(){ Scan; append }` + `rows.Err()` shape is near-identical in `board_member.go` and `workspace_member.go`, differing only by the `BoardID` source (param vs scanned column). Pre-existing shape relocated by the reorder, not introduced here. Optional: extract a shared `scanAffectedCards` helper. Low value — fold into a future cascade-touching change (e.g. the ADR-007 Transactor work, which composes this code).
+
+### F4 — [Optional] Duplicated FK-error mapping
+
+The `errors.As(&pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "fk_cards_assignee_board_member"` block repeats in `cardRepo.Create` and `cardRepo.Update`. Optional: a small `mapAssigneeFKError(err) error` helper. Two trivial sites; borderline — leave unless it grows a third caller.
+
+### Action summary
+
+| # | Action | When |
+|---|---|---|
+| F1 | Add integration test #4 (migration violator-cleanup) | Before closing the FK step |
+| F2 | Drop the redundant explicit `rows.Close()` in both cascades (`board_member.go:197`, `workspace_member.go:205`); keep the `defer` | Now |
+| F3 | Extract shared `scanAffectedCards` helper | Optional / future |
+| F4 | Extract `mapAssigneeFKError` helper | Optional / future |
+
+Code changes are **not yet applied** — this section records the findings and the agreed solutions.
