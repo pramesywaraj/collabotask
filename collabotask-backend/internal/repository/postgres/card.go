@@ -25,6 +25,17 @@ func NewCardRepository(db *pgxpool.Pool) repository.CardRepository {
 
 const cardCaps = 16
 
+// isAssigneeFKViolation reports whether err is the composite-FK violation
+// (23503 on fk_cards_assignee_board_member), meaning the assignee is not a
+// member of the card's board. Shared by Create and Update, which both map it to
+// domain.ErrAssigneeNotBoardMember (400).
+func isAssigneeFKViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) &&
+		pgErr.Code == "23503" &&
+		pgErr.ConstraintName == "fk_cards_assignee_board_member"
+}
+
 func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error {
 	err := cdr.db.QueryRow(
 		ctx,
@@ -52,13 +63,11 @@ func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error 
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return domain.ErrConstraintViolation
-			}
-			if pgErr.Code == "23503" && pgErr.ConstraintName == "fk_cards_assignee_board_member" {
-				return domain.ErrAssigneeNotBoardMember
-			}
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.ErrConstraintViolation
+		}
+		if isAssigneeFKViolation(err) {
+			return domain.ErrAssigneeNotBoardMember
 		}
 		return fmt.Errorf("failed to create card: %w", err)
 	}
@@ -100,8 +109,7 @@ func (cdr *cardRepository) Update(ctx context.Context, card *entity.Card) error 
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrCardNotFound
 		}
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "fk_cards_assignee_board_member" {
+		if isAssigneeFKViolation(err) {
 			return domain.ErrAssigneeNotBoardMember
 		}
 		return fmt.Errorf("failed to update card: %w", err)

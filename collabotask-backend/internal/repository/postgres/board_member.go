@@ -182,19 +182,10 @@ func (bmr *boardMemberRepository) RemoveWithParticipationCascade(ctx context.Con
 	}
 	defer rows.Close()
 
-	var affected []repository.AffectedCard
-	for rows.Next() {
-		var card repository.AffectedCard
-		if err := rows.Scan(&card.CardID, &card.ColumnID); err != nil {
-			return nil, fmt.Errorf("failed to scan affected card: %w", err)
-		}
-		card.BoardID = boardID
-		affected = append(affected, card)
+	affected, err := scanAffectedCards(rows, &boardID)
+	if err != nil {
+		return nil, err
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating affected cards: %w", err)
-	}
-	rows.Close()
 
 	result, err := tx.Exec(ctx, deleteBoardMemberForCascadeQuery, boardID, userID)
 	if err != nil {

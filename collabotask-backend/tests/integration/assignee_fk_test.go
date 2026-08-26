@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -209,6 +210,85 @@ func TestAssigneeFKInvariant_WorkspaceCascadeBroadcastList(t *testing.T) {
 		affectedIDs[i] = a.CardID
 	}
 	assert.ElementsMatch(t, []uuid.UUID{card1.ID, card2.ID}, affectedIDs)
+}
+
+// TestAssigneeFKInvariant_MigrationCleanup verifies migration 000009's step-4
+// cleanup: a pre-existing card whose assignee is NOT a member of its board is
+// nulled before the composite FK installs, while a valid assignment survives.
+// This exercises the violator-nulling branch, which the always-fully-migrated
+// shared pool never reaches (it only sees clean, post-FK data).
+//
+// It runs on its own container migrated to version 8 (pre-000009), seeds the
+// violating + valid rows via raw SQL (no board_id column, no FK yet), then
+// migrates up to 9 and asserts the outcome.
+func TestAssigneeFKInvariant_MigrationCleanup(t *testing.T) {
+	pool, m, terminate := testutil.NewTestDBAtVersion(t, 8)
+	defer terminate()
+
+	ctx := context.Background()
+
+	ownerID := uuid.New()
+	memberID := uuid.New()
+	nonMemberID := uuid.New()
+	wsID := uuid.New()
+	boardID := uuid.New()
+	colID := uuid.New()
+	violatingCardID := uuid.New()
+	validCardID := uuid.New()
+
+	// Seed against the v8 schema (cards has no board_id column, no composite FK).
+	exec := func(sql string, args ...any) {
+		_, err := pool.Exec(ctx, sql, args...)
+		require.NoError(t, err)
+	}
+	mkUser := func(id uuid.UUID) {
+		exec(`INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, $4)`,
+			id, fmt.Sprintf("%s@test.com", id.String()[:8]), "hash", "Test User")
+	}
+	mkUser(ownerID)
+	mkUser(memberID)
+	mkUser(nonMemberID)
+
+	exec(`INSERT INTO workspaces (id, name, owner_id) VALUES ($1, $2, $3)`, wsID, "WS", ownerID)
+	exec(`INSERT INTO boards (id, workspace_id, title, created_by) VALUES ($1, $2, $3, $4)`,
+		boardID, wsID, "Board", ownerID)
+	exec(`INSERT INTO columns (id, board_id, title, position) VALUES ($1, $2, $3, $4)`,
+		colID, boardID, "Col", 1000)
+	// memberID IS a board member; nonMemberID is NOT.
+	exec(`INSERT INTO board_members (board_id, user_id, role) VALUES ($1, $2, 'BOARD_MEMBER')`,
+		boardID, memberID)
+
+	// Violating row: assignee is not a member of the card's board.
+	exec(`INSERT INTO cards (id, column_id, title, position, assigned_to, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
+		violatingCardID, colID, "Violator", 1000, nonMemberID, ownerID)
+	// Valid row: assignee is a member — must survive the cleanup.
+	exec(`INSERT INTO cards (id, column_id, title, position, assigned_to, created_by) VALUES ($1, $2, $3, $4, $5, $6)`,
+		validCardID, colID, "Valid", 2000, memberID, ownerID)
+
+	// Run the remaining migrations (000009) — the cleanup branch fires here.
+	require.NoError(t, m.Up())
+
+	// The violating assignment was nulled.
+	var violatorAssignedTo *uuid.UUID
+	require.NoError(t, pool.QueryRow(ctx,
+		`SELECT assigned_to FROM cards WHERE id = $1`, violatingCardID,
+	).Scan(&violatorAssignedTo))
+	assert.Nil(t, violatorAssignedTo, "violating assignee should have been nulled by migration cleanup")
+
+	// The valid assignment survived.
+	var validAssignedTo *uuid.UUID
+	require.NoError(t, pool.QueryRow(ctx,
+		`SELECT assigned_to FROM cards WHERE id = $1`, validCardID,
+	).Scan(&validAssignedTo))
+	require.NotNil(t, validAssignedTo, "valid assignee should not be touched")
+	assert.Equal(t, memberID, *validAssignedTo)
+
+	// The composite FK installed successfully.
+	var fkExists bool
+	require.NoError(t, pool.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_cards_assignee_board_member')`,
+	).Scan(&fkExists))
+	assert.True(t, fkExists, "composite FK should be installed after migration 000009")
 }
 
 // TestAssigneeFKInvariant_ConstraintName verifies that the DB FK constraint is

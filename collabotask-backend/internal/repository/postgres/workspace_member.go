@@ -191,18 +191,10 @@ func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.
 	}
 	defer cardRows.Close()
 
-	var affectedCards []repository.AffectedCard
-	for cardRows.Next() {
-		var card repository.AffectedCard
-		if err := cardRows.Scan(&card.CardID, &card.ColumnID, &card.BoardID); err != nil {
-			return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to scan affected card: %w", err)
-		}
-		affectedCards = append(affectedCards, card)
+	affectedCards, err := scanAffectedCards(cardRows, nil)
+	if err != nil {
+		return repository.WorkspaceCascadeResult{}, err
 	}
-	if err := cardRows.Err(); err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("error iterating affected cards: %w", err)
-	}
-	cardRows.Close()
 
 	// Capture the board IDs the user was a member of before deleting the rows.
 	boardRows, err := tx.Query(ctx, deleteBoardMembershipsForUserQuery, workspaceID, userID)
