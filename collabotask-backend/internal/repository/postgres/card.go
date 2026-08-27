@@ -25,11 +25,23 @@ func NewCardRepository(db *pgxpool.Pool) repository.CardRepository {
 
 const cardCaps = 16
 
+// isAssigneeFKViolation reports whether err is the composite-FK violation
+// (23503 on fk_cards_assignee_board_member), meaning the assignee is not a
+// member of the card's board. Shared by Create and Update, which both map it to
+// domain.ErrAssigneeNotBoardMember (400).
+func isAssigneeFKViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) &&
+		pgErr.Code == "23503" &&
+		pgErr.ConstraintName == "fk_cards_assignee_board_member"
+}
+
 func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error {
 	err := cdr.db.QueryRow(
 		ctx,
 		createCardQuery,
 		card.ColumnID,
+		card.BoardID,
 		card.Title,
 		card.Description,
 		card.Position,
@@ -39,6 +51,7 @@ func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error 
 	).Scan(
 		&card.ID,
 		&card.ColumnID,
+		&card.BoardID,
 		&card.Title,
 		&card.Description,
 		&card.Position,
@@ -50,11 +63,11 @@ func (cdr *cardRepository) Create(ctx context.Context, card *entity.Card) error 
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
-
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return domain.ErrConstraintViolation
-			}
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.ErrConstraintViolation
+		}
+		if isAssigneeFKViolation(err) {
+			return domain.ErrAssigneeNotBoardMember
 		}
 		return fmt.Errorf("failed to create card: %w", err)
 	}
@@ -82,6 +95,7 @@ func (cdr *cardRepository) Update(ctx context.Context, card *entity.Card) error 
 	).Scan(
 		&card.ID,
 		&card.ColumnID,
+		&card.BoardID,
 		&card.Title,
 		&card.Description,
 		&card.Position,
@@ -94,6 +108,9 @@ func (cdr *cardRepository) Update(ctx context.Context, card *entity.Card) error 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.ErrCardNotFound
+		}
+		if isAssigneeFKViolation(err) {
+			return domain.ErrAssigneeNotBoardMember
 		}
 		return fmt.Errorf("failed to update card: %w", err)
 	}
@@ -128,6 +145,7 @@ func (cdr *cardRepository) GetByID(ctx context.Context, cardID uuid.UUID) (*enti
 	).Scan(
 		&card.ID,
 		&card.ColumnID,
+		&card.BoardID,
 		&card.Title,
 		&card.Description,
 		&card.Position,
@@ -165,6 +183,7 @@ func (cdr *cardRepository) GetCardsByColumn(ctx context.Context, columnID uuid.U
 		err := rows.Scan(
 			&card.ID,
 			&card.ColumnID,
+			&card.BoardID,
 			&card.Title,
 			&card.Description,
 			&card.Position,
@@ -228,6 +247,7 @@ func (cdr *cardRepository) Move(ctx context.Context, cardID, fromColumnID, toCol
 	err = tx.QueryRow(ctx, moveCardQuery, toColumnID, toPosition, cardID).Scan(
 		&moved.ID,
 		&moved.ColumnID,
+		&moved.BoardID,
 		&moved.Title,
 		&moved.Description,
 		&moved.Position,

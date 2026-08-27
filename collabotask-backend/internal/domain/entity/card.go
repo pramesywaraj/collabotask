@@ -9,6 +9,7 @@ import (
 type Card struct {
 	ID          uuid.UUID  `json:"id" db:"id"`
 	ColumnID    uuid.UUID  `json:"column_id" db:"column_id"`
+	BoardID     uuid.UUID  `json:"board_id" db:"board_id"`
 	Title       string     `json:"title" db:"title"`
 	Description *string    `json:"description" db:"description"`
 	Position    float64    `json:"position" db:"position"`

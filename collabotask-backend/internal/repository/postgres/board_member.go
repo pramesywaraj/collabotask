@@ -172,31 +172,27 @@ func (bmr *boardMemberRepository) RemoveWithParticipationCascade(ctx context.Con
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	result, err := tx.Exec(ctx, deleteBoardMemberForCascadeQuery, boardID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to remove board member: %w", err)
-	}
-	if result.RowsAffected() == 0 {
-		return nil, domain.ErrBoardMemberNotFound
-	}
-
+	// Unassign cards BEFORE deleting the board_member row. The composite FK
+	// (fk_cards_assignee_board_member) fires ON DELETE SET NULL when the
+	// board_member row is removed — if we collected cards after the delete,
+	// the list would already be empty. Collecting first preserves the broadcast list.
 	rows, err := tx.Query(ctx, unassignBoardCardsForUserQuery, boardID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unassign cards: %w", err)
 	}
 	defer rows.Close()
 
-	var affected []repository.AffectedCard
-	for rows.Next() {
-		var card repository.AffectedCard
-		if err := rows.Scan(&card.CardID, &card.ColumnID); err != nil {
-			return nil, fmt.Errorf("failed to scan affected card: %w", err)
-		}
-		card.BoardID = boardID // board is the known param — keep AffectedCard fully populated
-		affected = append(affected, card)
+	affected, err := scanAffectedCards(rows)
+	if err != nil {
+		return nil, err
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating affected cards: %w", err)
+
+	result, err := tx.Exec(ctx, deleteBoardMemberForCascadeQuery, boardID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove board member: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return nil, domain.ErrBoardMemberNotFound
 	}
 
 	if err := tx.Commit(ctx); err != nil {

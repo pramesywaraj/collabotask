@@ -59,6 +59,7 @@ func (cru *CardUseCase) CreateCard(ctx context.Context, input CreateCardInput) (
 
 	card := &entity.Card{
 		ColumnID:    column.ID,
+		BoardID:     column.BoardID,
 		Title:       input.Title,
 		Description: input.Description,
 		Position:    maxPos + domain.PositionStep,
