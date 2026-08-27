@@ -177,4 +177,13 @@ The `errors.As(&pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "fk_c
 | F3 | Extract shared `scanAffectedCards` helper | Optional / future |
 | F4 | Extract `mapAssigneeFKError` helper | Optional / future |
 
-Code changes are **not yet applied** — this section records the findings and the agreed solutions.
+### Resolution — 2026-08-27
+
+All four findings implemented and re-reviewed (two-axis `/code-review`, clean both axes):
+
+- **F1** — `TestAssigneeFKInvariant_MigrationCleanup` added; new `NewTestDBAtVersion(t, 8)` harness support migrates to the pre-000009 version so a violating row can be seeded before the constraint exists. Genuinely exercises the `up.sql` step-4 cleanup branch (asserts the violator is nulled, a valid assignment survives, and the FK installs).
+- **F2** — explicit `rows.Close()` dropped in both cascades; `defer` retained; reorder intact.
+- **F3** — shared `scanAffectedCards` helper extracted (`cascade_helpers.go`). The re-review flagged a nil-`*uuid.UUID` mode-flag (scan-arity sentinel) in the first cut; resolved via **Option B**: the board-path query (`unassignBoardCardsForUserQuery`) now `RETURN`s `board_id` too, so both cascades share one `(card_id, column_id, board_id)` row shape and the helper takes no board param. The board path now sources `BoardID` from the row (FK-guaranteed identical to the board) instead of the function arg.
+- **F4** — shared `isAssigneeFKViolation` predicate; both `cardRepo.Create` and `Update` delegate; `23505` and other `23503`s unchanged.
+
+Verified: `go build`, `go vet`, `gofmt` clean; 598 unit + 10 integration tests pass.

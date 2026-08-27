@@ -191,7 +191,7 @@ func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.
 	}
 	defer cardRows.Close()
 
-	affectedCards, err := scanAffectedCards(cardRows, nil)
+	affectedCards, err := scanAffectedCards(cardRows)
 	if err != nil {
 		return repository.WorkspaceCascadeResult{}, err
 	}

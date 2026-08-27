@@ -182,7 +182,7 @@ func (bmr *boardMemberRepository) RemoveWithParticipationCascade(ctx context.Con
 	}
 	defer rows.Close()
 
-	affected, err := scanAffectedCards(rows, &boardID)
+	affected, err := scanAffectedCards(rows)
 	if err != nil {
 		return nil, err
 	}

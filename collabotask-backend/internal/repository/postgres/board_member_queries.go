@@ -55,10 +55,11 @@ const (
 		DELETE FROM board_members WHERE board_id = $1 AND user_id = $2
 	`
 	// unassignBoardCardsForUserQuery clears card assignments for a user leaving a board.
-	// Uses cards.board_id directly (denormalized in migration 000009).
+	// Uses cards.board_id directly (denormalized in migration 000009); also RETURNs it
+	// so both cascade paths yield the same (card_id, column_id, board_id) row shape.
 	unassignBoardCardsForUserQuery = `
 		UPDATE cards c SET assigned_to = NULL
 		WHERE c.board_id = $1 AND c.assigned_to = $2
-		RETURNING c.id, c.column_id
+		RETURNING c.id, c.column_id, c.board_id
 	`
 )
