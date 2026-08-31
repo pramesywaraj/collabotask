@@ -29,7 +29,7 @@ Strict-for-all forces every one of the 17 usecases to wrap `mutation + Log` in o
 
 **The codebase evidence decides A.** Of the ~10 hand-rolled-tx call sites, **8 already pair with an activity write** (both `RemoveWithParticipationCascade` sites, `TransferOwnership`, `CreateMany`/invite, `Move`, `UpdatePosition`). The only 2 standalone callers — `create_board` and `create_workspace` — write **no activity at all** ([create_board.go](../../collabotask-backend/internal/usecase/board/create_board.go) has no `WriteActivity` and no broadcast). Under **A** those 2 paths change by *zero lines* (no ambient tx ⇒ they self-begin exactly as today) and keep their existing internal atomicity for free; under **B** they would have to be force-wrapped purely to preserve atomicity they already had, for a feature they don't participate in. A also generalizes an idiom the code already speaks: `rebalanceIfNeeded`/`neighborPosition` ([positioning.go:21](../../collabotask-backend/internal/repository/postgres/positioning.go)) already take an explicit `pgx.Tx` and run on a caller-provided transaction — A lifts that from "explicit param" to "resolved from context."
 
-The accepted cost of A: the transaction is **implicit in the context** (idiomatic Go for this pattern), and forgetting `exec(ctx)` in one method would let a statement silently escape the tx — caught by the integration harness (see Testing) and a review grep-guard.
+The accepted cost of A: the transaction is **implicit in the context** (idiomatic Go for this pattern). The related "forgot `exec(ctx)`" risk is closed structurally — the `base` wrapper (Decision #4) makes the wrong call not compile — rather than left to review discipline.
 
 ### Q3 — `common.WriteActivity`'s fate
 
@@ -49,18 +49,26 @@ The accepted cost of A: the transaction is **implicit in the context** (idiomati
 2. **Composition = ambient-tx join-or-begin** (Q2-A). Repos resolve their executor from context; the 9 hand-rolled methods become `joinOrBegin` (self-begin standalone, join when composed).
 3. **Placement (mirrors the `Broadcaster` port/impl split):**
    - `Transactor` **port** in `internal/usecase/common/` — `WithinTransaction(ctx context.Context, fn func(ctx context.Context) error) error`.
-   - `DBTX` interface, unexported `txKey`, `exec(ctx, pool)` resolver, `joinOrBegin` helper, and the Transactor **implementation** in `internal/repository/postgres/` — the ctx-key must be unexported and shared between the impl (writes it) and every repo (reads it), so all of it sits in one package.
-4. **Usecase shape:** the closure wraps **only** the mutation + `Log`; access-checks, validation, and pre-reads stay **before** it; **broadcast moves to post-commit** (never broadcast a mutation that may roll back).
-5. **`common.WriteActivity` → `common.LogActivity(...) error`** (Q3): still sets `a.UserID = &actorID`, returns the error, no swallow.
-6. **Convert all 52 pool-direct sites to `exec(ctx)`** (Q4).
-7. **DI:** add `ProvideTransactor(db.Pool)`; inject the `Transactor` into the four usecases that write activities (board, card, column, workspace). Repo constructors are **unchanged** (they keep the pool as the no-ambient-tx fallback).
+   - `DBTX` interface, unexported `txKey`, the Transactor **implementation**, and an embedded **`base`** wrapper in `internal/repository/postgres/` — the ctx-key must be unexported and shared between the impl (writes it) and every repo (reads it), so all of it sits in one package.
+4. **Compile-time footgun closure — the `base` wrapper (see #2 below).** Repos **do not** hold a raw `*pgxpool.Pool db` field. They embed a `base` struct that exposes only `exec(ctx) DBTX` (ambient tx or pool) and `tx(ctx, fn)` (join-or-begin), keeping the pool as an unexported `base.pool`. Statements become `r.exec(ctx).QueryRow(...)`; the old habit `r.db.QueryRow(...)` **no longer compiles**. The raw pool survives only as `base.pool`, reachable only inside the `postgres` package — a single narrow surface guarded by a `forbidigo` lint rule in CI (`\.pool\.(Query|QueryRow|Exec|Begin)` forbidden outside `base.go`).
+5. **Usecase shape:** the closure wraps **only** the mutation + `Log`; access-checks, validation, and pre-reads stay **before** it; **broadcast moves to post-commit** (never broadcast a mutation that may roll back).
+6. **`common.WriteActivity` → `common.LogActivity(...) error`** (Q3): still sets `a.UserID = &actorID`, returns the error, no swallow. A comment at `LogActivity` pins the propagation to this ADR so it is not "fixed" back to swallowing.
+7. **Convert all 52 pool-direct sites to `r.exec(ctx)`** (Q4), and the 9 hand-rolled methods to `r.tx(ctx, fn)`.
+8. **DI:** add `ProvideTransactor(db.Pool)`; inject the `Transactor` into the four usecases that write activities (board, card, column, workspace). Repo constructor **signatures are unchanged** (still take `*pgxpool.Pool`); each now wraps it in the embedded `base`.
+
+### Rollout — two phases, each independently green (mitigates the large-diff risk)
+
+The change ships in two sequenced passes so the huge mechanical diff and the small behavioral flip are reviewed — and bisectable — separately:
+
+- **Phase 1 — behavior-preserving refactor.** Introduce `Transactor`, `base`, `exec`/`tx`, the `DBTX` interface and the `forbidigo` rule; convert all 52 sites; rewrite the 9 hand-rolled methods to `r.tx(ctx, fn)`; wire DI. **No usecase changes** — activity writes still run through the old swallowing `WriteActivity`. The full existing suite (598 unit + 10 integration) must stay green with **zero behavior change**. This is the large, boring diff.
+- **Phase 2 — the behavioral flip.** Move the 17 call sites inside `WithinTransaction`, swap `WriteActivity` → `LogActivity`, move broadcasts post-commit, add the atomicity tests. Small, focused; this is the only pass where semantics change.
 
 ### Testing bar
 
 - **Integration (real Postgres, via [ADR-015](adr-015-integration-test-harness.md)):**
   1. **Transactor rolls back** — `WithinTransaction` doing a real INSERT then returning an error ⇒ row absent.
   2. **Real `Log` honors the ambient tx** — a real `activityRepo.Log` inside a rolled-back `WithinTransaction` leaves no row. This is the footgun guard: it goes red if `Log` (or its repo) still uses `r.db` instead of `exec(ctx)`.
-  3. **End-to-end composition** — real DB + real Transactor + real mutation repo with a forced `Log` failure ⇒ the usecase errors **and the mutation row is absent.** Written for `CreateCard` (single-statement) and repeated for the two high-stakes multi-statement paths `TransferOwnership` and break-glass `self_join_board`.
+  3. **End-to-end composition** — real DB + real Transactor + real mutation repo with a forced `Log` failure ⇒ the usecase errors **and the mutation row is absent.** Written for `CreateCard` (single-statement) and repeated for the two high-stakes multi-statement paths `TransferOwnership` and break-glass `self_join_board`. This test also **locks the behavior reversal** (#3 in Consequences): reverting `LogActivity` to a swallow turns it red.
 - **Unit (mock `Transactor`):** each of the 17 usecases asserts it routes mutation + `Log` through `WithinTransaction` — cheap insurance against future drift.
 
 ### Out of scope (unchanged from ADR-007 / deferred)
@@ -87,13 +95,20 @@ type DBTX interface {                       // *pgxpool.Pool AND pgx.Tx both sat
     Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 type txKey struct{}
-func exec(ctx context.Context, pool DBTX) DBTX { /* ambient tx from ctx, else pool */ }
-// joinOrBegin(ctx, pool, fn): ambient tx ⇒ run fn(ctx) on it; else Begin → fn(ctx') → Commit/Rollback
+
+// internal/repository/postgres/base.go — embedded by every repo; the ONLY hop to the DB
+type base struct { pool *pgxpool.Pool }                         // pool is unexported, package-only
+func (b base) exec(ctx context.Context) DBTX { /* ambient tx from ctx, else b.pool */ }
+func (b base) tx(ctx context.Context, fn func(context.Context) error) error {
+    // ambient tx ⇒ run fn(ctx) on it; else b.pool.Begin → fn(ctx') → Commit/Rollback
+}
+
+type cardRepository struct { base }         // no `db` field — r.db.QueryRow(...) won't compile
 ```
 
-- Every repo statement: `r.db.QueryRow(...)` → `exec(ctx, r.db).QueryRow(...)` (all 52 sites).
-- Every hand-rolled method: `r.db.Begin()` → `joinOrBegin(ctx, r.db, func(ctx) error { … })`.
-- The Transactor impl `Begin`s on the pool, stashes the tx under `txKey` in the returned context, runs `fn`, then `Commit` on success / `Rollback` on error.
+- Every repo statement: `r.db.QueryRow(...)` → `r.exec(ctx).QueryRow(...)` (all 52 sites).
+- Every hand-rolled method: `r.db.Begin()` → `r.tx(ctx, func(ctx) error { … })`.
+- The Transactor impl `Begin`s on the pool, stashes the tx under `txKey` in the returned context, runs `fn`, then `Commit` on success / `Rollback` on error — it shares `txKey` with `base` so `r.exec(ctx)`/`r.tx(ctx, …)` pick the ambient tx up.
 
 ### Worked example — `TransferOwnership` (high-stakes, multi-statement)
 
@@ -122,7 +137,7 @@ bu.broadcaster.Broadcast(input.BoardID, common.OwnershipTransferred{ … })   //
 return nil
 ```
 
-`TransferOwnership`'s `joinOrBegin` sees the ambient tx and runs the demote+promote **on it**; `LogActivity` runs on it too. If the `Log` fails, the whole transfer rolls back. When some future caller invokes `TransferOwnership` standalone, `joinOrBegin` opens its own tx — atomicity preserved with no call-site change.
+`TransferOwnership`'s `r.tx(ctx, …)` sees the ambient tx and runs the demote+promote **on it**; `LogActivity` runs on it too. If the `Log` fails, the whole transfer rolls back. When some future caller invokes `TransferOwnership` standalone, `r.tx` opens its own tx — atomicity preserved with no call-site change.
 
 ### The single-statement case — `CreateCard`
 
@@ -145,8 +160,11 @@ cru.broadcaster.Broadcast(column.BoardID, common.CardCreated{Card: card, Assigne
 - The existing hand-rolled cascades gain a reusable transaction seam (`joinOrBegin`) instead of nine bespoke `db.Begin()` blocks.
 - The two standalone creators (`create_board`, `create_workspace`) are untouched; the change concentrates where activity writes actually happen.
 
-**Negative / notes**
-- **Implicit transaction in context.** A reader of a repo method can't see "am I in a tx?" without knowing the convention. Mitigated by uniformity and the harness.
-- **Footgun: forgetting `exec(ctx)`** in a new or edited repo method silently escapes the ambient tx. Caught by integration test #2 (real `Log` honors the tx) and a review grep-guard for `\.db\.` outside constructors/`joinOrBegin`.
-- **Behavior reversal at 17 call sites:** a `Log` failure now fails the user's mutation (previously swallowed). This is the intended point of Option C, defended by Q1's same-DB reasoning, but it is a real semantics change from Phase 1.
-- **Large mechanical diff** (52 conversions + 9 method rewrites + DI). Mechanical, guarded by the existing 598 unit + 10 integration tests plus the new atomicity tests.
+**Negative / notes** (each with its strengthened mitigation)
+
+| # | Cost | Mitigation |
+|---|------|------------|
+| 1 | **Implicit transaction in context** — a repo method can't show "am I in a tx?" from its signature; the fact lives in `ctx`. | Left as a known trade-off (engineering it away = the rejected Option B). Uniformity makes "there may be an ambient tx" always-true-everywhere; a package `doc.go` states the contract. |
+| 2 | **Footgun: bypassing the ambient tx** by hitting the pool directly in a new/edited repo method — silently escapes the transaction and survives a rollback. | **Closed structurally, not by review:** the `base` wrapper (Decision #4) removes the `db` field, so `r.db.QueryRow(...)` **won't compile**; the residual `base.pool` surface is forbidden outside `base.go` by a `forbidigo` CI rule; integration test #2 catches any leak at runtime. |
+| 3 | **Behavior reversal at 17 call sites** — a `Log` failure now fails the user's mutation (was swallowed). Intended (this *is* Option C), but a real semantics change. | **Locked, not just noted:** integration test #3 goes red if it's reverted to a swallow; a comment at `LogActivity` records the intent. Defended by Q1's same-DB reasoning. |
+| 4 | **Large mechanical diff** (52 conversions + 9 method rewrites + DI). | **Two-phase rollout** (Decision, Rollout): a behavior-preserving refactor (full suite green, zero behavior change) then a small behavioral flip — each reviewed and `git bisect`-able on its own, on top of the existing 598 unit + 10 integration tests. |
