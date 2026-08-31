@@ -62,6 +62,9 @@ func ProvideCardRepository(db *database.DB) repository.CardRepository {
 func ProvideActivityRepository(db *database.DB) repository.ActivityRepository {
 	return postgres.NewActivityRepository(db.Pool)
 }
+func ProvideTransactor(db *database.DB) common.Transactor {
+	return postgres.NewTransactor(db.Pool)
+}
 
 // UseCase
 func ProvideAuthUseCase(userRepo repository.UserRepository, cfg *config.Config) *auth.AuthUseCase {
@@ -76,8 +79,9 @@ func ProvideWorkspaceUseCase(
 	userRepo repository.UserRepository,
 	activityRepo repository.ActivityRepository,
 	broadcaster common.Broadcaster,
+	tx common.Transactor,
 ) *workspace.WorkspaceUseCase {
-	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+	return workspace.NewWorkspaceUseCase(workspaceRepo, workspaceMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 }
 func ProvideBroadcaster(hub *realtime.Hub) common.Broadcaster {
 	return broadcast.NewHubBroadcaster(hub)
@@ -92,16 +96,18 @@ func ProvideBoardUseCase(
 	cardRepo repository.CardRepository,
 	activityRepo repository.ActivityRepository,
 	broadcaster common.Broadcaster,
+	tx common.Transactor,
 ) *board.BoardUseCase {
-	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo, activityRepo, broadcaster)
+	return board.NewBoardUseCase(boardAccessChecker, boardRepo, boardMemberRepo, workspaceMemberRepo, userRepo, columnRepo, cardRepo, activityRepo, broadcaster, tx)
 }
 func ProvideColumnUseCase(
 	columnRepo repository.ColumnRepository,
 	boardAccessChecker common.BoardAccessChecker,
 	activityRepo repository.ActivityRepository,
 	broadcaster common.Broadcaster,
+	tx common.Transactor,
 ) *column.ColumnUseCase {
-	return column.NewColumnUseCase(columnRepo, boardAccessChecker, activityRepo, broadcaster)
+	return column.NewColumnUseCase(columnRepo, boardAccessChecker, activityRepo, broadcaster, tx)
 }
 func ProvideCardUseCase(
 	cardRepo repository.CardRepository,
@@ -111,8 +117,9 @@ func ProvideCardUseCase(
 	boardMemberRepo repository.BoardMemberRepository,
 	activityRepo repository.ActivityRepository,
 	broadcaster common.Broadcaster,
+	tx common.Transactor,
 ) *card.CardUseCase {
-	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker, boardMemberRepo, activityRepo, broadcaster)
+	return card.NewCardUseCase(cardRepo, columnRepo, userRepo, boardAccessChecker, boardMemberRepo, activityRepo, broadcaster, tx)
 }
 
 // Common use cases

@@ -10,6 +10,7 @@ type ColumnUseCase struct {
 	boardAccessChecker common.BoardAccessChecker
 	activityRepo       repository.ActivityRepository
 	broadcaster        common.Broadcaster
+	tx                 common.Transactor
 }
 
 func NewColumnUseCase(
@@ -17,11 +18,13 @@ func NewColumnUseCase(
 	boardAccessChecker common.BoardAccessChecker,
 	activityRepo repository.ActivityRepository,
 	broadcaster common.Broadcaster,
+	tx common.Transactor,
 ) *ColumnUseCase {
 	return &ColumnUseCase{
 		columnRepo:         columnRepo,
 		boardAccessChecker: boardAccessChecker,
 		activityRepo:       activityRepo,
 		broadcaster:        broadcaster,
+		tx:                 tx,
 	}
 }

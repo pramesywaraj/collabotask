@@ -1,0 +1,18 @@
+version: "2"
+
+linters:
+  enable:
+    - forbidigo
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: '\.pool\.(Query|QueryRow|Exec|Begin)'
+          msg: "access pool directly only via base.exec(ctx) or base.tx(ctx, fn); see ADR-016"
+  exclusions:
+    rules:
+      - path: internal/repository/postgres/base\.go
+        linters:
+          - forbidigo
+      - path: internal/repository/postgres/transactor\.go
+        linters:
+          - forbidigo

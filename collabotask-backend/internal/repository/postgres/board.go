@@ -16,96 +16,87 @@ import (
 )
 
 type boardRepository struct {
-	db *pgxpool.Pool
+	base
 }
 
-func NewBoardRepository(db *pgxpool.Pool) repository.BoardRepository {
-	return &boardRepository{db: db}
+func NewBoardRepository(pool *pgxpool.Pool) repository.BoardRepository {
+	return &boardRepository{base: base{pool: pool}}
 }
 
 const defaultBoardCaps = 16
 
 func (br *boardRepository) CreateWithOwner(ctx context.Context, board *entity.Board, requesterID uuid.UUID) error {
-	tx, err := br.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin create board with owner transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	var description *string
-	if board.Description != nil && *board.Description != "" {
-		description = board.Description
-	}
-
-	err = tx.QueryRow(
-		ctx,
-		createBoardQuery,
-		board.WorkspaceID,
-		board.Title,
-		description,
-		board.CreatedBy,
-		board.BackgroundColor,
-		board.Visibility,
-	).Scan(
-		&board.ID,
-		&board.WorkspaceID,
-		&board.Title,
-		&board.Description,
-		&board.CreatedBy,
-		&board.IsArchived,
-		&board.BackgroundColor,
-		&board.Visibility,
-		&board.CreatedAt,
-		&board.UpdatedAt,
-	)
-	if err != nil {
-		var pgErr *pgconn.PgError
-
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return domain.ErrConstraintViolation
-			}
+	return br.tx(ctx, func(ctx context.Context) error {
+		var description *string
+		if board.Description != nil && *board.Description != "" {
+			description = board.Description
 		}
-		return fmt.Errorf("failed to create board: %w", err)
-	}
 
-	_, err = tx.Exec(
-		ctx,
-		createBoardMemberQuery,
-		board.ID,
-		requesterID,
-		entity.BoardRoleOwner,
-	)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return domain.ErrBoardAlreadyMember
-		}
-		return fmt.Errorf("failed to add owner to board: %w", err)
-	}
-
-	for position, colTitle := range domain.DefaultNewBoardColumnTitles {
-		_, err = tx.Exec(
+		err := br.exec(ctx).QueryRow(
 			ctx,
-			createColumnQuery,
+			createBoardQuery,
+			board.WorkspaceID,
+			board.Title,
+			description,
+			board.CreatedBy,
+			board.BackgroundColor,
+			board.Visibility,
+		).Scan(
+			&board.ID,
+			&board.WorkspaceID,
+			&board.Title,
+			&board.Description,
+			&board.CreatedBy,
+			&board.IsArchived,
+			&board.BackgroundColor,
+			&board.Visibility,
+			&board.CreatedAt,
+			&board.UpdatedAt,
+		)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.Code == "23505" {
+					return domain.ErrConstraintViolation
+				}
+			}
+			return fmt.Errorf("failed to create board: %w", err)
+		}
+
+		_, err = br.exec(ctx).Exec(
+			ctx,
+			createBoardMemberQuery,
 			board.ID,
-			colTitle,
-			position,
+			requesterID,
+			entity.BoardRoleOwner,
 		)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				return domain.ErrConstraintViolation
+				return domain.ErrBoardAlreadyMember
 			}
-			return fmt.Errorf("failed to create default column: %w", err)
+			return fmt.Errorf("failed to add owner to board: %w", err)
 		}
-	}
 
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit create board transaction: %w", err)
-	}
+		for position, colTitle := range domain.DefaultNewBoardColumnTitles {
+			_, err = br.exec(ctx).Exec(
+				ctx,
+				createColumnQuery,
+				board.ID,
+				colTitle,
+				position,
+			)
+			if err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+					return domain.ErrConstraintViolation
+				}
+				return fmt.Errorf("failed to create default column: %w", err)
+			}
+		}
 
-	return nil
+		return nil
+	})
 }
 
 func (br *boardRepository) Update(ctx context.Context, board *entity.Board) error {
@@ -126,7 +117,7 @@ func (br *boardRepository) Update(ctx context.Context, board *entity.Board) erro
 
 	updatedAt := time.Now()
 
-	err := br.db.QueryRow(
+	err := br.exec(ctx).QueryRow(
 		ctx,
 		updateBoardQuery,
 		title,
@@ -161,7 +152,7 @@ func (br *boardRepository) GetByID(ctx context.Context, boardID uuid.UUID) (*ent
 	var description *string
 	board := &entity.Board{}
 
-	err := br.db.QueryRow(
+	err := br.exec(ctx).QueryRow(
 		ctx,
 		getBoardByIDQuery,
 		boardID,
@@ -190,7 +181,7 @@ func (br *boardRepository) GetByID(ctx context.Context, boardID uuid.UUID) (*ent
 }
 
 func (br *boardRepository) GetUserBoardsInWorkspace(ctx context.Context, workspaceID, userID uuid.UUID) ([]*entity.BoardListItem, error) {
-	rows, err := br.db.Query(
+	rows, err := br.exec(ctx).Query(
 		ctx,
 		getUserBoardsInWorkspace,
 		workspaceID,
@@ -251,7 +242,7 @@ func (br *boardRepository) GetUserBoardsInWorkspace(ctx context.Context, workspa
 }
 
 func (br *boardRepository) GetBoardIDsByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
-	rows, err := br.db.Query(ctx, getBoardIDsByWorkspaceQuery, workspaceID)
+	rows, err := br.exec(ctx).Query(ctx, getBoardIDsByWorkspaceQuery, workspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query board ids in workspace: %w", err)
 	}
@@ -273,7 +264,7 @@ func (br *boardRepository) GetBoardIDsByWorkspace(ctx context.Context, workspace
 }
 
 func (br *boardRepository) SetArchived(ctx context.Context, boardID uuid.UUID, archived bool) error {
-	result, err := br.db.Exec(
+	result, err := br.exec(ctx).Exec(
 		ctx,
 		setBoardArchivedQuery,
 		boardID,

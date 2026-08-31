@@ -15,20 +15,18 @@ import (
 )
 
 type boardMemberRepository struct {
-	db *pgxpool.Pool
+	base
 }
 
 const boardMembersListCap = 16
 
-func NewBoardMemberRepository(db *pgxpool.Pool) repository.BoardMemberRepository {
-	return &boardMemberRepository{
-		db: db,
-	}
+func NewBoardMemberRepository(pool *pgxpool.Pool) repository.BoardMemberRepository {
+	return &boardMemberRepository{base: base{pool: pool}}
 }
 
 func (bmr *boardMemberRepository) CreateIfAbsent(ctx context.Context, boardMember *entity.BoardMember) (bool, error) {
 	var boardID uuid.UUID
-	err := bmr.db.QueryRow(
+	err := bmr.exec(ctx).QueryRow(
 		ctx,
 		createBoardMemberIfAbsentQuery,
 		boardMember.BoardID,
@@ -51,31 +49,26 @@ func (bmr *boardMemberRepository) CreateMany(ctx context.Context, boardMembers [
 		return nil
 	}
 
-	tx, err := bmr.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	for _, member := range boardMembers {
-		// RETURNING joined_at so the DB-assigned timestamp flows back onto the
-		// struct — callers (e.g. invite broadcast) need the real join time.
-		err := tx.QueryRow(ctx, createBoardMemberQuery, member.BoardID, member.UserID, member.Role).
-			Scan(&member.JoinedAt)
-		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				return domain.ErrBoardAlreadyMember
+	return bmr.tx(ctx, func(ctx context.Context) error {
+		for _, member := range boardMembers {
+			// RETURNING joined_at so the DB-assigned timestamp flows back onto the
+			// struct — callers (e.g. invite broadcast) need the real join time.
+			err := bmr.exec(ctx).QueryRow(ctx, createBoardMemberQuery, member.BoardID, member.UserID, member.Role).
+				Scan(&member.JoinedAt)
+			if err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+					return domain.ErrBoardAlreadyMember
+				}
+				return fmt.Errorf("failed to add member to board: %w", err)
 			}
-			return fmt.Errorf("failed to add member to board: %w", err)
 		}
-	}
-
-	return tx.Commit(ctx)
+		return nil
+	})
 }
 
 func (bmr *boardMemberRepository) Delete(ctx context.Context, boardID, userID uuid.UUID) error {
-	result, err := bmr.db.Exec(
+	result, err := bmr.exec(ctx).Exec(
 		ctx,
 		deleteBoardMemberQuery,
 		boardID,
@@ -93,7 +86,7 @@ func (bmr *boardMemberRepository) Delete(ctx context.Context, boardID, userID uu
 }
 
 func (bmr *boardMemberRepository) GetMembersByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.BoardMember, error) {
-	rows, err := bmr.db.Query(
+	rows, err := bmr.exec(ctx).Query(
 		ctx,
 		listMemberByBoardQuery,
 		boardID,
@@ -128,7 +121,7 @@ func (bmr *boardMemberRepository) GetMembersByBoard(ctx context.Context, boardID
 
 func (bmr *boardMemberRepository) GetMemberByBoardAndUser(ctx context.Context, boardID, userID uuid.UUID) (*entity.BoardMember, error) {
 	boardMember := &entity.BoardMember{}
-	err := bmr.db.QueryRow(
+	err := bmr.exec(ctx).QueryRow(
 		ctx,
 		getMemberByBoardAndUserQuery,
 		boardID,
@@ -151,7 +144,7 @@ func (bmr *boardMemberRepository) GetMemberByBoardAndUser(ctx context.Context, b
 
 func (bmr *boardMemberRepository) IsUserExists(ctx context.Context, boardID, userID uuid.UUID) (bool, error) {
 	var isExists bool
-	err := bmr.db.QueryRow(
+	err := bmr.exec(ctx).QueryRow(
 		ctx,
 		isUserExistsOnBoardQuery,
 		boardID,
@@ -166,70 +159,58 @@ func (bmr *boardMemberRepository) IsUserExists(ctx context.Context, boardID, use
 }
 
 func (bmr *boardMemberRepository) RemoveWithParticipationCascade(ctx context.Context, boardID, userID uuid.UUID) ([]repository.AffectedCard, error) {
-	tx, err := bmr.db.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	var affected []repository.AffectedCard
+	err := bmr.tx(ctx, func(ctx context.Context) error {
+		// Unassign cards BEFORE deleting the board_member row. The composite FK
+		// (fk_cards_assignee_board_member) fires ON DELETE SET NULL when the
+		// board_member row is removed — if we collected cards after the delete,
+		// the list would already be empty. Collecting first preserves the broadcast list.
+		rows, err := bmr.exec(ctx).Query(ctx, unassignBoardCardsForUserQuery, boardID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to unassign cards: %w", err)
+		}
+		defer rows.Close()
 
-	// Unassign cards BEFORE deleting the board_member row. The composite FK
-	// (fk_cards_assignee_board_member) fires ON DELETE SET NULL when the
-	// board_member row is removed — if we collected cards after the delete,
-	// the list would already be empty. Collecting first preserves the broadcast list.
-	rows, err := tx.Query(ctx, unassignBoardCardsForUserQuery, boardID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unassign cards: %w", err)
-	}
-	defer rows.Close()
+		var scanErr error
+		affected, scanErr = scanAffectedCards(rows)
+		if scanErr != nil {
+			return scanErr
+		}
 
-	affected, err := scanAffectedCards(rows)
-	if err != nil {
-		return nil, err
-	}
+		result, err := bmr.exec(ctx).Exec(ctx, deleteBoardMemberForCascadeQuery, boardID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to remove board member: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return domain.ErrBoardMemberNotFound
+		}
 
-	result, err := tx.Exec(ctx, deleteBoardMemberForCascadeQuery, boardID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to remove board member: %w", err)
-	}
-	if result.RowsAffected() == 0 {
-		return nil, domain.ErrBoardMemberNotFound
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit cascade transaction: %w", err)
-	}
-
-	return affected, nil
+		return nil
+	})
+	return affected, err
 }
 
 func (bmr *boardMemberRepository) TransferOwnership(ctx context.Context, boardID, newOwnerID uuid.UUID) (*uuid.UUID, error) {
-	tx, err := bmr.db.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	var fromUserID uuid.UUID
-	err = tx.QueryRow(ctx, demoteCurrentOwnerQuery, boardID).Scan(&fromUserID)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("failed to demote current owner: %w", err)
-	}
 	var fromPtr *uuid.UUID
-	if err == nil {
-		fromPtr = &fromUserID
-	}
+	err := bmr.tx(ctx, func(ctx context.Context) error {
+		var fromUserID uuid.UUID
+		err := bmr.exec(ctx).QueryRow(ctx, demoteCurrentOwnerQuery, boardID).Scan(&fromUserID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("failed to demote current owner: %w", err)
+		}
+		if err == nil {
+			fromPtr = &fromUserID
+		}
 
-	result, err := tx.Exec(ctx, promoteNewOwnerQuery, boardID, newOwnerID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to promote new owner: %w", err)
-	}
-	if result.RowsAffected() == 0 {
-		return nil, domain.ErrBoardMemberNotFound
-	}
+		result, err := bmr.exec(ctx).Exec(ctx, promoteNewOwnerQuery, boardID, newOwnerID)
+		if err != nil {
+			return fmt.Errorf("failed to promote new owner: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return domain.ErrBoardMemberNotFound
+		}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit ownership transfer: %w", err)
-	}
-
-	return fromPtr, nil
+		return nil
+	})
+	return fromPtr, err
 }

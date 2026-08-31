@@ -12,6 +12,7 @@ type WorkspaceUseCase struct {
 	userRepo            repository.UserRepository
 	activityRepo        repository.ActivityRepository
 	broadcaster         common.Broadcaster
+	tx                  common.Transactor
 }
 
 func NewWorkspaceUseCase(
@@ -21,6 +22,7 @@ func NewWorkspaceUseCase(
 	uRepo repository.UserRepository,
 	activityRepo repository.ActivityRepository,
 	broadcaster common.Broadcaster,
+	tx common.Transactor,
 ) *WorkspaceUseCase {
 	return &WorkspaceUseCase{
 		workspaceRepo:       wRepo,
@@ -29,5 +31,6 @@ func NewWorkspaceUseCase(
 		userRepo:            uRepo,
 		activityRepo:        activityRepo,
 		broadcaster:         broadcaster,
+		tx:                  tx,
 	}
 }

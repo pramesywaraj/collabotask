@@ -42,6 +42,7 @@ var (
 		ProvideColumnUseCase,
 		ProvideCardUseCase,
 		ProvideBroadcaster,
+		ProvideTransactor,
 	)
 	HandlerSet = wire.NewSet(
 		ProvideAuthHandler,

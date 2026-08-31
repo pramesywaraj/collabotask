@@ -15,11 +15,11 @@ import (
 )
 
 type userRepository struct {
-	db *pgxpool.Pool
+	base
 }
 
-func NewUserRepository(db *pgxpool.Pool) repository.UserRepository {
-	return &userRepository{db: db}
+func NewUserRepository(pool *pgxpool.Pool) repository.UserRepository {
+	return &userRepository{base: base{pool: pool}}
 }
 
 func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
@@ -28,7 +28,7 @@ func (r *userRepository) Create(ctx context.Context, user *entity.User) error {
 		avatarURL = user.AvatarURL
 	}
 
-	err := r.db.QueryRow(
+	err := r.exec(ctx).QueryRow(
 		ctx,
 		createUserQuery,
 		user.Email,
@@ -64,7 +64,7 @@ func (r *userRepository) GetById(ctx context.Context, id uuid.UUID) (*entity.Use
 	user := &entity.User{}
 	var avatarURL *string
 
-	err := r.db.QueryRow(ctx, getUserByIdQuery, id).Scan(
+	err := r.exec(ctx).QueryRow(ctx, getUserByIdQuery, id).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
@@ -91,7 +91,7 @@ func (r *userRepository) GetByIds(ctx context.Context, ids []uuid.UUID) (map[uui
 		return map[uuid.UUID]*entity.User{}, nil
 	}
 
-	rows, err := r.db.Query(ctx, getUsersByIdsQuery, ids)
+	rows, err := r.exec(ctx).Query(ctx, getUsersByIdsQuery, ids)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users by ids: %w", err)
 	}
@@ -130,7 +130,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*entity.
 	user := &entity.User{}
 	var avatarURL *string
 
-	err := r.db.QueryRow(ctx, getUserByEmailQuery, email).Scan(
+	err := r.exec(ctx).QueryRow(ctx, getUserByEmailQuery, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
@@ -173,7 +173,7 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 		passwordHash = &user.PasswordHash
 	}
 
-	err := r.db.QueryRow(
+	err := r.exec(ctx).QueryRow(
 		ctx,
 		updateUserQuery,
 		email,
@@ -211,7 +211,7 @@ func (r *userRepository) Update(ctx context.Context, user *entity.User) error {
 }
 
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.db.Exec(ctx, deleteUserQuery, id)
+	result, err := r.exec(ctx).Exec(ctx, deleteUserQuery, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
@@ -224,7 +224,7 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (r *userRepository) List(ctx context.Context, limit, offset int) ([]*entity.User, error) {
-	rows, err := r.db.Query(ctx, listUsersQuery, limit, offset)
+	rows, err := r.exec(ctx).Query(ctx, listUsersQuery, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
@@ -261,7 +261,7 @@ func (r *userRepository) List(ctx context.Context, limit, offset int) ([]*entity
 
 func (r *userRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	var exists bool
-	err := r.db.QueryRow(ctx, existsUserByEmailQuery, email).Scan(&exists)
+	err := r.exec(ctx).QueryRow(ctx, existsUserByEmailQuery, email).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if user exists: %w", err)
 	}
