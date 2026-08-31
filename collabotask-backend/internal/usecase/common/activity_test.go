@@ -14,7 +14,7 @@ import (
 	"collabotask/internal/usecase/common"
 )
 
-func TestWriteActivity(t *testing.T) {
+func TestLogActivity(t *testing.T) {
 	boardID := uuid.New()
 	entityID := uuid.New()
 	actorID := uuid.New()
@@ -35,16 +35,14 @@ func TestWriteActivity(t *testing.T) {
 		repo.EXPECT().Log(context.Background(), mock.MatchedBy(func(got *entity.Activity) bool {
 			return got.UserID != nil && *got.UserID == actorID
 		})).Return(nil)
-		require.NotPanics(t, func() {
-			common.WriteActivity(context.Background(), repo, actorID, a)
-		})
+		err := common.LogActivity(context.Background(), repo, actorID, a)
+		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed (no panic, no return value)", func(t *testing.T) {
+	t.Run("propagation — Log error is returned to caller", func(t *testing.T) {
 		repo := mocks.NewMockActivityRepository(t)
 		repo.EXPECT().Log(context.Background(), mock.Anything).Return(errors.New("db down"))
-		require.NotPanics(t, func() {
-			common.WriteActivity(context.Background(), repo, actorID, newActivity())
-		})
+		err := common.LogActivity(context.Background(), repo, actorID, newActivity())
+		require.ErrorContains(t, err, "db down")
 	})
 }

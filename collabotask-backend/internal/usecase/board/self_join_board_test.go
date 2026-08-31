@@ -175,6 +175,7 @@ func TestSelfJoinBoard(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			d := newDeps(t)
+			passthroughTx(d)
 			d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 			tt.setupMocks(d)
 

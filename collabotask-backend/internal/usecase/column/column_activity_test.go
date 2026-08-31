@@ -31,6 +31,10 @@ func TestCreateColumnActivityLog(t *testing.T) {
 	}
 
 	setupUntilCreate := func(d columnTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
 		d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(1000), nil)
@@ -57,14 +61,13 @@ func TestCreateColumnActivityLog(t *testing.T) {
 		assert.Equal(t, columnID, out.Column.ID)
 	})
 
-	t.Run("resilience — Log error is swallowed, creation still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the creation (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilCreate(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.CreateColumn(context.Background(), input)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -84,6 +87,10 @@ func TestDeleteColumnActivityLog(t *testing.T) {
 	}
 
 	setupUntilDelete := func(d columnTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
@@ -108,14 +115,13 @@ func TestDeleteColumnActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, deletion still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the deletion (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilDelete(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.DeleteColumn(context.Background(), input)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -128,6 +134,10 @@ func TestUpdateColumnActivityLog(t *testing.T) {
 	board := &entity.Board{ID: boardID}
 
 	setupUntilUpdate := func(d columnTestDeps, oldTitle, newTitle string) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		col := &entity.Column{ID: columnID, BoardID: boardID, Title: oldTitle}
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
@@ -173,11 +183,10 @@ func TestUpdateColumnActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, update still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the update (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilUpdate(d, "Old Title", "New Title")
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateColumn(context.Background(), column.UpdateColumnInput{
 			BoardID:     boardID,
@@ -185,7 +194,7 @@ func TestUpdateColumnActivityLog(t *testing.T) {
 			Title:       "New Title",
 			RequesterID: requesterID,
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -201,6 +210,10 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 	}
 
 	setupBase := func(d columnTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newCol(), nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
@@ -248,12 +261,11 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, move still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the move (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.columnRepo.EXPECT().UpdatePosition(mock.Anything, columnID, float64(2000)).Return(float64(2000), nil)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateColumnPosition(context.Background(), column.UpdateColumnPositionInput{
 			BoardID:     boardID,
@@ -261,7 +273,7 @@ func TestUpdateColumnPositionActivityLog(t *testing.T) {
 			Position:    2000,
 			RequesterID: requesterID,
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 
 	t.Run("UpdatePosition repo error does not call Log", func(t *testing.T) {

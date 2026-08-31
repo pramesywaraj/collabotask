@@ -27,24 +27,30 @@ type wsBroadcastDeps struct {
 	wsMemberRepo *mocks.MockWorkspaceMemberRepository
 	boardRepo    *mocks.MockBoardRepository
 	broadcaster  *mocks.MockBroadcaster
+	tx           *mocks.MockTransactor
 	uc           *workspace.WorkspaceUseCase
 }
 
 func newWSBroadcastDeps(t *testing.T) wsBroadcastDeps {
+	t.Helper()
 	wsRepo := mocks.NewMockWorkspaceRepository(t)
 	wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
 	boardRepo := mocks.NewMockBoardRepository(t)
 	userRepo := mocks.NewMockUserRepository(t)
 	activityRepo := mocks.NewMockActivityRepository(t)
 	broadcaster := mocks.NewMockBroadcaster(t)
+	tx := mocks.NewMockTransactor(t)
 	activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
+	tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }).Maybe()
 
 	return wsBroadcastDeps{
 		wsRepo:       wsRepo,
 		wsMemberRepo: wsMemberRepo,
 		boardRepo:    boardRepo,
 		broadcaster:  broadcaster,
-		uc:           workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster),
+		tx:           tx,
+		uc:           workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx),
 	}
 }
 

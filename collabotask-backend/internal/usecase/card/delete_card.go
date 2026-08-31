@@ -43,17 +43,20 @@ func (cru *CardUseCase) DeleteCard(ctx context.Context, input DeleteCardInput) e
 	}
 
 	cardTitle := card.Title
-	if err = cru.cardRepo.Delete(ctx, input.CardID); err != nil {
+	if err := cru.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := cru.cardRepo.Delete(ctx, input.CardID); err != nil {
+			return err
+		}
+		return common.LogActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    column.BoardID,
+			ActionType: entity.ActivityActionDeleted,
+			EntityType: entity.ActivityEntityCard,
+			EntityID:   input.CardID,
+			Metadata:   map[string]any{entity.ActivityMetaCardTitle: cardTitle},
+		})
+	}); err != nil {
 		return err
 	}
-
-	common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
-		BoardID:    column.BoardID,
-		ActionType: entity.ActivityActionDeleted,
-		EntityType: entity.ActivityEntityCard,
-		EntityID:   input.CardID,
-		Metadata:   map[string]any{entity.ActivityMetaCardTitle: cardTitle},
-	})
 
 	cru.broadcaster.Broadcast(column.BoardID, common.CardDeleted{
 		CardID:   input.CardID,

@@ -42,6 +42,10 @@ func TestCreateCardBroadcast(t *testing.T) {
 
 	// wireCreate wires the create path with no assignee resolution.
 	wireCreate := func(d cardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
@@ -70,6 +74,10 @@ func TestCreateCardBroadcast(t *testing.T) {
 		{
 			name: "happy path — CARD_CREATED broadcast with resolved assignee",
 			setupMocks: func(d cardTestDeps) {
+				d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+					RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+						return fn(ctx)
+					})
 				d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 				d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 					Return(&common.BoardAccess{Board: board}, nil)
@@ -128,6 +136,10 @@ func TestMoveCardBroadcast(t *testing.T) {
 	toColumn := &entity.Column{ID: toColID, BoardID: boardID, Title: "Done"}
 
 	wireBase := func(d cardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, fromColID).Return(fromColumn, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, toColID).Return(toColumn, nil)
@@ -284,6 +296,7 @@ func TestUpdateCardBroadcast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			_, err := d.uc.UpdateCard(context.Background(), tt.input)
@@ -312,6 +325,10 @@ func TestDeleteCardBroadcast(t *testing.T) {
 	}
 
 	wireRead := func(d cardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).

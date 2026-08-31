@@ -67,18 +67,21 @@ func (cru *CardUseCase) CreateCard(ctx context.Context, input CreateCardInput) (
 		DueDate:     input.DueDate,
 		CreatedBy:   input.RequesterID,
 	}
-	err = cru.cardRepo.Create(ctx, card)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create card: %w", err)
-	}
 
-	common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
-		BoardID:    column.BoardID,
-		ActionType: entity.ActivityActionCreated,
-		EntityType: entity.ActivityEntityCard,
-		EntityID:   card.ID,
-		Metadata:   map[string]any{entity.ActivityMetaCardTitle: card.Title},
-	})
+	if err := cru.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := cru.cardRepo.Create(ctx, card); err != nil {
+			return fmt.Errorf("failed to create card: %w", err)
+		}
+		return common.LogActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    column.BoardID,
+			ActionType: entity.ActivityActionCreated,
+			EntityType: entity.ActivityEntityCard,
+			EntityID:   card.ID,
+			Metadata:   map[string]any{entity.ActivityMetaCardTitle: card.Title},
+		})
+	}); err != nil {
+		return nil, err
+	}
 
 	cru.broadcaster.Broadcast(column.BoardID, common.CardCreated{Card: card, Assignee: assignee})
 

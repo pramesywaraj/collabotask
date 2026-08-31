@@ -34,20 +34,25 @@ func (cu *ColumnUseCase) UpdateColumn(ctx context.Context, input UpdateColumnInp
 	titleChanged := column.Title != input.Title
 	column.Title = input.Title
 
-	err = cu.columnRepo.Update(ctx, column)
-	if err != nil {
+	if err := cu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := cu.columnRepo.Update(ctx, column); err != nil {
+			return err
+		}
+		if titleChanged {
+			return common.LogActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
+				BoardID:    column.BoardID,
+				ActionType: entity.ActivityActionUpdated,
+				EntityType: entity.ActivityEntityColumn,
+				EntityID:   column.ID,
+				Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
+			})
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
 	if titleChanged {
-		common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
-			BoardID:    column.BoardID,
-			ActionType: entity.ActivityActionUpdated,
-			EntityType: entity.ActivityEntityColumn,
-			EntityID:   column.ID,
-			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
-		})
-
 		cu.broadcaster.Broadcast(column.BoardID, common.ColumnUpdated{
 			ColumnID: column.ID,
 			Title:    column.Title,

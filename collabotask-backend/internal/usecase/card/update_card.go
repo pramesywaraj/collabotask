@@ -109,23 +109,28 @@ func (cru *CardUseCase) UpdateCard(ctx context.Context, input UpdateCardInput) (
 		assignee = user
 	}
 
-	err = cru.cardRepo.Update(ctx, card)
-	if err != nil {
+	if err := cru.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := cru.cardRepo.Update(ctx, card); err != nil {
+			return err
+		}
+		if len(changedFields) > 0 {
+			return common.LogActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
+				BoardID:    column.BoardID,
+				ActionType: entity.ActivityActionUpdated,
+				EntityType: entity.ActivityEntityCard,
+				EntityID:   input.CardID,
+				Metadata: map[string]any{
+					entity.ActivityMetaCardTitle:     card.Title,
+					entity.ActivityMetaChangedFields: changedFields,
+				},
+			})
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
 	if len(changedFields) > 0 {
-		common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
-			BoardID:    column.BoardID,
-			ActionType: entity.ActivityActionUpdated,
-			EntityType: entity.ActivityEntityCard,
-			EntityID:   input.CardID,
-			Metadata: map[string]any{
-				entity.ActivityMetaCardTitle:     card.Title,
-				entity.ActivityMetaChangedFields: changedFields,
-			},
-		})
-
 		cru.broadcaster.Broadcast(column.BoardID, common.CardUpdated{
 			Card:          card,
 			Assignee:      assignee,

@@ -169,6 +169,7 @@ func TestRemoveMemberBoard(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			d := newDeps(t)
+			passthroughTx(d)
 			d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 			d.broadcaster.EXPECT().EvictUser(mock.Anything, mock.Anything, mock.Anything).Maybe()
 			d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()

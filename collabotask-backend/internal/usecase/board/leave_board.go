@@ -3,6 +3,7 @@ package board
 import (
 	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
+	"collabotask/internal/domain/repository"
 	"collabotask/internal/usecase/common"
 	"collabotask/pkg/validator"
 	"context"
@@ -41,21 +42,26 @@ func (bu *BoardUseCase) LeaveBoard(ctx context.Context, input LeaveBoardInput) e
 		return domain.ErrBoardOwnerCannotLeave
 	}
 
-	affectedCards, err := bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.RequesterID)
-	if err != nil {
-		if errors.Is(err, domain.ErrBoardMemberNotFound) {
-			return domain.ErrBoardMemberNotFound
+	var affectedCards []repository.AffectedCard
+	if err := bu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		var txErr error
+		affectedCards, txErr = bu.boardMemberRepo.RemoveWithParticipationCascade(ctx, input.BoardID, input.RequesterID)
+		if txErr != nil {
+			if errors.Is(txErr, domain.ErrBoardMemberNotFound) {
+				return domain.ErrBoardMemberNotFound
+			}
+			return fmt.Errorf("failed to remove member from board: %w", txErr)
 		}
-		return fmt.Errorf("failed to remove member from board: %w", err)
+		return common.LogActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    input.BoardID,
+			ActionType: entity.ActivityActionLeft,
+			EntityType: entity.ActivityEntityMember,
+			EntityID:   input.RequesterID,
+			Metadata:   map[string]any{entity.ActivityMetaSource: "board"},
+		})
+	}); err != nil {
+		return err
 	}
-
-	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
-		BoardID:    input.BoardID,
-		ActionType: entity.ActivityActionLeft,
-		EntityType: entity.ActivityEntityMember,
-		EntityID:   input.RequesterID,
-		Metadata:   map[string]any{entity.ActivityMetaSource: "board"},
-	})
 
 	// Voluntary leave: evict silently (EvictReasonSilent → no ACCESS_REVOKED).
 	// USER_LEFT presence event covers the room via the hub's onPresence callback.

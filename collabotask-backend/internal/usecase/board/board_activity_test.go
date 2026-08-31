@@ -27,6 +27,8 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 	boardMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleOwner}
 
 	setupBase := func(d boardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(newBoard(), nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
@@ -59,31 +61,33 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 
 	t.Run("no-op silence — description present but unchanged → Log NOT called", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		desc := "existing description"
 		sameBoard := &entity.Board{ID: boardID, WorkspaceID: workspaceID, Title: "Old Title", Description: &desc}
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(sameBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
 		d.boardRepo.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
-		// DescriptionPresent=true but value identical → no changedFields → Log must NOT be called
 
 		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
-			RequesterID:         requesterID,
-			BoardID:             boardID,
-			DescriptionPresent:  true,
-			Description:         strPtr("existing description"),
+			RequesterID:        requesterID,
+			BoardID:            boardID,
+			DescriptionPresent: true,
+			Description:        strPtr("existing description"),
 		})
 		require.NoError(t, err)
 	})
 
 	t.Run("no-op silence — title unchanged → Log NOT called", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		sameBoard := &entity.Board{ID: boardID, WorkspaceID: workspaceID, Title: "Same Title"}
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(sameBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
 		d.boardRepo.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
-		// No activityRepo.Log expectation
 
 		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
 			RequesterID: requesterID,
@@ -93,22 +97,23 @@ func TestUpdateBoardActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, update still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the update (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateBoard(context.Background(), board.UpdateBoardInput{
 			RequesterID: requesterID,
 			BoardID:     boardID,
 			Title:       strPtr("New Title"),
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 
 	t.Run("happy path — visibility flip logged with visibility_from and visibility_to", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		visBoard := &entity.Board{ID: boardID, WorkspaceID: workspaceID, Title: "My Board", Visibility: entity.BoardVisibilityWorkspace}
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(visBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
@@ -152,6 +157,8 @@ func TestSetArchivedActivityLog(t *testing.T) {
 	boardMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleOwner}
 
 	setupBase := func(d boardTestDeps, b *entity.Board) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(b, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
@@ -204,7 +211,7 @@ func TestSetArchivedActivityLog(t *testing.T) {
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(b, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(boardMember, nil)
-		// SetArchived repo may or may not be called; Log must NOT be called
+		// Early return before tx — Log must NOT be called
 
 		_, err := d.uc.SetArchived(context.Background(), board.SetArchivedInput{
 			RequesterID: requesterID,
@@ -214,19 +221,18 @@ func TestSetArchivedActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, archive still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the archive (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		b := &entity.Board{ID: boardID, WorkspaceID: workspaceID, IsArchived: false}
 		setupBase(d, b)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.SetArchived(context.Background(), board.SetArchivedInput{
 			RequesterID: requesterID,
 			BoardID:     boardID,
 			IsArchived:  boolPtr(true),
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -253,6 +259,8 @@ func TestTransferOwnershipActivityLog(t *testing.T) {
 	}
 
 	setupUntilTransfer := func(d boardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{
 				Board:           b,
@@ -292,20 +300,19 @@ func TestTransferOwnershipActivityLog(t *testing.T) {
 				BoardMember:     ownerBoardMember,
 			}, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, toUserID).Return(alreadyOwnerTarget, nil)
-		// early return → Log must NOT be called
+		// Early return before tx — Log must NOT be called
 
 		err := d.uc.TransferOwnership(context.Background(), input)
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, transfer still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the transfer (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilTransfer(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.TransferOwnership(context.Background(), input)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -322,14 +329,15 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 	regularMember := &entity.WorkspaceMember{WorkspaceID: workspaceID, UserID: requesterID, Role: entity.WorkspaceRoleMember}
 
 	input := board.SelfJoinBoardInput{
-		RequesterID: workspaceID,
+		RequesterID: requesterID,
 		BoardID:     boardID,
 		WorkspaceID: workspaceID,
 	}
-	input.RequesterID = requesterID
 
 	t.Run("happy path — MEMBER/JOINED logged when inserted, break_glass=false (workspace board)", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(workspaceBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, nil)
@@ -355,6 +363,8 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 
 	t.Run("happy path — MEMBER/JOINED logged with break_glass=true when admin joins PRIVATE board", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(privateBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, nil)
@@ -382,7 +392,7 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		existingMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleMember}
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(existingMember, nil)
-		// Early return — Log must NOT be called
+		// Early return before tx — Log must NOT be called
 
 		out, err := d.uc.SelfJoinBoard(context.Background(), input)
 		require.NoError(t, err)
@@ -391,6 +401,8 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 
 	t.Run("no-op silence — race: CreateIfAbsent returns inserted=false → Log NOT called", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(workspaceBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, nil)
@@ -403,8 +415,10 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 		require.False(t, out.Joined)
 	})
 
-	t.Run("resilience — Log error is swallowed, join still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the join (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(workspaceBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, nil)
@@ -412,9 +426,8 @@ func TestSelfJoinBoardActivityLog(t *testing.T) {
 		d.boardMbrRepo.EXPECT().CreateIfAbsent(mock.Anything, newMember).Return(true, nil)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
 
-		out, err := d.uc.SelfJoinBoard(context.Background(), input)
-		require.NoError(t, err)
-		require.True(t, out.Joined)
+		_, err := d.uc.SelfJoinBoard(context.Background(), input)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -439,6 +452,8 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 
 	t.Run("happy path — MEMBER/ADDED logged once per invitee", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		setupBase(d)
 		d.userRepo.EXPECT().GetByIds(mock.Anything, []uuid.UUID{userAID}).
 			Return(map[uuid.UUID]*entity.User{userAID: {ID: userAID}}, nil)
@@ -468,6 +483,8 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 
 	t.Run("happy path — MEMBER/ADDED logged once per each of multiple invitees", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		setupBase(d)
 		d.userRepo.EXPECT().GetByIds(mock.Anything, []uuid.UUID{userAID, userBID}).
 			Return(map[uuid.UUID]*entity.User{
@@ -499,8 +516,10 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error per invitee is swallowed, invite still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the invite (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		setupBase(d)
 		d.userRepo.EXPECT().GetByIds(mock.Anything, []uuid.UUID{userAID}).
 			Return(map[uuid.UUID]*entity.User{userAID: {ID: userAID}}, nil)
@@ -508,7 +527,6 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 		d.boardMbrRepo.EXPECT().IsUserExists(mock.Anything, boardID, userAID).Return(false, nil)
 		d.boardMbrRepo.EXPECT().CreateMany(mock.Anything, mock.Anything).Return(nil)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.InviteMember(context.Background(), board.InviteMemberInput{
 			RequesterID: requesterID,
@@ -516,7 +534,7 @@ func TestBoardInviteMemberActivityLog(t *testing.T) {
 			BoardID:     boardID,
 			UserIDs:     []uuid.UUID{userAID},
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -530,6 +548,8 @@ func TestLeaveBoardActivityLog(t *testing.T) {
 	regularMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleMember}
 
 	setupBase := func(d boardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(b, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(regularMember, nil)
 		d.boardMbrRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, boardID, requesterID).Return([]repository.AffectedCard{}, nil)
@@ -558,13 +578,13 @@ func TestLeaveBoardActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, leave still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the leave (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
 
 		err := d.uc.LeaveBoard(context.Background(), input)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -581,6 +601,8 @@ func TestBoardRemoveMemberActivityLog(t *testing.T) {
 	ownerBoardMember := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleOwner}
 
 	setupBase := func(d boardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(b, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(wsMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(ownerBoardMember, nil)
@@ -613,12 +635,12 @@ func TestBoardRemoveMemberActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, remove still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the removal (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
 
 		err := d.uc.RemoveMember(context.Background(), input)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
