@@ -14,12 +14,10 @@ Build order (spec §9.1):
 ① P0 fixes ✅ → ② positioning ✅ → ③ REST features ✅ → ③.5 cookie auth ✅ → ④ WebSocket ✅ → **⑤ integrity pass ◀ here**
 
 ⑤: harness ✅ → composite-FK ✅ → Transactor ✅ (merged, PR #14) → **deferred SQL tests ◀ next**
-(board unassign cascade, position rebalance, visibility filter, `card_count` — all repo-layer, deferred from earlier steps until the harness existed)
+(position rebalance, visibility filter, `card_count` — all repo-layer, deferred from earlier steps until the harness existed. Board unassign cascade is already covered, board- and workspace-level, in `tests/integration/assignee_fk_test.go`.)
 
-Carry-over from the Transactor review (merged with these still open — do them first on the next branch):
-- 3 stale comments still name the deleted `WriteActivity`; `activity_repository.go:10` is actively wrong.
-- ADR-016's integration test #3 covers only the `CreateCard` shape; `TransferOwnership` and break-glass `self_join_board` are unit-only.
-- The testcontainers integration suite has never been run end to end — only compiled.
+Carry-over from the Transactor review — one item left:
+- ADR-016's integration test #3 covers only the `CreateCard` shape; `TransferOwnership` and break-glass `self_join_board` need integration variants (unit-only today).
 
 After ⑤: frontend implementation. Architecture is settled (ADR-011/012/013); no code written.
 
