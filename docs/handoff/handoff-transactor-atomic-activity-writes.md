@@ -2,7 +2,12 @@
 
 **Date:** 2026-08-31
 **Repo:** `collabotask` (backend: `collabotask-backend/`)
-**Status:** **BUILT + two-axis `/code-review` done (2026-08-31).** Design settled + approved via `/grill-with-docs`, recorded as **ADR-016** (Accepted). Both phases implemented; `go build` + `go vet` green; review verdict **faithful + production-sound** with 5 cheap loose ends (see [Post-implementation review](#post-implementation-review-2026-08-31)). Not yet committed.
+**Status:** **BUILT, reviewed, and MERGED to `main` via PR #14.** Design settled + approved via `/grill-with-docs`, recorded as **ADR-016** (Accepted). Both phases implemented; `go build` + `go vet` green; 598 unit tests green, `-race` clean; two-axis `/code-review` verdict **faithful + production-sound**, 0 correctness defects (see [Post-implementation review](#post-implementation-review-2026-08-31)).
+
+> ⚠️ **Merged with three review items still open.** The recommended pre-merge batch was not applied. Do these first on the next branch, before the deferred SQL tests:
+> 1. **Reword the 3 stale `WriteActivity` comments** (finding #1). `internal/domain/repository/activity_repository.go:10` is *actively wrong* — it claims the swallow policy lives in `common.WriteActivity`, but that function is deleted and the swallow no longer exists.
+> 2. **Resolve finding #2** — add `TransferOwnership` + break-glass `self_join_board` integration variants of test #3, or record the decision to accept unit-only coverage.
+> 3. **Run the integration suite.** The testcontainers tests compile but have never been executed — not in review, not before merge.
 
 This is the **third** item of the ⑤ post-Phase-1 integrity pass: harness ✅ → composite-FK assignee invariant ✅ → **Transactor / Option-C (this)** → remaining deferred SQL tests (cascade, rebalance, visibility filter, `card_count`).
 
@@ -96,6 +101,8 @@ Two-axis `/code-review` against fixed point `HEAD` (`cd97f4e`, docs-only) over t
 | 5 | **Repeated `exec(ctx).(pgx.Tx)` assertion** at `card.go:821` / `column.go:992` to feed `rebalanceIfNeeded`, each with a "// safe to assert" comment. Justified (rebalance needs the concrete tx); latent panic only if ever called outside `tx(...)`. | Minor | Leave as-is. |
 
 **Recommended pre-merge batch:** #1 (reword comments) + resolve #2 (add the two named integration variants, or note the deferral). #3 optional; #4 done; #5 leave.
+
+> **Not applied — merged without this batch (PR #14).** #1 and #2 are still open and carried over to the next branch, along with a first run of the integration suite. See the warning under *Status* at the top. The "before merge" wording in the table above is historical.
 
 ## After it lands
 
