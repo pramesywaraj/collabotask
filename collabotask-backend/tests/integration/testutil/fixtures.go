@@ -103,3 +103,47 @@ func (f *Fixtures) AddBoardMember(t *testing.T, boardID, userID uuid.UUID) {
 	})
 	require.NoError(t, err)
 }
+
+// CreateTestBoardWithVisibility inserts a board with an explicit visibility and returns
+// it. CreateTestBoard always yields a WORKSPACE-visible board; PRIVATE is what break-glass
+// joins and the visibility filter turn on.
+func (f *Fixtures) CreateTestBoardWithVisibility(t *testing.T, workspaceID, ownerID uuid.UUID, visibility entity.BoardVisibility) *entity.Board {
+	t.Helper()
+	repo := pgRepos.NewBoardRepository(f.pool)
+	board := &entity.Board{
+		WorkspaceID:     workspaceID,
+		Title:           fmt.Sprintf("Board-%s", uuid.New().String()[:8]),
+		CreatedBy:       ownerID,
+		BackgroundColor: "#0079BF",
+		Visibility:      visibility,
+	}
+	require.NoError(t, repo.CreateWithOwner(context.Background(), board, ownerID))
+	return board
+}
+
+// AddWorkspaceMember adds userID to the workspace with the given role. Workspace Admin
+// authority outranks board authority, so the role decides what the user may see and join.
+func (f *Fixtures) AddWorkspaceMember(t *testing.T, workspaceID, userID uuid.UUID, role entity.WorkspaceRole) {
+	t.Helper()
+	repo := pgRepos.NewWorkspaceMemberRepository(f.pool)
+	require.NoError(t, repo.Create(context.Background(), &entity.WorkspaceMember{
+		WorkspaceID: workspaceID,
+		UserID:      userID,
+		Role:        role,
+	}))
+}
+
+// CreateTestCardAt inserts a card at an explicit position (CreateTestCard always uses 1000).
+func (f *Fixtures) CreateTestCardAt(t *testing.T, columnID, boardID, createdBy uuid.UUID, title string, position float64) *entity.Card {
+	t.Helper()
+	repo := pgRepos.NewCardRepository(f.pool)
+	card := &entity.Card{
+		ColumnID:  columnID,
+		BoardID:   boardID,
+		Title:     title,
+		Position:  position,
+		CreatedBy: createdBy,
+	}
+	require.NoError(t, repo.Create(context.Background(), card))
+	return card
+}
