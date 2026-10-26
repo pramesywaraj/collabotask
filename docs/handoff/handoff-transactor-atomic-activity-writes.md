@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-31
 **Repo:** `collabotask` (backend: `collabotask-backend/`)
-**Status:** Design **settled + approved** via `/grill-with-docs` (2026-08-31). Recorded as **ADR-016** (Accepted). **Nothing implemented yet.** Next session should `/implement` this test-first, using the ADR-015 harness for the atomicity tests.
+**Status:** **BUILT + two-axis `/code-review` done (2026-08-31).** Design settled + approved via `/grill-with-docs`, recorded as **ADR-016** (Accepted). Both phases implemented; `go build` + `go vet` green; review verdict **faithful + production-sound** with 5 cheap loose ends (see [Post-implementation review](#post-implementation-review-2026-08-31)). Not yet committed.
 
 This is the **third** item of the ⑤ post-Phase-1 integrity pass: harness ✅ → composite-FK assignee invariant ✅ → **Transactor / Option-C (this)** → remaining deferred SQL tests (cascade, rebalance, visibility filter, `card_count`).
 
@@ -59,6 +59,8 @@ Land the plumbing with **no usecase changes** — activity writes still go throu
 `card/{create,update,move,delete}_card.go` · `board/{update_board,leave_board,set_archived,invite_member,transfer_ownership,self_join_board,remove_member}.go` · `workspace/{leave_workspace,remove_member,util}.go` · `column/{create_column,update_column,update_column_position,delete_column}.go`
 (Grep to confirm: `grep -rl WriteActivity internal/usecase --include='*.go'`.)
 
+> **Correction (post-build, review finding #4):** `workspace/util.go` is **not** an activity site — the grep matched it only via a code comment, not a `WriteActivity` call. It is a broadcast/eviction fan-out helper (`fanOutParticipationCascade`) and correctly needs **zero** tx change. The real activity-writing surface is **17** `LogActivity` calls across the other 17 files listed above; `util.go`'s broadcast stays post-commit as designed.
+
 The two **standalone** hand-rolled callers that write **no** activity and therefore need **zero** call-site change under Option A: `board/create_board.go`, `workspace/create_workspace.go`.
 
 ## Gotchas
@@ -78,6 +80,22 @@ go test ./tests/integration/...     # integration (testcontainers postgres:16-al
 mockery                             # after editing .mockery.yaml
 go run github.com/google/wire/cmd/wire ./internal/injection   # after DI changes
 ```
+
+## Post-implementation review (2026-08-31)
+
+Two-axis `/code-review` against fixed point `HEAD` (`cd97f4e`, docs-only) over the uncommitted working tree (71 tracked files, +1068/−766, plus 6 new files). **Independent gate checks:** `go build ./...` ✅ · `go vet ./internal/...` ✅ · `WriteActivity` fully deleted (0 code refs) · no repo retains a `db` field, 0 residual `r.db.` calls · all 17 activity sites wrapped in `WithinTransaction`. (Testcontainers integration suite not run in-review.)
+
+**Verdict — faithful to ADR-016 and production-sound.** No correctness defects. Spec axis: 0 missing / 0 wrong / 0 scope-creep. Standards axis: 0 hard violations. All 8 ADR-016 decisions, both rollout phases, DI/mockery wiring, and the `forbidigo` rule verified present and correct. 5 cheap loose ends remain:
+
+| # | Finding | Severity | How to address |
+|---|---------|----------|----------------|
+| 1 | **3 stale `WriteActivity` comments** — function is deleted but comments still name it. [`activity_repository.go:10`](../../collabotask-backend/internal/domain/repository/activity_repository.go) is *actively wrong* ("swallow policy lives in `common.WriteActivity`" — the swallow no longer exists). Also [`common/broadcaster.go:51`](../../collabotask-backend/internal/usecase/common/broadcaster.go) ("identical contract to WriteActivity") and [`workspace/util.go:47`](../../collabotask-backend/internal/usecase/workspace/util.go) ("mirrors WriteActivity's swallow"). | Low (one misleading) | Reword the 3 comments to reference `LogActivity` / the Transactor propagation contract. **Do before merge.** |
+| 2 | **Integration test #3 covers only the `CreateCard`-shaped path.** ADR-016 §Testing-bar item 3 also named `TransferOwnership` + break-glass `self_join_board` ("*repeated for the two high-stakes multi-statement paths*"). Those are covered at the **unit** (mock) layer but not repeated as integration cases. Also: [`tests/integration/transactor_test.go`](../../collabotask-backend/tests/integration/transactor_test.go) test #3 drives the card + activity repos directly, not the real `CreateCardUseCase`. | Low | Either add `TransferOwnership` + `self_join_board` integration variants of test #3 (~30 min, reuses existing fixtures — discharges the bar literally), **or** accept unit-only coverage and record that decision here. **Decide before merge.** |
+| 3 | **Duplicated test stub** — the `passthroughTx(d)` helper exists (e.g. `board_test_helpers_test.go:57-62`) but ~dozens of test sites re-inline the identical `WithinTransaction … RunAndReturn(fn(ctx))` closure (`board_activity_test.go` ~15×, plus card/column tests). | Judgement (test hygiene) | Route those sites through `passthroughTx`. Optional cleanup. |
+| 4 | **This handoff's "17 sites" list mislabeled `workspace/util.go`** as an activity site (it's broadcast-only). Code is correct. | Doc nit | ✅ Corrected inline above (see the "Correction" note under *The 17 activity call sites*). |
+| 5 | **Repeated `exec(ctx).(pgx.Tx)` assertion** at `card.go:821` / `column.go:992` to feed `rebalanceIfNeeded`, each with a "// safe to assert" comment. Justified (rebalance needs the concrete tx); latent panic only if ever called outside `tx(...)`. | Minor | Leave as-is. |
+
+**Recommended pre-merge batch:** #1 (reword comments) + resolve #2 (add the two named integration variants, or note the deferral). #3 optional; #4 done; #5 leave.
 
 ## After it lands
 
