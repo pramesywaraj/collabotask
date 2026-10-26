@@ -131,3 +131,111 @@ Four files already fail `gofmt` on `main` — `workspace_response.go`, `activity
 ## Done means
 
 Six tests written and passing, suite green end to end with `-race`, `docs/build-log.md` updated with a step-⑤ entry, and `## Now` in `CLAUDE.md` moved on to the next step. Step ⑤ is the last thing before frontend implementation begins.
+
+---
+
+## Review findings — 2026-10-26
+
+The six tests were written and then reviewed against this document and against the repo's own
+conventions. **The suite was actually run: 29 tests pass (13 that already existed + 16 new), with
+`-race` clean.** Nothing in the branch is wrong or broken. What follows is what is still missing,
+and a bit of tidying.
+
+### Checked and clean
+
+Two things this document warned about were specifically verified:
+
+- **The `card_count` test is the strong version.** It builds one board holding 3 members *and*
+  2 cards at the same time, which is what makes it meaningful — the four stacked `LEFT JOIN`s
+  multiply into 6+ rows, so if the `COUNT(DISTINCT …)` were ever weakened to a plain `COUNT()`,
+  this test reports 6 and fails. A board with one member or one card would have passed either way
+  and proved nothing. That trap was avoided.
+- **The new fixtures do not weaken the existing tests.** `testutil/fixtures.go` grew by 44 lines,
+  but every one of them is a *new* helper. No existing helper had its body, its signature, or its
+  defaults touched — `CreateTestBoard` still forces `WORKSPACE` visibility and still seeds the three
+  default columns, `CreateTestCard` still uses position 1000, `AddBoardMember` is untouched. The
+  tests that already depended on this file (`board_repo_test.go`, `assignee_fk_test.go`) cannot
+  behave differently because of this change.
+
+Also confirmed: the test commit touches only `tests/`. The three non-test files that show up in the
+branch diff (`activity_repository.go`, `broadcaster.go`, `workspace/util.go`) are comment rewordings
+from the earlier commit `d25b4a1`, not new work. So "no production code changes expected" held.
+
+### Still to do before step ⑤ is closed
+
+**1. The docs now contradict the branch.** This is the one that matters.
+
+`CLAUDE.md` still lists as an open item *"`TransferOwnership` and break-glass `self_join_board` need
+integration variants (unit-only today)"* — but this branch adds exactly those tests, so that line is
+no longer true. `docs/build-log.md` is further out of date still: its step-⑤ section lists position
+rebalance, the visibility filter and `card_count` as outstanding, and all three are now written.
+
+→ Add the step-⑤ entry to `docs/build-log.md`, and move `## Now` in `CLAUDE.md` on to the next step
+(frontend implementation). This is the same thing "Done means" above already asks for; it just has
+not been done yet.
+
+**2. Column rebalancing is tested less thoroughly than card rebalancing.**
+
+The rebalance logic is shared by two things: cards inside a column, and columns inside a board. This
+document asked for four cases on *both*. Cards got all four. Columns got only the first one — the
+"the gap got too small, so rewrite the whole partition" case.
+
+Missing for columns:
+- a comfortable gap must **not** trigger a rewrite
+- an item at either end, where there is no neighbour on one side, must **not** trigger a rewrite
+
+→ Two short tests mirroring the card ones. This is the only real gap in coverage.
+
+### Optional tidying — one worth doing, the rest not
+
+These were all raised by the review. They were then checked against the actual code, and most of
+them did not survive that second look. Verdicts below, so the next person does not have to redo
+the reasoning.
+
+**Worth doing — collapse the duplicated fixtures.**
+`CreateTestBoardWithVisibility` is a byte-for-byte copy of `CreateTestBoard` with `Visibility`
+parameterised, and `CreateTestCardAt` is the same story against `CreateTestCard`. Each pair now
+carries its *own* copy of the seeded defaults — the `#0079BF` background, the `Board-%s` /
+`Card-%s` title format, position `1000`.
+
+That is how a fixture drifts. Change a default in one body and forget the other, and some later
+test is quietly seeded differently from what its author assumed — which is the same hazard this
+branch was reviewed for, just arriving from the other direction. Have the older helper call the
+newer one so the defaults live in exactly one place. A few lines, and the drift cannot happen
+again.
+
+**Leave alone — `assert` vs `require` in `board_member_repo_test.go`.**
+The review flagged two sentinel checks that use `assert` (which lets the test continue) before
+reading a value. Checked: the value is `affected`, a slice, and the next line is `assert.Empty` on
+it, which handles nil safely. Nothing can crash. So the only effect of `assert` here is that a
+failure reports all three problems at once instead of stopping at the first — which for this test
+is arguably the more useful behaviour. Correct as written.
+
+**Leave alone — the file names.**
+The house pattern is `<thing>_repo_test.go`. `positioning_test.go` deliberately tests one
+behaviour across two different repositories (cards partitioned by `column_id`, columns by
+`board_id`) and says so in its own header comment — there is no `<entity>_repo_test.go` name that
+would describe it honestly. `board_list_test.go` has a better case for renaming, but it is churn
+on an otherwise clean branch with nothing gained in readability. Here the convention is the thing
+that fits badly, not the files.
+
+**Leave alone — aborting inside the open transaction.**
+`transactor_test.go` calls `require.True` from inside the `WithinTransaction` closure. This is
+correct: the failure triggers a `Goexit`, and the deferred rollback still runs. The only argument
+against it is that it is an unusual shape someone might copy somewhere it is *not* safe. Not worth
+a change on its own.
+
+**Opportunistic only.** The same activity struct is spelled out four times in `transactor_test.go`.
+Fold it into a small local builder if you are already editing that file; not a task in itself.
+
+### One limit worth recording, not fixing
+
+Tests 1 and 2 rebuild the use-case logic by hand inside `WithinTransaction` rather than calling the
+real use case — which is exactly what the "Follow the existing shape" section above instructed, so
+this is not a defect in the work.
+
+But it is worth knowing what that buys and what it does not. These tests prove that the Transactor
+and the repositories roll back together. They do **not** exercise the wiring in `self_join_board.go`
+itself: if someone deleted the `if inserted` guard there, `TestTransactor_SelfJoinTwiceLogsOnce`
+would still pass. Worth one sentence in the build-log entry so the next person knows where the
+proof stops.
