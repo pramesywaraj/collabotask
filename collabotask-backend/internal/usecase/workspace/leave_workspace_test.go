@@ -127,12 +127,15 @@ func TestLeaveWorkspace(t *testing.T) {
 			userRepo := mocks.NewMockUserRepository(t)
 			activityRepo := mocks.NewMockActivityRepository(t)
 			broadcaster := mocks.NewMockBroadcaster(t)
+			tx := mocks.NewMockTransactor(t)
 			activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Maybe().Return(nil)
 			stubBroadcastMocks(boardRepo, broadcaster)
+			tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+				RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }).Maybe()
 
 			tt.setupMocks(wsRepo, wsMemberRepo)
 
-			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 			err := uc.LeaveWorkspace(context.Background(), tt.input)
 
 			if tt.wantErr != nil {

@@ -16,11 +16,11 @@ import (
 )
 
 type workspaceRepository struct {
-	db *pgxpool.Pool
+	base
 }
 
-func NewWorkspaceRepository(db *pgxpool.Pool) repository.WorkspaceRepository {
-	return &workspaceRepository{db: db}
+func NewWorkspaceRepository(pool *pgxpool.Pool) repository.WorkspaceRepository {
+	return &workspaceRepository{base: base{pool: pool}}
 }
 
 const workspacesCap = 16
@@ -31,7 +31,7 @@ func (w *workspaceRepository) Create(ctx context.Context, workspace *entity.Work
 		description = workspace.Description
 	}
 
-	err := w.db.QueryRow(
+	err := w.exec(ctx).QueryRow(
 		ctx,
 		createWorkspaceQuery,
 		workspace.Name,
@@ -62,56 +62,47 @@ func (w *workspaceRepository) Create(ctx context.Context, workspace *entity.Work
 }
 
 func (w *workspaceRepository) CreateWithOwner(ctx context.Context, workspace *entity.Workspace, ownerID uuid.UUID) error {
-	tx, err := w.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin create workspace with owner transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	return w.tx(ctx, func(ctx context.Context) error {
+		var description *string
+		if workspace.Description != nil && *workspace.Description != "" {
+			description = workspace.Description
+		}
 
-	var description *string
-	if workspace.Description != nil && *workspace.Description != "" {
-		description = workspace.Description
-	}
-
-	err = tx.QueryRow(
-		ctx,
-		createWorkspaceQuery,
-		workspace.Name,
-		description,
-		workspace.OwnerID,
-	).Scan(
-		&workspace.ID,
-		&workspace.Name,
-		&workspace.Description,
-		&workspace.OwnerID,
-		&workspace.CreatedAt,
-		&workspace.UpdatedAt,
-	)
-
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return domain.ErrConstraintViolation
+		err := w.exec(ctx).QueryRow(
+			ctx,
+			createWorkspaceQuery,
+			workspace.Name,
+			description,
+			workspace.OwnerID,
+		).Scan(
+			&workspace.ID,
+			&workspace.Name,
+			&workspace.Description,
+			&workspace.OwnerID,
+			&workspace.CreatedAt,
+			&workspace.UpdatedAt,
+		)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.Code == "23505" {
+					return domain.ErrConstraintViolation
+				}
 			}
+			return fmt.Errorf("failed to create workspace: %w", err)
 		}
-		return fmt.Errorf("failed to create workspace: %w", err)
-	}
 
-	_, err = tx.Exec(ctx, createWorkspaceMemberQuery, workspace.ID, ownerID, entity.WorkspaceRoleAdmin)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return domain.ErrAlreadyMember
+		_, err = w.exec(ctx).Exec(ctx, createWorkspaceMemberQuery, workspace.ID, ownerID, entity.WorkspaceRoleAdmin)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				return domain.ErrAlreadyMember
+			}
+			return fmt.Errorf("failed to add owner to workspace: %w", err)
 		}
-		return fmt.Errorf("failed to add owner to workspace: %w", err)
-	}
 
-	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (w *workspaceRepository) Update(ctx context.Context, workspace *entity.Workspace) error {
@@ -127,7 +118,7 @@ func (w *workspaceRepository) Update(ctx context.Context, workspace *entity.Work
 
 	updatedAt := time.Now()
 
-	err := w.db.QueryRow(
+	err := w.exec(ctx).QueryRow(
 		ctx,
 		updateWorkspaceQuery,
 		name,
@@ -155,7 +146,7 @@ func (w *workspaceRepository) Update(ctx context.Context, workspace *entity.Work
 }
 
 func (w *workspaceRepository) Delete(ctx context.Context, workspaceID uuid.UUID) error {
-	result, err := w.db.Exec(ctx, deleteWorkspaceQuery, workspaceID)
+	result, err := w.exec(ctx).Exec(ctx, deleteWorkspaceQuery, workspaceID)
 	if err != nil {
 		return fmt.Errorf("failed to delete workspace: %w", err)
 	}
@@ -171,7 +162,7 @@ func (w *workspaceRepository) GetByID(ctx context.Context, workspaceID uuid.UUID
 	var description *string
 	workspace := &entity.Workspace{}
 
-	err := w.db.QueryRow(ctx, getWorkspaceByIdQuery, workspaceID).Scan(
+	err := w.exec(ctx).QueryRow(ctx, getWorkspaceByIdQuery, workspaceID).Scan(
 		&workspace.ID,
 		&workspace.Name,
 		&description,
@@ -193,7 +184,7 @@ func (w *workspaceRepository) GetByID(ctx context.Context, workspaceID uuid.UUID
 }
 
 func (w *workspaceRepository) GetUserWorkspaces(ctx context.Context, userID uuid.UUID) ([]*entity.WorkspaceListItem, error) {
-	rows, err := w.db.Query(ctx, getUserWorkspacesQuery, userID)
+	rows, err := w.exec(ctx).Query(ctx, getUserWorkspacesQuery, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query user workspaces: %w", err)
 	}

@@ -1,9 +1,9 @@
 package card_test
 
-// Activity log contract tests for the card use case (ADR-007 / SRS §4.6).
+// Activity log contract tests for the card use case (ADR-016 / SRS §4.6).
 // Three contract points per mutation: (1) happy path — Log called with correct args,
-// (2) resilience — Log error does not fail the mutation, (3) no-op silence — no-op
-// mutations do NOT call Log.
+// (2) propagation — Log error fails the mutation (strict atomicity, ADR-016 §Q1),
+// (3) no-op silence — no-op mutations do NOT call Log.
 
 import (
 	"context"
@@ -39,6 +39,10 @@ func TestCreateCardActivityLog(t *testing.T) {
 	}
 
 	setupUntilCreate := func(d cardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
@@ -66,14 +70,14 @@ func TestCreateCardActivityLog(t *testing.T) {
 		assert.Equal(t, cardID, out.Card.ID)
 	})
 
-	t.Run("resilience — Log error is swallowed, mutation still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the mutation (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilCreate(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
+		// No broadcaster expectation: tx rolls back so broadcast must not fire
 
 		_, err := d.uc.CreateCard(context.Background(), input)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -97,6 +101,10 @@ func TestDeleteCardActivityLog(t *testing.T) {
 	}
 
 	setupUntilDelete := func(d cardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
@@ -122,14 +130,13 @@ func TestDeleteCardActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, deletion still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the deletion (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilDelete(d)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		err := d.uc.DeleteCard(context.Background(), input)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -148,6 +155,10 @@ func TestMoveCardActivityLog(t *testing.T) {
 	toColumn := &entity.Column{ID: toColumnID, BoardID: boardID, Title: "Done"}
 
 	setupBase := func(d cardTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, fromColumnID).Return(fromColumn, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, toColumnID).Return(toColumn, nil)
@@ -194,14 +205,15 @@ func TestMoveCardActivityLog(t *testing.T) {
 
 	t.Run("happy path — CARD/MOVED logged when position changes in same column", func(t *testing.T) {
 		d := newDeps(t)
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(existingCard, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, fromColumnID).Return(fromColumn, nil)
-		d.columnRepo.EXPECT().GetByID(mock.Anything, fromColumnID).Return(fromColumn, nil) // toColumnID = fromColumnID
+		d.columnRepo.EXPECT().GetByID(mock.Anything, fromColumnID).Return(fromColumn, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
-
-		sameColumnSameBoard := &entity.Column{ID: fromColumnID, BoardID: boardID, Title: "To Do"}
-		_ = sameColumnSameBoard
 
 		movedCard := &entity.Card{ID: cardID, ColumnID: fromColumnID, Title: "Fix login bug", Position: 1500}
 		d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, fromColumnID, float64(1500)).Return(movedCard, nil)
@@ -242,13 +254,12 @@ func TestMoveCardActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, move still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the move (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupBase(d)
 		movedCard := &entity.Card{ID: cardID, ColumnID: toColumnID, Title: "Fix login bug", Position: 2000}
 		d.cardRepo.EXPECT().Move(mock.Anything, cardID, fromColumnID, toColumnID, float64(2000)).Return(movedCard, nil)
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.MoveCard(context.Background(), card.MoveCardInput{
 			BoardID:      boardID,
@@ -258,7 +269,7 @@ func TestMoveCardActivityLog(t *testing.T) {
 			ToPosition:   2000,
 			RequesterID:  requesterID,
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -276,6 +287,10 @@ func TestUpdateCardActivityLog(t *testing.T) {
 	newTitle := "New Title"
 
 	setupUntilUpdate := func(d cardTestDeps, c *entity.Card) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.cardRepo.EXPECT().GetByID(mock.Anything, cardID).Return(c, nil)
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(column, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
@@ -326,11 +341,10 @@ func TestUpdateCardActivityLog(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, update still succeeds", func(t *testing.T) {
+	t.Run("propagation — Log error fails the update (ADR-016 strict atomicity)", func(t *testing.T) {
 		d := newDeps(t)
 		setupUntilUpdate(d, newCard())
 		d.activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
-		d.broadcaster.EXPECT().Broadcast(mock.Anything, mock.Anything).Maybe()
 
 		_, err := d.uc.UpdateCard(context.Background(), card.UpdateCardInput{
 			BoardID:     boardID,
@@ -339,6 +353,6 @@ func TestUpdateCardActivityLog(t *testing.T) {
 			RequesterID: requesterID,
 			Title:       &newTitle,
 		})
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }

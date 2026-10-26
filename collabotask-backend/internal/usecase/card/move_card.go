@@ -57,8 +57,30 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 	oldColumnID := card.ColumnID
 	oldPosition := card.Position
 
-	movedCard, err := cru.cardRepo.Move(ctx, input.CardID, input.FromColumnID, input.ToColumnID, input.ToPosition)
-	if err != nil {
+	var movedCard *entity.Card
+	if err := cru.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		var txErr error
+		movedCard, txErr = cru.cardRepo.Move(ctx, input.CardID, input.FromColumnID, input.ToColumnID, input.ToPosition)
+		if txErr != nil {
+			return txErr
+		}
+		if movedCard.ColumnID != oldColumnID || movedCard.Position != oldPosition {
+			return common.LogActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
+				BoardID:    fromColumn.BoardID,
+				ActionType: entity.ActivityActionMoved,
+				EntityType: entity.ActivityEntityCard,
+				EntityID:   input.CardID,
+				Metadata: map[string]any{
+					entity.ActivityMetaCardTitle:       movedCard.Title,
+					entity.ActivityMetaFromColumnID:    oldColumnID.String(),
+					entity.ActivityMetaFromColumnTitle: fromColumn.Title,
+					entity.ActivityMetaToColumnID:      movedCard.ColumnID.String(),
+					entity.ActivityMetaToColumnTitle:   toColumn.Title,
+				},
+			})
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
@@ -76,20 +98,6 @@ func (cru *CardUseCase) MoveCard(ctx context.Context, input MoveCardInput) (*Mov
 	}
 
 	if movedCard.ColumnID != oldColumnID || movedCard.Position != oldPosition {
-		common.WriteActivity(ctx, cru.activityRepo, input.RequesterID, &entity.Activity{
-			BoardID:    fromColumn.BoardID,
-			ActionType: entity.ActivityActionMoved,
-			EntityType: entity.ActivityEntityCard,
-			EntityID:   input.CardID,
-			Metadata: map[string]any{
-				entity.ActivityMetaCardTitle:       movedCard.Title,
-				entity.ActivityMetaFromColumnID:    oldColumnID.String(),
-				entity.ActivityMetaFromColumnTitle: fromColumn.Title,
-				entity.ActivityMetaToColumnID:      movedCard.ColumnID.String(),
-				entity.ActivityMetaToColumnTitle:   toColumn.Title,
-			},
-		})
-
 		cru.broadcaster.Broadcast(fromColumn.BoardID, common.CardMoved{
 			CardID:       input.CardID,
 			FromColumnID: oldColumnID,

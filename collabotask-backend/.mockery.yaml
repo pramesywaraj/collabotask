@@ -21,6 +21,7 @@ packages:
     interfaces:
       BoardAccessChecker: {}
       Broadcaster: {}
+      Transactor: {}
   collabotask/internal/usecase/auth:
     config:
       filename: auth_mocks.go

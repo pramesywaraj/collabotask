@@ -15,17 +15,15 @@ import (
 )
 
 type workspaceMemberRepository struct {
-	db *pgxpool.Pool
+	base
 }
 
-func NewWorkspaceMemberRepository(db *pgxpool.Pool) repository.WorkspaceMemberRepository {
-	return &workspaceMemberRepository{
-		db: db,
-	}
+func NewWorkspaceMemberRepository(pool *pgxpool.Pool) repository.WorkspaceMemberRepository {
+	return &workspaceMemberRepository{base: base{pool: pool}}
 }
 
 func (wm *workspaceMemberRepository) Create(ctx context.Context, workspaceMember *entity.WorkspaceMember) error {
-	err := wm.db.QueryRow(
+	err := wm.exec(ctx).QueryRow(
 		ctx,
 		createWorkspaceMemberQuery,
 		workspaceMember.WorkspaceID,
@@ -52,7 +50,7 @@ func (wm *workspaceMemberRepository) Create(ctx context.Context, workspaceMember
 }
 
 func (wm *workspaceMemberRepository) Delete(ctx context.Context, workspaceID, userID uuid.UUID) error {
-	result, err := wm.db.Exec(ctx, deleteWorkspaceMemberQuery, workspaceID, userID)
+	result, err := wm.exec(ctx).Exec(ctx, deleteWorkspaceMemberQuery, workspaceID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to remove user from workspace: %w", err)
 	}
@@ -66,7 +64,7 @@ func (wm *workspaceMemberRepository) Delete(ctx context.Context, workspaceID, us
 
 func (wm *workspaceMemberRepository) GetByWorkspaceAndUser(ctx context.Context, workspaceID, userID uuid.UUID) (*entity.WorkspaceMember, error) {
 	workspaceMember := &entity.WorkspaceMember{}
-	err := wm.db.QueryRow(
+	err := wm.exec(ctx).QueryRow(
 		ctx,
 		getByWorkspaceAndUserQuery,
 		workspaceID,
@@ -89,7 +87,7 @@ func (wm *workspaceMemberRepository) GetByWorkspaceAndUser(ctx context.Context, 
 }
 
 func (wm *workspaceMemberRepository) GetMembersByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]*entity.WorkspaceMember, error) {
-	rows, err := wm.db.Query(
+	rows, err := wm.exec(ctx).Query(
 		ctx,
 		listMemberByWorkspaceQuery,
 		workspaceID,
@@ -125,7 +123,7 @@ func (wm *workspaceMemberRepository) GetMembersByWorkspace(ctx context.Context, 
 
 func (wm *workspaceMemberRepository) IsUserExists(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error) {
 	var exists bool
-	err := wm.db.QueryRow(
+	err := wm.exec(ctx).QueryRow(
 		ctx,
 		isUserExistsOnWorkspaceQuery,
 		workspaceID,
@@ -140,7 +138,7 @@ func (wm *workspaceMemberRepository) IsUserExists(ctx context.Context, workspace
 
 func (wm *workspaceMemberRepository) UpdateRole(ctx context.Context, workspaceID, userID uuid.UUID, role entity.WorkspaceRole) (*entity.WorkspaceMember, error) {
 	member := &entity.WorkspaceMember{}
-	err := wm.db.QueryRow(ctx, updateWorkspaceMemberRoleQuery, workspaceID, userID, role).Scan(
+	err := wm.exec(ctx).QueryRow(ctx, updateWorkspaceMemberRoleQuery, workspaceID, userID, role).Scan(
 		&member.WorkspaceID,
 		&member.UserID,
 		&member.Role,
@@ -158,7 +156,7 @@ func (wm *workspaceMemberRepository) UpdateRole(ctx context.Context, workspaceID
 
 func (wm *workspaceMemberRepository) CountAdmins(ctx context.Context, workspaceID uuid.UUID) (int, error) {
 	var count int
-	err := wm.db.QueryRow(ctx, countWorkspaceAdminsQuery, workspaceID).Scan(&count)
+	err := wm.exec(ctx).QueryRow(ctx, countWorkspaceAdminsQuery, workspaceID).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count workspace admins: %w", err)
 	}
@@ -167,60 +165,55 @@ func (wm *workspaceMemberRepository) CountAdmins(ctx context.Context, workspaceI
 }
 
 func (wm *workspaceMemberRepository) RemoveWithParticipationCascade(ctx context.Context, workspaceID, userID uuid.UUID) (repository.WorkspaceCascadeResult, error) {
-	tx, err := wm.db.Begin(ctx)
-	if err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	result, err := tx.Exec(ctx, deleteWorkspaceMemberQuery, workspaceID, userID)
-	if err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to remove workspace member: %w", err)
-	}
-	if result.RowsAffected() == 0 {
-		return repository.WorkspaceCascadeResult{}, domain.ErrMemberNotFound
-	}
-
-	// Unassign cards BEFORE deleting board memberships. The composite FK
-	// (fk_cards_assignee_board_member) fires ON DELETE SET NULL when a board_member
-	// row is removed — collecting cards after the board-membership delete would yield
-	// an empty list. Both queries are independent on (workspace_id, user_id).
-	cardRows, err := tx.Query(ctx, unassignCardsForUserQuery, workspaceID, userID)
-	if err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to unassign cards: %w", err)
-	}
-	defer cardRows.Close()
-
-	affectedCards, err := scanAffectedCards(cardRows)
-	if err != nil {
-		return repository.WorkspaceCascadeResult{}, err
-	}
-
-	// Capture the board IDs the user was a member of before deleting the rows.
-	boardRows, err := tx.Query(ctx, deleteBoardMembershipsForUserQuery, workspaceID, userID)
-	if err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to remove board memberships: %w", err)
-	}
-	defer boardRows.Close()
-
-	var affectedBoardIDs []uuid.UUID
-	for boardRows.Next() {
-		var boardID uuid.UUID
-		if err := boardRows.Scan(&boardID); err != nil {
-			return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to scan affected board id: %w", err)
+	var result repository.WorkspaceCascadeResult
+	err := wm.tx(ctx, func(ctx context.Context) error {
+		r, err := wm.exec(ctx).Exec(ctx, deleteWorkspaceMemberQuery, workspaceID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to remove workspace member: %w", err)
 		}
-		affectedBoardIDs = append(affectedBoardIDs, boardID)
-	}
-	if err := boardRows.Err(); err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("error iterating affected board ids: %w", err)
-	}
+		if r.RowsAffected() == 0 {
+			return domain.ErrMemberNotFound
+		}
 
-	if err := tx.Commit(ctx); err != nil {
-		return repository.WorkspaceCascadeResult{}, fmt.Errorf("failed to commit cascade transaction: %w", err)
-	}
+		// Unassign cards BEFORE deleting board memberships. The composite FK
+		// (fk_cards_assignee_board_member) fires ON DELETE SET NULL when a board_member
+		// row is removed — collecting cards after the board-membership delete would yield
+		// an empty list. Both queries are independent on (workspace_id, user_id).
+		cardRows, err := wm.exec(ctx).Query(ctx, unassignCardsForUserQuery, workspaceID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to unassign cards: %w", err)
+		}
+		defer cardRows.Close()
 
-	return repository.WorkspaceCascadeResult{
-		AffectedCards:    affectedCards,
-		AffectedBoardIDs: affectedBoardIDs,
-	}, nil
+		affectedCards, err := scanAffectedCards(cardRows)
+		if err != nil {
+			return err
+		}
+
+		// Capture the board IDs the user was a member of before deleting the rows.
+		boardRows, err := wm.exec(ctx).Query(ctx, deleteBoardMembershipsForUserQuery, workspaceID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to remove board memberships: %w", err)
+		}
+		defer boardRows.Close()
+
+		var affectedBoardIDs []uuid.UUID
+		for boardRows.Next() {
+			var boardID uuid.UUID
+			if err := boardRows.Scan(&boardID); err != nil {
+				return fmt.Errorf("failed to scan affected board id: %w", err)
+			}
+			affectedBoardIDs = append(affectedBoardIDs, boardID)
+		}
+		if err := boardRows.Err(); err != nil {
+			return fmt.Errorf("error iterating affected board ids: %w", err)
+		}
+
+		result = repository.WorkspaceCascadeResult{
+			AffectedCards:    affectedCards,
+			AffectedBoardIDs: affectedBoardIDs,
+		}
+		return nil
+	})
+	return result, err
 }

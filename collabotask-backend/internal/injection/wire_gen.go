@@ -36,17 +36,18 @@ func InitializeApp() (*App, error) {
 	activityRepository := ProvideActivityRepository(db)
 	hub := ProvideHub()
 	broadcaster := ProvideBroadcaster(hub)
-	workspaceUseCase := ProvideWorkspaceUseCase(workspaceRepository, workspaceMemberRepository, boardRepository, userRepository, activityRepository, broadcaster)
+	transactor := ProvideTransactor(db)
+	workspaceUseCase := ProvideWorkspaceUseCase(workspaceRepository, workspaceMemberRepository, boardRepository, userRepository, activityRepository, broadcaster, transactor)
 	workspaceHandler := ProvideWorkspaceHandler(workspaceUseCase)
 	boardMemberRepository := ProvideBoardMemberRepository(db)
 	boardAccessChecker := ProvideBoardAccessChecker(boardRepository, boardMemberRepository, workspaceMemberRepository)
 	columnRepository := ProvideColumnRepository(db)
 	cardRepository := ProvideCardRepository(db)
-	boardUseCase := ProvideBoardUseCase(boardAccessChecker, boardRepository, boardMemberRepository, workspaceMemberRepository, userRepository, columnRepository, cardRepository, activityRepository, broadcaster)
+	boardUseCase := ProvideBoardUseCase(boardAccessChecker, boardRepository, boardMemberRepository, workspaceMemberRepository, userRepository, columnRepository, cardRepository, activityRepository, broadcaster, transactor)
 	boardHandler := ProvideBoardHandler(boardUseCase)
-	columnUseCase := ProvideColumnUseCase(columnRepository, boardAccessChecker, activityRepository, broadcaster)
+	columnUseCase := ProvideColumnUseCase(columnRepository, boardAccessChecker, activityRepository, broadcaster, transactor)
 	columnHandler := ProvideColumnHandler(columnUseCase)
-	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker, boardMemberRepository, activityRepository, broadcaster)
+	cardUseCase := ProvideCardUseCase(cardRepository, columnRepository, userRepository, boardAccessChecker, boardMemberRepository, activityRepository, broadcaster, transactor)
 	cardHandler := ProvideCardHandler(cardUseCase)
 	wsHandler := ProvideWSHandler(config, hub, boardAccessChecker, userRepository)
 	engine := ProvideRouter(config, logger, authHandler, userHandler, workspaceHandler, boardHandler, columnHandler, cardHandler, wsHandler)
@@ -94,6 +95,7 @@ var (
 		ProvideColumnUseCase,
 		ProvideCardUseCase,
 		ProvideBroadcaster,
+		ProvideTransactor,
 	)
 	HandlerSet = wire.NewSet(
 		ProvideAuthHandler,

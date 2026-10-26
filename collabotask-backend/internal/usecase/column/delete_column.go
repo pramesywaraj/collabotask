@@ -32,17 +32,20 @@ func (cu *ColumnUseCase) DeleteColumn(ctx context.Context, input DeleteColumnInp
 	}
 
 	colTitle := column.Title
-	if err = cu.columnRepo.Delete(ctx, column.ID); err != nil {
+	if err := cu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := cu.columnRepo.Delete(ctx, column.ID); err != nil {
+			return err
+		}
+		return common.LogActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    column.BoardID,
+			ActionType: entity.ActivityActionDeleted,
+			EntityType: entity.ActivityEntityColumn,
+			EntityID:   column.ID,
+			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: colTitle},
+		})
+	}); err != nil {
 		return err
 	}
-
-	common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
-		BoardID:    column.BoardID,
-		ActionType: entity.ActivityActionDeleted,
-		EntityType: entity.ActivityEntityColumn,
-		EntityID:   column.ID,
-		Metadata:   map[string]any{entity.ActivityMetaColumnTitle: colTitle},
-	})
 
 	cu.broadcaster.Broadcast(column.BoardID, common.ColumnDeleted{ColumnID: column.ID})
 

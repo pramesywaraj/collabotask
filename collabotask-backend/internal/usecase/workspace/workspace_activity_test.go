@@ -37,14 +37,31 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 		WorkspaceID: workspaceID,
 	}
 
-	t.Run("happy path — one MEMBER/LEFT per affected board", func(t *testing.T) {
+	newMocks := func(t *testing.T) (
+		*mocks.MockWorkspaceRepository,
+		*mocks.MockWorkspaceMemberRepository,
+		*mocks.MockBoardRepository,
+		*mocks.MockUserRepository,
+		*mocks.MockActivityRepository,
+		*mocks.MockBroadcaster,
+		*mocks.MockTransactor,
+	) {
+		t.Helper()
 		wsRepo := mocks.NewMockWorkspaceRepository(t)
 		wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
 		boardRepo := mocks.NewMockBoardRepository(t)
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
+		tx := mocks.NewMockTransactor(t)
 		stubBroadcastMocks(boardRepo, broadcaster)
+		tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
+		return wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx
+	}
+
+	t.Run("happy path — one MEMBER/LEFT per affected board", func(t *testing.T) {
+		wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx := newMocks(t)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(ws, nil)
@@ -71,19 +88,13 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 				source == "workspace"
 		})).Return(nil).Once()
 
-		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 		err := uc.LeaveWorkspace(context.Background(), validInput)
 		require.NoError(t, err)
 	})
 
 	t.Run("no affected boards → Log NOT called", func(t *testing.T) {
-		wsRepo := mocks.NewMockWorkspaceRepository(t)
-		wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
-		boardRepo := mocks.NewMockBoardRepository(t)
-		userRepo := mocks.NewMockUserRepository(t)
-		activityRepo := mocks.NewMockActivityRepository(t)
-		broadcaster := mocks.NewMockBroadcaster(t)
-		stubBroadcastMocks(boardRepo, broadcaster)
+		wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx := newMocks(t)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(ws, nil)
@@ -92,19 +103,13 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 		)
 		// No Log expectation
 
-		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 		err := uc.LeaveWorkspace(context.Background(), validInput)
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error per board is swallowed, leave still succeeds", func(t *testing.T) {
-		wsRepo := mocks.NewMockWorkspaceRepository(t)
-		wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
-		boardRepo := mocks.NewMockBoardRepository(t)
-		userRepo := mocks.NewMockUserRepository(t)
-		activityRepo := mocks.NewMockActivityRepository(t)
-		broadcaster := mocks.NewMockBroadcaster(t)
-		stubBroadcastMocks(boardRepo, broadcaster)
+	t.Run("propagation — Log error fails the leave (ADR-016 strict atomicity)", func(t *testing.T) {
+		wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx := newMocks(t)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 		wsRepo.EXPECT().GetByID(mock.Anything, workspaceID).Return(ws, nil)
@@ -115,9 +120,9 @@ func TestLeaveWorkspaceActivityLog(t *testing.T) {
 		)
 		activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
 
-		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 		err := uc.LeaveWorkspace(context.Background(), validInput)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }
 
@@ -143,14 +148,31 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 		UserID:      targetID,
 	}
 
-	t.Run("happy path — one MEMBER/REMOVED per affected board", func(t *testing.T) {
+	newMocks := func(t *testing.T) (
+		*mocks.MockWorkspaceRepository,
+		*mocks.MockWorkspaceMemberRepository,
+		*mocks.MockBoardRepository,
+		*mocks.MockUserRepository,
+		*mocks.MockActivityRepository,
+		*mocks.MockBroadcaster,
+		*mocks.MockTransactor,
+	) {
+		t.Helper()
 		wsRepo := mocks.NewMockWorkspaceRepository(t)
 		wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
 		boardRepo := mocks.NewMockBoardRepository(t)
 		userRepo := mocks.NewMockUserRepository(t)
 		activityRepo := mocks.NewMockActivityRepository(t)
 		broadcaster := mocks.NewMockBroadcaster(t)
+		tx := mocks.NewMockTransactor(t)
 		stubBroadcastMocks(boardRepo, broadcaster)
+		tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) })
+		return wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx
+	}
+
+	t.Run("happy path — one MEMBER/REMOVED per affected board", func(t *testing.T) {
+		wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx := newMocks(t)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(
@@ -169,19 +191,13 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 				source == "workspace"
 		})).Return(nil).Once()
 
-		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 		err := uc.RemoveMember(context.Background(), validInput)
 		require.NoError(t, err)
 	})
 
 	t.Run("no affected boards → Log NOT called", func(t *testing.T) {
-		wsRepo := mocks.NewMockWorkspaceRepository(t)
-		wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
-		boardRepo := mocks.NewMockBoardRepository(t)
-		userRepo := mocks.NewMockUserRepository(t)
-		activityRepo := mocks.NewMockActivityRepository(t)
-		broadcaster := mocks.NewMockBroadcaster(t)
-		stubBroadcastMocks(boardRepo, broadcaster)
+		wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx := newMocks(t)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(
@@ -189,19 +205,13 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 		)
 		// No Log expectation
 
-		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 		err := uc.RemoveMember(context.Background(), validInput)
 		require.NoError(t, err)
 	})
 
-	t.Run("resilience — Log error is swallowed, remove still succeeds", func(t *testing.T) {
-		wsRepo := mocks.NewMockWorkspaceRepository(t)
-		wsMemberRepo := mocks.NewMockWorkspaceMemberRepository(t)
-		boardRepo := mocks.NewMockBoardRepository(t)
-		userRepo := mocks.NewMockUserRepository(t)
-		activityRepo := mocks.NewMockActivityRepository(t)
-		broadcaster := mocks.NewMockBroadcaster(t)
-		stubBroadcastMocks(boardRepo, broadcaster)
+	t.Run("propagation — Log error fails the removal (ADR-016 strict atomicity)", func(t *testing.T) {
+		wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx := newMocks(t)
 
 		wsMemberRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		wsMemberRepo.EXPECT().RemoveWithParticipationCascade(mock.Anything, workspaceID, targetID).Return(
@@ -211,8 +221,8 @@ func TestWorkspaceRemoveMemberActivityLog(t *testing.T) {
 		)
 		activityRepo.EXPECT().Log(mock.Anything, mock.Anything).Return(errors.New("db down"))
 
-		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster)
+		uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, boardRepo, userRepo, activityRepo, broadcaster, tx)
 		err := uc.RemoveMember(context.Background(), validInput)
-		require.NoError(t, err)
+		require.ErrorContains(t, err, "db down")
 	})
 }

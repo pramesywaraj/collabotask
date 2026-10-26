@@ -11,11 +11,11 @@ import (
 )
 
 type activityRepository struct {
-	db *pgxpool.Pool
+	base
 }
 
-func NewActivityRepository(db *pgxpool.Pool) repository.ActivityRepository {
-	return &activityRepository{db: db}
+func NewActivityRepository(pool *pgxpool.Pool) repository.ActivityRepository {
+	return &activityRepository{base: base{pool: pool}}
 }
 
 func (ar *activityRepository) Log(ctx context.Context, a *entity.Activity) error {
@@ -24,7 +24,7 @@ func (ar *activityRepository) Log(ctx context.Context, a *entity.Activity) error
 		return fmt.Errorf("failed to marshal activity metadata: %w", err)
 	}
 
-	err = ar.db.QueryRow(ctx, insertActivityQuery,
+	err = ar.exec(ctx).QueryRow(ctx, insertActivityQuery,
 		a.BoardID,
 		a.UserID,
 		string(a.ActionType),

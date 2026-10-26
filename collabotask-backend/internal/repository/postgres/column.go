@@ -16,17 +16,17 @@ import (
 )
 
 type columnRepository struct {
-	db *pgxpool.Pool
+	base
 }
 
-func NewColumnRepository(db *pgxpool.Pool) repository.ColumnRepository {
-	return &columnRepository{db: db}
+func NewColumnRepository(pool *pgxpool.Pool) repository.ColumnRepository {
+	return &columnRepository{base: base{pool: pool}}
 }
 
 const columnsCap = 16
 
 func (cr *columnRepository) Create(ctx context.Context, column *entity.Column) error {
-	err := cr.db.QueryRow(
+	err := cr.exec(ctx).QueryRow(
 		ctx,
 		createColumnQuery,
 		column.BoardID,
@@ -59,36 +59,31 @@ func (cr *columnRepository) CreateMany(ctx context.Context, columns []*entity.Co
 		return nil
 	}
 
-	tx, err := cr.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction to create many columns: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	for _, column := range columns {
-		_, err := tx.Exec(
-			ctx,
-			createColumnQuery,
-			column.BoardID,
-			column.Title,
-			column.Position,
-		)
-		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				return domain.ErrConstraintViolation
+	return cr.tx(ctx, func(ctx context.Context) error {
+		for _, column := range columns {
+			_, err := cr.exec(ctx).Exec(
+				ctx,
+				createColumnQuery,
+				column.BoardID,
+				column.Title,
+				column.Position,
+			)
+			if err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+					return domain.ErrConstraintViolation
+				}
+				return fmt.Errorf("failed to create column: %w", err)
 			}
-			return fmt.Errorf("failed to create column: %w", err)
 		}
-	}
-
-	return tx.Commit(ctx)
+		return nil
+	})
 }
 
 func (cr *columnRepository) GetByID(ctx context.Context, columnID uuid.UUID) (*entity.Column, error) {
 	column := &entity.Column{}
 
-	err := cr.db.QueryRow(
+	err := cr.exec(ctx).QueryRow(
 		ctx,
 		getColumnByIDQuery,
 		columnID,
@@ -111,7 +106,7 @@ func (cr *columnRepository) GetByID(ctx context.Context, columnID uuid.UUID) (*e
 }
 
 func (cr *columnRepository) GetColumnsByBoard(ctx context.Context, boardID uuid.UUID) ([]*entity.Column, error) {
-	rows, err := cr.db.Query(
+	rows, err := cr.exec(ctx).Query(
 		ctx,
 		listColumnByBoardIDQuery,
 		boardID,
@@ -150,7 +145,7 @@ func (cr *columnRepository) GetColumnsByBoard(ctx context.Context, boardID uuid.
 func (cr *columnRepository) GetMaxPosition(ctx context.Context, boardID uuid.UUID) (float64, error) {
 	var position float64
 
-	err := cr.db.QueryRow(
+	err := cr.exec(ctx).QueryRow(
 		ctx,
 		getColumnMaxPositionQuery,
 		boardID,
@@ -172,7 +167,7 @@ func (cr *columnRepository) Update(ctx context.Context, column *entity.Column) e
 
 	updatedAt := time.Now()
 
-	err := cr.db.QueryRow(
+	err := cr.exec(ctx).QueryRow(
 		ctx,
 		updateColumnQuery,
 		title,
@@ -197,42 +192,37 @@ func (cr *columnRepository) Update(ctx context.Context, column *entity.Column) e
 }
 
 func (cr *columnRepository) UpdatePosition(ctx context.Context, columnID uuid.UUID, position float64) (float64, error) {
-	tx, err := cr.db.Begin(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to begin update column position transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	var col entity.Column
-	err = tx.QueryRow(ctx, updateColumnPositionQuery, position, columnID).Scan(
-		&col.ID,
-		&col.BoardID,
-		&col.Title,
-		&col.Position,
-		&col.CreatedAt,
-		&col.UpdatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, domain.ErrColumnNotFound
+	var newPos float64
+	err := cr.tx(ctx, func(ctx context.Context) error {
+		var col entity.Column
+		err := cr.exec(ctx).QueryRow(ctx, updateColumnPositionQuery, position, columnID).Scan(
+			&col.ID,
+			&col.BoardID,
+			&col.Title,
+			&col.Position,
+			&col.CreatedAt,
+			&col.UpdatedAt,
+		)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return domain.ErrColumnNotFound
+			}
+			return fmt.Errorf("failed to update column position: %w", err)
 		}
-		return 0, fmt.Errorf("failed to update column position: %w", err)
-	}
 
-	newPos, err := rebalanceIfNeeded(ctx, tx, "columns", "board_id", col.BoardID, col.ID, col.Position)
-	if err != nil {
-		return 0, fmt.Errorf("failed to rebalance columns: %w", err)
-	}
-
-	if err = tx.Commit(ctx); err != nil {
-		return 0, fmt.Errorf("failed to commit update column position: %w", err)
-	}
-
-	return newPos, nil
+		// exec(ctx) returns the ambient pgx.Tx inside tx(ctx, fn) — safe to assert.
+		p, err := rebalanceIfNeeded(ctx, cr.exec(ctx).(pgx.Tx), "columns", "board_id", col.BoardID, col.ID, col.Position)
+		if err != nil {
+			return fmt.Errorf("failed to rebalance columns: %w", err)
+		}
+		newPos = p
+		return nil
+	})
+	return newPos, err
 }
 
 func (cr *columnRepository) Delete(ctx context.Context, columnID uuid.UUID) error {
-	result, err := cr.db.Exec(
+	result, err := cr.exec(ctx).Exec(
 		ctx,
 		deleteColumnQuery,
 		columnID,

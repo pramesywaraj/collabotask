@@ -34,6 +34,10 @@ func TestCreateColumnBroadcast(t *testing.T) {
 	}
 
 	wireCreate := func(d columnTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
 		d.columnRepo.EXPECT().GetMaxPosition(mock.Anything, boardID).Return(float64(1000), nil)
@@ -85,6 +89,10 @@ func TestUpdateColumnBroadcast(t *testing.T) {
 	board := &entity.Board{ID: boardID}
 
 	wireUpdate := func(d columnTestDeps, oldTitle string) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		col := &entity.Column{ID: columnID, BoardID: boardID, Title: oldTitle}
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
@@ -151,6 +159,10 @@ func TestDeleteColumnBroadcast(t *testing.T) {
 	}
 
 	wireRead := func(d columnTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(col, nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)
@@ -211,6 +223,10 @@ func TestUpdateColumnPositionBroadcast(t *testing.T) {
 	newCol := func() *entity.Column { return &entity.Column{ID: columnID, BoardID: boardID, Position: 1000} }
 
 	wireBase := func(d columnTestDeps) {
+		d.tx.EXPECT().WithinTransaction(mock.Anything, mock.Anything).
+			RunAndReturn(func(ctx context.Context, fn func(context.Context) error) error {
+				return fn(ctx)
+			})
 		d.columnRepo.EXPECT().GetByID(mock.Anything, columnID).Return(newCol(), nil)
 		d.checker.EXPECT().CheckMutateAccess(mock.Anything, boardID, requesterID).
 			Return(&common.BoardAccess{Board: board}, nil)

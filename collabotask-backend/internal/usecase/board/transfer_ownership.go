@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 func (bu *BoardUseCase) TransferOwnership(ctx context.Context, input TransferOwnershipInput) error {
@@ -40,22 +42,27 @@ func (bu *BoardUseCase) TransferOwnership(ctx context.Context, input TransferOwn
 		return nil
 	}
 
-	fromUserID, err := bu.boardMemberRepo.TransferOwnership(ctx, input.BoardID, input.ToUserID)
-	if err != nil {
-		return fmt.Errorf("failed to transfer ownership: %w", err)
+	var fromUserID *uuid.UUID
+	if err := bu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		var txErr error
+		fromUserID, txErr = bu.boardMemberRepo.TransferOwnership(ctx, input.BoardID, input.ToUserID)
+		if txErr != nil {
+			return fmt.Errorf("failed to transfer ownership: %w", txErr)
+		}
+		meta := map[string]any{entity.ActivityMetaToUserID: input.ToUserID.String()}
+		if fromUserID != nil {
+			meta[entity.ActivityMetaFromUserID] = fromUserID.String()
+		}
+		return common.LogActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    input.BoardID,
+			ActionType: entity.ActivityActionOwnershipTransferred,
+			EntityType: entity.ActivityEntityBoard,
+			EntityID:   input.BoardID,
+			Metadata:   meta,
+		})
+	}); err != nil {
+		return err
 	}
-
-	meta := map[string]any{entity.ActivityMetaToUserID: input.ToUserID.String()}
-	if fromUserID != nil {
-		meta[entity.ActivityMetaFromUserID] = fromUserID.String()
-	}
-	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
-		BoardID:    input.BoardID,
-		ActionType: entity.ActivityActionOwnershipTransferred,
-		EntityType: entity.ActivityEntityBoard,
-		EntityID:   input.BoardID,
-		Metadata:   meta,
-	})
 
 	bu.broadcaster.Broadcast(input.BoardID, common.OwnershipTransferred{
 		BoardID:    input.BoardID,

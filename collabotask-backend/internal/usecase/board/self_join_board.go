@@ -64,26 +64,32 @@ func (bu *BoardUseCase) SelfJoinBoard(ctx context.Context, input SelfJoinBoardIn
 		Role:    entity.BoardRoleMember,
 	}
 
-	// ON CONFLICT DO NOTHING RETURNING: guards the race where a concurrent join
-	// slipped in between the check above and here. A no-op insert reports
-	// Joined=false so the activity log / broadcast stays silent.
-	inserted, err := bu.boardMemberRepo.CreateIfAbsent(ctx, newBoardMember)
-	if err != nil {
-		return nil, fmt.Errorf("failed join to the board: %w", err)
-	}
-
-	if inserted {
-		breakGlass := workspaceMember.IsAdmin() && board.Visibility == entity.BoardVisibilityPrivate
-		common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
-			BoardID:    input.BoardID,
-			ActionType: entity.ActivityActionJoined,
-			EntityType: entity.ActivityEntityMember,
-			EntityID:   input.RequesterID,
-			Metadata: map[string]any{
-				entity.ActivityMetaRole:       string(entity.BoardRoleMember),
-				entity.ActivityMetaBreakGlass: breakGlass,
-			},
-		})
+	var inserted bool
+	if err := bu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		var txErr error
+		// ON CONFLICT DO NOTHING RETURNING: guards the race where a concurrent join
+		// slipped in between the check above and here. A no-op insert reports
+		// Joined=false so the activity log / broadcast stays silent.
+		inserted, txErr = bu.boardMemberRepo.CreateIfAbsent(ctx, newBoardMember)
+		if txErr != nil {
+			return fmt.Errorf("failed join to the board: %w", txErr)
+		}
+		if inserted {
+			breakGlass := workspaceMember.IsAdmin() && board.Visibility == entity.BoardVisibilityPrivate
+			return common.LogActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+				BoardID:    input.BoardID,
+				ActionType: entity.ActivityActionJoined,
+				EntityType: entity.ActivityEntityMember,
+				EntityID:   input.RequesterID,
+				Metadata: map[string]any{
+					entity.ActivityMetaRole:       string(entity.BoardRoleMember),
+					entity.ActivityMetaBreakGlass: breakGlass,
+				},
+			})
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return &SelfJoinBoardOutput{Joined: inserted}, nil

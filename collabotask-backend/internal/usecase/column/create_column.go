@@ -28,18 +28,21 @@ func (cu *ColumnUseCase) CreateColumn(ctx context.Context, input CreateColumnInp
 		Title:    input.Title,
 		Position: maxPos + domain.PositionStep,
 	}
-	err = cu.columnRepo.Create(ctx, column)
-	if err != nil {
+
+	if err := cu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := cu.columnRepo.Create(ctx, column); err != nil {
+			return err
+		}
+		return common.LogActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    column.BoardID,
+			ActionType: entity.ActivityActionCreated,
+			EntityType: entity.ActivityEntityColumn,
+			EntityID:   column.ID,
+			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
+		})
+	}); err != nil {
 		return nil, err
 	}
-
-	common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
-		BoardID:    column.BoardID,
-		ActionType: entity.ActivityActionCreated,
-		EntityType: entity.ActivityEntityColumn,
-		EntityID:   column.ID,
-		Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
-	})
 
 	cu.broadcaster.Broadcast(column.BoardID, common.ColumnCreated{Column: column})
 

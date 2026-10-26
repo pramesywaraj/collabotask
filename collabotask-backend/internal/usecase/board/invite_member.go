@@ -83,19 +83,27 @@ func (bu *BoardUseCase) InviteMember(ctx context.Context, input InviteMemberInpu
 		return domain.ErrBoardNoMembersToInvite
 	}
 
-	if err := bu.boardMemberRepo.CreateMany(ctx, membersToAdd); err != nil {
+	if err := bu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := bu.boardMemberRepo.CreateMany(ctx, membersToAdd); err != nil {
+			return err
+		}
+		for _, m := range membersToAdd {
+			if err := common.LogActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+				BoardID:    input.BoardID,
+				ActionType: entity.ActivityActionAdded,
+				EntityType: entity.ActivityEntityMember,
+				EntityID:   m.UserID,
+				Metadata:   map[string]any{entity.ActivityMetaRole: string(m.Role)},
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 
 	for _, m := range membersToAdd {
-		common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
-			BoardID:    input.BoardID,
-			ActionType: entity.ActivityActionAdded,
-			EntityType: entity.ActivityEntityMember,
-			EntityID:   m.UserID,
-			Metadata:   map[string]any{entity.ActivityMetaRole: string(m.Role)},
-		})
-
 		bu.broadcaster.Broadcast(input.BoardID, common.MemberAdded{
 			BoardID:  input.BoardID,
 			User:     users[m.UserID],

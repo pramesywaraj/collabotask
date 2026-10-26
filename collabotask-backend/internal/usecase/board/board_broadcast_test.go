@@ -72,6 +72,7 @@ func TestUpdateBoardBroadcast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			_, err := d.uc.UpdateBoard(context.Background(), tt.input)
@@ -152,6 +153,7 @@ func TestSetArchivedBroadcast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			_, err := d.uc.SetArchived(context.Background(), board.SetArchivedInput{
@@ -228,6 +230,7 @@ func TestTransferOwnershipBroadcast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			err := d.uc.TransferOwnership(context.Background(), input)
@@ -315,6 +318,7 @@ func TestRemoveMemberBroadcast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			err := d.uc.RemoveMember(context.Background(), validInput)
@@ -343,6 +347,7 @@ func TestRemoveMemberCascadeError(t *testing.T) {
 
 	t.Run("cascade error — no EvictUser, no broadcast", func(t *testing.T) {
 		d := newDeps(t)
+		passthroughTx(d)
 		d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
 		d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 		d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).
@@ -422,6 +427,7 @@ func TestLeaveBoardBroadcast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			err := d.uc.LeaveBoard(context.Background(), validInput)
@@ -543,6 +549,7 @@ func TestUpdateBoardPrivateEviction(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			_, err := d.uc.UpdateBoard(context.Background(), tt.input)
@@ -651,6 +658,7 @@ func TestInviteMemberBroadcast(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := newDeps(t)
+			passthroughTx(d)
 			tt.setupMocks(d)
 
 			err := d.uc.InviteMember(context.Background(), board.InviteMemberInput{

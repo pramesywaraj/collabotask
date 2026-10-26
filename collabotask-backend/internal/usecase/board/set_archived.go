@@ -44,24 +44,26 @@ func (bu *BoardUseCase) SetArchived(ctx context.Context, input SetArchivedInput)
 		return &SetArchivedOutput{Board: board}, nil
 	}
 
-	err = bu.boardRepo.SetArchived(ctx, input.BoardID, *input.IsArchived)
-	if err != nil {
-		return nil, fmt.Errorf("failed to set archived status for board: %w", err)
-	}
-
 	board.IsArchived = *input.IsArchived
-
 	actionType := entity.ActivityActionArchived
 	if !board.IsArchived {
 		actionType = entity.ActivityActionUnarchived
 	}
-	common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
-		BoardID:    board.ID,
-		ActionType: actionType,
-		EntityType: entity.ActivityEntityBoard,
-		EntityID:   board.ID,
-		Metadata:   map[string]any{},
-	})
+
+	if err := bu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := bu.boardRepo.SetArchived(ctx, input.BoardID, *input.IsArchived); err != nil {
+			return fmt.Errorf("failed to set archived status for board: %w", err)
+		}
+		return common.LogActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+			BoardID:    board.ID,
+			ActionType: actionType,
+			EntityType: entity.ActivityEntityBoard,
+			EntityID:   board.ID,
+			Metadata:   map[string]any{},
+		})
+	}); err != nil {
+		return nil, err
+	}
 
 	bu.broadcaster.Broadcast(board.ID, common.BoardArchivedSet{
 		BoardID:  board.ID,

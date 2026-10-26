@@ -32,8 +32,24 @@ func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateC
 	}
 
 	oldPosition := column.Position
-	newPos, err := cu.columnRepo.UpdatePosition(ctx, column.ID, input.Position)
-	if err != nil {
+	var newPos float64
+	if err := cu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		var txErr error
+		newPos, txErr = cu.columnRepo.UpdatePosition(ctx, column.ID, input.Position)
+		if txErr != nil {
+			return txErr
+		}
+		if newPos != oldPosition {
+			return common.LogActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
+				BoardID:    column.BoardID,
+				ActionType: entity.ActivityActionMoved,
+				EntityType: entity.ActivityEntityColumn,
+				EntityID:   column.ID,
+				Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
+			})
+		}
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 
@@ -42,14 +58,6 @@ func (cu *ColumnUseCase) UpdateColumnPosition(ctx context.Context, input UpdateC
 	column.Position = newPos
 
 	if newPos != oldPosition {
-		common.WriteActivity(ctx, cu.activityRepo, input.RequesterID, &entity.Activity{
-			BoardID:    column.BoardID,
-			ActionType: entity.ActivityActionMoved,
-			EntityType: entity.ActivityEntityColumn,
-			EntityID:   column.ID,
-			Metadata:   map[string]any{entity.ActivityMetaColumnTitle: column.Title},
-		})
-
 		cu.broadcaster.Broadcast(column.BoardID, common.ColumnMoved{
 			ColumnID: column.ID,
 			Position: newPos,

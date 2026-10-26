@@ -93,28 +93,33 @@ func (bu *BoardUseCase) UpdateBoard(ctx context.Context, input UpdateBoardInput)
 		board.Visibility = entity.BoardVisibility(*input.Visibility)
 	}
 
-	err = bu.boardRepo.Update(ctx, board)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update the board: %w", err)
+	if err := bu.tx.WithinTransaction(ctx, func(ctx context.Context) error {
+		if err := bu.boardRepo.Update(ctx, board); err != nil {
+			return fmt.Errorf("failed to update the board: %w", err)
+		}
+		if len(changedFields) > 0 {
+			meta := map[string]any{
+				entity.ActivityMetaBoardTitle:    board.Title,
+				entity.ActivityMetaChangedFields: changedFields,
+			}
+			if oldVisibility != "" {
+				meta[entity.ActivityMetaVisibilityFrom] = string(oldVisibility)
+				meta[entity.ActivityMetaVisibilityTo] = string(board.Visibility)
+			}
+			return common.LogActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
+				BoardID:    board.ID,
+				ActionType: entity.ActivityActionUpdated,
+				EntityType: entity.ActivityEntityBoard,
+				EntityID:   board.ID,
+				Metadata:   meta,
+			})
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	if len(changedFields) > 0 {
-		meta := map[string]any{
-			entity.ActivityMetaBoardTitle:    board.Title,
-			entity.ActivityMetaChangedFields: changedFields,
-		}
-		if oldVisibility != "" {
-			meta[entity.ActivityMetaVisibilityFrom] = string(oldVisibility)
-			meta[entity.ActivityMetaVisibilityTo] = string(board.Visibility)
-		}
-		common.WriteActivity(ctx, bu.activityRepo, input.RequesterID, &entity.Activity{
-			BoardID:    board.ID,
-			ActionType: entity.ActivityActionUpdated,
-			EntityType: entity.ActivityEntityBoard,
-			EntityID:   board.ID,
-			Metadata:   meta,
-		})
-
 		bu.broadcaster.Broadcast(board.ID, common.BoardUpdated{
 			Board:         board,
 			ChangedFields: changedFields,

@@ -100,7 +100,7 @@ func TestCreateWorkspace(t *testing.T) {
 
 			tt.setupMocks(wsRepo)
 
-			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, mocks.NewMockBoardRepository(t), userRepo, activityRepo, mocks.NewMockBroadcaster(t))
+			uc := workspace.NewWorkspaceUseCase(wsRepo, wsMemberRepo, mocks.NewMockBoardRepository(t), userRepo, activityRepo, mocks.NewMockBroadcaster(t), mocks.NewMockTransactor(t))
 			out, err := uc.CreateWorkspace(context.Background(), tt.input)
 
 			if tt.wantErrMsg != "" {
