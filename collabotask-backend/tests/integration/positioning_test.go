@@ -37,6 +37,20 @@ func cardOrder(t *testing.T, columnID uuid.UUID) ([]uuid.UUID, []float64) {
 	return ids, positions
 }
 
+// columnOrder returns the ids and positions of a board's columns in sort order.
+func columnOrder(t *testing.T, boardID uuid.UUID) ([]uuid.UUID, []float64) {
+	t.Helper()
+	cols, err := pgRepos.NewColumnRepository(testPool).GetColumnsByBoard(context.Background(), boardID)
+	require.NoError(t, err)
+	ids := make([]uuid.UUID, 0, len(cols))
+	positions := make([]float64, 0, len(cols))
+	for _, c := range cols {
+		ids = append(ids, c.ID)
+		positions = append(positions, c.Position)
+	}
+	return ids, positions
+}
+
 // TestCardMove_RebalancesWhenGapTooSmall drops a card 0.2 above its new predecessor —
 // under the 0.5 threshold — and expects the column rewritten to clean STEP multiples in
 // the order the move produced, with Move reporting the position the DB actually holds.
@@ -162,15 +176,76 @@ func TestColumnUpdatePosition_RebalancesWhenGapTooSmall(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, newPos, stored.Position, "the reported position must be the one the DB holds")
 
-	after, err := columnRepo.GetColumnsByBoard(context.Background(), board.ID)
-	require.NoError(t, err)
-	gotIDs := make([]uuid.UUID, 0, len(after))
-	gotPositions := make([]float64, 0, len(after))
-	for _, c := range after {
-		gotIDs = append(gotIDs, c.ID)
-		gotPositions = append(gotPositions, c.Position)
-	}
-	assert.Equal(t, []uuid.UUID{toDo.ID, done.ID, inProgress.ID}, gotIDs, "the drag order must survive the rewrite")
-	assert.Equal(t, []float64{domain.PositionStep, 2 * domain.PositionStep, 3 * domain.PositionStep}, gotPositions,
+	ids, positions := columnOrder(t, board.ID)
+	assert.Equal(t, []uuid.UUID{toDo.ID, done.ID, inProgress.ID}, ids, "the drag order must survive the rewrite")
+	assert.Equal(t, []float64{domain.PositionStep, 2 * domain.PositionStep, 3 * domain.PositionStep}, positions,
 		"the whole board partition must be rewritten to evenly spaced STEP multiples")
+}
+
+// TestColumnUpdatePosition_NoRebalanceOnComfortableGap is the column mirror of the card
+// comfortable-gap case. The three default columns sit one apart at 0, 1, 2 — too packed
+// to drop anything between them — so a fourth column seeded at STEP opens a wide gap to
+// land in. Dropping the `Done` column into the middle of it keeps the requested position
+// and leaves every other column, including the packed 0/1 pair, exactly where it was.
+func TestColumnUpdatePosition_NoRebalanceOnComfortableGap(t *testing.T) {
+	t.Cleanup(func() { testutil.TruncateAll(t, testPool) })
+
+	user := fx.CreateTestUser(t)
+	ws := fx.CreateTestWorkspace(t, user.ID)
+	board := fx.CreateTestBoard(t, ws.ID, user.ID)
+	extra := fx.CreateTestColumn(t, board.ID) // position 1000
+
+	columnRepo := pgRepos.NewColumnRepository(testPool)
+
+	cols, err := columnRepo.GetColumnsByBoard(context.Background(), board.ID)
+	require.NoError(t, err)
+	require.Len(t, cols, len(domain.DefaultNewBoardColumnTitles)+1, "three default columns plus the seeded one")
+	toDo, inProgress, done := cols[0], cols[1], cols[2]
+
+	// 500 sits 499 after `inProgress` (1) and 500 before `extra` (1000) → both gaps clear 0.5.
+	newPos, err := columnRepo.UpdatePosition(context.Background(), done.ID, 500)
+	require.NoError(t, err)
+	assert.Equal(t, 500.0, newPos, "a comfortable gap must leave the requested position intact")
+
+	ids, positions := columnOrder(t, board.ID)
+	assert.Equal(t, []uuid.UUID{toDo.ID, inProgress.ID, done.ID, extra.ID}, ids)
+	assert.Equal(t, []float64{0, 1, 500, domain.PositionStep}, positions,
+		"no rewrite: the other columns keep their positions, packed 0/1 pair included")
+}
+
+// TestColumnUpdatePosition_NoRebalanceAtOpenEnd covers both open ends of the board
+// partition. With no neighbour on one side that gap is ±Inf, so min(gap, ±Inf) must be
+// judged on the real gap alone — an open end is not a packed one.
+func TestColumnUpdatePosition_NoRebalanceAtOpenEnd(t *testing.T) {
+	t.Cleanup(func() { testutil.TruncateAll(t, testPool) })
+
+	user := fx.CreateTestUser(t)
+	ws := fx.CreateTestWorkspace(t, user.ID)
+	board := fx.CreateTestBoard(t, ws.ID, user.ID)
+
+	columnRepo := pgRepos.NewColumnRepository(testPool)
+
+	cols, err := columnRepo.GetColumnsByBoard(context.Background(), board.ID)
+	require.NoError(t, err)
+	require.Len(t, cols, len(domain.DefaultNewBoardColumnTitles), "a fixture board starts with its default columns")
+	toDo, inProgress, done := cols[0], cols[1], cols[2]
+
+	// Drag `toDo` past the end: no next neighbour (+Inf), prev gap 4998.
+	newPos, err := columnRepo.UpdatePosition(context.Background(), toDo.ID, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, 5000.0, newPos, "a trailing open end must not trigger a rebalance")
+
+	ids, positions := columnOrder(t, board.ID)
+	assert.Equal(t, []uuid.UUID{inProgress.ID, done.ID, toDo.ID}, ids)
+	assert.Equal(t, []float64{1, 2, 5000}, positions)
+
+	// The other open end: first position in the partition, no previous neighbour (-Inf),
+	// next gap 1.75.
+	newPos, err = columnRepo.UpdatePosition(context.Background(), inProgress.ID, 0.25)
+	require.NoError(t, err)
+	assert.Equal(t, 0.25, newPos, "the leading open end must not trigger a rebalance either")
+
+	ids, positions = columnOrder(t, board.ID)
+	assert.Equal(t, []uuid.UUID{inProgress.ID, done.ID, toDo.ID}, ids)
+	assert.Equal(t, []float64{0.25, 2, 5000}, positions)
 }

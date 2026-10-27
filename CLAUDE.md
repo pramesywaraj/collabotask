@@ -8,18 +8,13 @@ The frontend architecture is settled and documented (`docs/architecture/frontend
 
 ## Now
 
-**Phase 1 backend — step ⑤ (post-Phase-1 integrity pass), in progress.**
+**Phase 1 backend is complete. Frontend implementation — not started.**
 
-Build order (spec §9.1):
-① P0 fixes ✅ → ② positioning ✅ → ③ REST features ✅ → ③.5 cookie auth ✅ → ④ WebSocket ✅ → **⑤ integrity pass ◀ here**
+Build order (spec §9.1): ① P0 fixes ✅ → ② positioning ✅ → ③ REST features ✅ → ③.5 cookie auth ✅ → ④ WebSocket ✅ → ⑤ integrity pass ✅ — **all closed.**
 
-⑤: harness ✅ → composite-FK ✅ → Transactor ✅ (merged, PR #14) → **deferred SQL tests ◀ next**
-(position rebalance, visibility filter, `card_count` — all repo-layer, deferred from earlier steps until the harness existed. Board unassign cascade is already covered, board- and workspace-level, in `tests/integration/assignee_fk_test.go`.)
+Step ⑤ closed 2026-10-26 on branch `test/deferred-sql-tests`: the deferred repository-layer SQL tests are written (31 integration tests, `-race` clean), the suite has now been run end to end, and the Transactor carry-over items are all discharged. **No open backend work.**
 
-Carry-over from the Transactor review — one item left:
-- ADR-016's integration test #3 covers only the `CreateCard` shape; `TransferOwnership` and break-glass `self_join_board` need integration variants (unit-only today).
-
-After ⑤: frontend implementation. Architecture is settled (ADR-011/012/013); no code written.
+Frontend: architecture is settled (ADR-011/012/013, `docs/architecture/frontend-architecture.md`); **no code written yet.** First decision when it starts is what to scaffold — the Vite app zone comes before the Astro landing.
 
 **Don't touch:** Phase-2 deferrals — comments, labels, attachments, public boards, refresh tokens, account deletion.
 
