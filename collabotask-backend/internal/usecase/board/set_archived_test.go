@@ -27,6 +27,14 @@ func TestSetArchived(t *testing.T) {
 		CreatedBy:   requesterID,
 		IsArchived:  false,
 	}
+	// Every subtest runs t.Parallel() and SetArchived writes to the board it is handed
+	// (set_archived.go:47), so each one needs its own copy. Sharing the pointer above
+	// races a write in one subtest against a read in another.
+	newExistingBoard := func() *entity.Board {
+		b := *existingBoard
+		return &b
+	}
+
 	adminMember := &entity.WorkspaceMember{WorkspaceID: workspaceID, UserID: requesterID, Role: entity.WorkspaceRoleAdmin}
 	regularMember := &entity.WorkspaceMember{WorkspaceID: workspaceID, UserID: requesterID, Role: entity.WorkspaceRoleMember}
 
@@ -70,7 +78,7 @@ func TestSetArchived(t *testing.T) {
 			name:  "requester not in workspace → ErrUserNotInWorkspace",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(newExistingBoard(), nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(nil, nil)
 			},
 			wantErr: domain.ErrUserNotInWorkspace,
@@ -79,7 +87,7 @@ func TestSetArchived(t *testing.T) {
 			name:  "unexpected error fetching board member → wrapped error",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(newExistingBoard(), nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, errors.New("db error"))
 			},
@@ -103,7 +111,7 @@ func TestSetArchived(t *testing.T) {
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
 				demotedCreator := &entity.BoardMember{BoardID: boardID, UserID: requesterID, Role: entity.BoardRoleMember}
-				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil) // existingBoard.CreatedBy == requesterID
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(newExistingBoard(), nil) // existingBoard.CreatedBy == requesterID
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(regularMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(demotedCreator, nil)
 			},
@@ -113,7 +121,7 @@ func TestSetArchived(t *testing.T) {
 			name:  "boardRepo.SetArchived fails → wrapped error",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(existingBoard, nil)
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(newExistingBoard(), nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
 				d.boardRepo.EXPECT().SetArchived(mock.Anything, boardID, true).Return(errors.New("db error"))
@@ -124,8 +132,7 @@ func TestSetArchived(t *testing.T) {
 			name:  "success — archive board",
 			input: validInput,
 			setupMocks: func(d boardTestDeps) {
-				b := *existingBoard
-				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(&b, nil)
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(newExistingBoard(), nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
 				d.boardRepo.EXPECT().SetArchived(mock.Anything, boardID, true).Return(nil)
@@ -138,9 +145,9 @@ func TestSetArchived(t *testing.T) {
 			name:  "success — unarchive board",
 			input: board.SetArchivedInput{RequesterID: requesterID, BoardID: boardID, IsArchived: boolPtr(false)},
 			setupMocks: func(d boardTestDeps) {
-				b := *existingBoard
+				b := newExistingBoard()
 				b.IsArchived = true
-				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(&b, nil)
+				d.boardRepo.EXPECT().GetByID(mock.Anything, boardID).Return(b, nil)
 				d.wsMbrRepo.EXPECT().GetByWorkspaceAndUser(mock.Anything, workspaceID, requesterID).Return(adminMember, nil)
 				d.boardMbrRepo.EXPECT().GetMemberByBoardAndUser(mock.Anything, boardID, requesterID).Return(nil, domain.ErrBoardMemberNotFound)
 				d.boardRepo.EXPECT().SetArchived(mock.Anything, boardID, false).Return(nil)

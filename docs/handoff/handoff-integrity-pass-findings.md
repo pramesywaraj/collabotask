@@ -15,6 +15,11 @@ Finding #1 is a product defect that exists in `main` today. Finding #2 is why
 `go test ./... -race` fails intermittently — it is a test bug, not a product one. Neither
 blocks step ⑤ from closing.
 
+**Status 2026-10-27:** #2 is **fixed and verified** (details under that finding) — do not redo
+it. #1 is **still open and is the live task**; its test impact has been re-measured and is
+larger than first written. #3 is still open, still housekeeping. The three step-⑤ follow-ups at
+the bottom of this doc are all done.
+
 ## Verified clean (do not re-investigate)
 
 - `tests/integration` — 26 tests, green, **5 consecutive `-race` runs**, no race.
@@ -76,13 +81,34 @@ blocks step ⑤ from closing.
   float64(position+1) * domain.PositionStep
   ```
 
-- **Test impact:** `tests/integration/positioning_test.go` ›
-  `TestColumnUpdatePosition_RebalancesWhenGapTooSmall` deliberately documents today's `0, 1, 2`
-  behaviour (it drags `Done` to `0.2` to pack the gap). Fixing this means updating that test's
-  drag target — e.g. to `1000.2` — so it still lands under the threshold. Update both together.
+- **Test impact — three tests, not one.** Re-checked 2026-10-27 against `242a34d`, which
+  expanded `positioning_test.go` by 95 lines after this finding was first written. All three
+  column cases in `tests/integration/positioning_test.go` hard-code today's `0, 1, 2` spacing,
+  in their assertions *and* their comments. They were written against the defect knowingly, so
+  fixing it moves all three together:
+  - `TestColumnUpdatePosition_RebalancesWhenGapTooSmall` — drags `Done` to `0.2`. Retarget to
+    `1000.2` so the gap still falls under `PositionRebalanceThreshold`; the
+    `2*domain.PositionStep` assertion still holds.
+  - `TestColumnUpdatePosition_NoRebalanceOnComfortableGap` — asserts
+    `{0, 1, 500, domain.PositionStep}`, and seeds a **fourth** column at `STEP` purely to
+    manufacture a gap wide enough to drop into, because the defaults are too packed to land
+    between. With 1000-spaced defaults that workaround stops being necessary, so this test gets
+    *simpler* — drop the extra column and drop into the real gap.
+  - `TestColumnUpdatePosition_NoRebalanceAtOpenEnd` — asserts `{1, 2, 5000}`, then
+    `{0.25, 2, 5000}` after the second leg.
+
+  Comments move with them: around lines 153 and 186 they state "three default columns at
+  positions 0, 1, 2" and "sit one apart at 0, 1, 2 — too packed to drop anything between them".
+  The second sentence stops being true after the fix.
+- **Verification needs Docker.** All three are integration tests, so nothing can be confirmed
+  without the testcontainers harness (`docker version` must answer, or `TestMain` panics in
+  `NewTestDB`). Beyond these three: changing the seeded positions changes what **every**
+  `fx.CreateTestBoard` call produces, and all 31 integration tests build their boards through
+  that fixture — so run the whole suite, not just `positioning_test.go`, then
+  `go test ./... -race`.
 - Frontend note: the app zone is not built yet, so no client depends on the current spacing.
 
-### 2. Flaky data race in `TestSetArchived` — FIX (test-only; breaks `go test ./... -race`)
+### 2. Flaky data race in `TestSetArchived` — ✅ FIXED 2026-10-27 (test-only)
 
 - Files: `internal/usecase/board/set_archived_test.go:23, 73, 82, 106, 116, 127, 141`;
   the racing write is `internal/usecase/board/set_archived.go:47`.
@@ -98,8 +124,10 @@ blocks step ⑤ from closing.
   One subtest writes `IsArchived` on the shared fixture while another reads it. The race report
   names exactly this pair: write at `set_archived.go:47`, previous read at
   `set_archived_test.go:141`.
-- Reproduction: `go test ./internal/usecase/board/ -race -count=1 -run TestSetArchived`, run
-  repeatedly. Measured **3 races in 8 runs**. A single clean run proves nothing; loop it.
+- Reproduction (before the fix): `go test ./internal/usecase/board/ -race -count=1 -run
+  TestSetArchived`, run repeatedly. Measured **3 races in 8 runs** when first found, then **5 in
+  12** and **4 of 4** whole-tree runs a day later — it got more reliable, not less. A single
+  clean run proves nothing; loop it.
 - Not a product defect. Production never shares one board struct across concurrent requests —
   each request fetches its own. `set_archived.go` is correct; only the fixture sharing is wrong.
 - Fix direction: give each subtest its own copy, the way lines 127 and 141 already do. A factory
@@ -114,10 +142,16 @@ blocks step ⑤ from closing.
 
   …then the four `Return(existingBoard, nil)` sites become `Return(newExistingBoard(), nil)`.
   Dropping `t.Parallel()` would also silence it, but that hides the sharing instead of fixing it.
-- **Sweep while in there:** a shared fixture pointer plus `t.Parallel()` is an easy pattern to
-  repeat across the sibling use-case tests. The others may simply be getting lucky — grep for
-  `t.Parallel()` alongside a shared `&entity.` fixture and confirm with a looped `-race` run.
-- Verify the fix with 20–30 looped runs, not one.
+- **Sweep — done, nothing else found.** The worry was that sibling tests share the same
+  pattern and are merely getting lucky. All 32 test files under `internal/usecase/` that call
+  `t.Parallel()` were run six times over with `-race`: the only site that ever appeared was
+  `set_archived.go:47`. Six runs is not proof of absence, but it was enough to not spend a day
+  auditing 32 files.
+- **Applied 2026-10-27**, as described above: a `newExistingBoard()` factory beside the fixture,
+  the four sharing sites switched to it, and the two subtests that were already hand-copying
+  (`b := *existingBoard`) folded onto the same factory so the file speaks one idiom.
+  **Verified 30/30** on `TestSetArchived` and **8/8** across `internal/`, zero `DATA RACE`
+  reports — against 4-of-4 failing beforehand.
 
 ### 3. Five files fail `gofmt` — HOUSEKEEPING (pre-existing, unrelated)
 
@@ -137,16 +171,23 @@ branch rather than mixing it into feature or test work.
 
 ## Suggested order
 
-1. **#2 first** — it is what makes `go test ./... -race` fail, so it is blocking anyone who runs
-   the full suite with the race detector. Test-only, four edits, no product risk.
-2. **#1 next**, together with its one-line test update. Small and safe, but it is product code,
-   so per root `CLAUDE.md` › "Working With Me" it wants a short plan and approval first.
+1. ~~**#2 first**~~ — done 2026-10-27, see above.
+2. **#1 — the live task.** One line of product code plus three integration tests. Small and
+   safe, but it *is* product code, so per root `CLAUDE.md` › "Working With Me" it wants a short
+   plan and approval before coding. Needs Docker up to verify.
 3. **#3 whenever** — its own branch.
 
 Neither #1 nor #2 reopens ADR-016, step ④, or any Phase-2 deferral.
 
-## Still open on step ⑤ itself
+## Step ⑤ follow-ups — all done
 
-- `/code-review` on `38b11a6` (two-axis, per project convention).
-- `docs/build-log.md` — append the step-⑤ entry.
-- `CLAUDE.md` › `## Now` — move the pointer on to frontend implementation.
+- ✅ `/code-review` ran on `38b11a6`; its findings produced `242a34d` (the missing
+  column-rebalance cases).
+- ✅ `docs/build-log.md` — step-⑤ entry appended, summary table row flipped to ✅.
+- ✅ `CLAUDE.md` › `## Now` — moved on to frontend, and now carries #1 and #3 as the two open
+  backend items rather than claiming there are none.
+
+One thing to know if you read the first version of those docs: they stated the suite was
+"`-race` clean" while #2 was still live and failing every run. That claim has been narrowed to
+name which half was verified and when. Worth not reintroducing — the branch is still unmerged,
+so "Phase 1 backend is complete" is true locally and not yet on `main`.

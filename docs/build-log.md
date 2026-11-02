@@ -14,7 +14,7 @@ The roadmap is spec §9.1. The pointer to current work is `## Now` in `CLAUDE.md
 | ③ | REST feature completion (5 sub-steps) | ✅ | ADR-005/006/007, migrations 000007–000008 |
 | ③.5 | Auth: Bearer → httpOnly cookie | ✅ 2026-07-27 | ADR-008 |
 | ④ | WebSocket + participation broadcast (A–F) | ✅ 2026-08-22 | ADR-009/014 |
-| ⑤ | Post-Phase-1 integrity pass | in progress (Transactor merged, PR #14) | ADR-010/015/016, migration 000009 |
+| ⑤ | Post-Phase-1 integrity pass | ✅ 2026-10-26 | ADR-010/015/016, migration 000009 |
 | — | Frontend architecture | ✅ settled, not built | ADR-011/012/013 |
 
 ---
@@ -154,7 +154,9 @@ Two-axis review (2026-08-31): faithful to ADR-016, 0 correctness defects. Merged
 
 [handoff](handoff/handoff-deferred-sql-tests.md) · [review findings](handoff/handoff-integrity-pass-findings.md)
 
-Repo-layer tests deferred from earlier steps, written now that the harness exists. Branch `test/deferred-sql-tests`, tests only — no production code touched. **31 integration tests pass, `-race` clean.** The suite was also run end to end for the first time here, which closes the third Transactor carry-over item.
+Repo-layer tests deferred from earlier steps, written now that the harness exists. Branch `test/deferred-sql-tests`, tests only — no production code touched. **31 integration tests pass.** The suite was also run end to end for the first time here, which closes the third Transactor carry-over item.
+
+`-race` on the *whole* suite was not clean when this was first written: `TestSetArchived` shared one mutable `*entity.Board` across `t.Parallel()` subtests while `set_archived.go:47` wrote to it — a pre-existing fault, unrelated to this branch, that failed 4 of 4 full runs. Each subtest now takes its own copy; verified 30/30 on the test and 8/8 across `internal/`. Found by writing these tests, not by them.
 
 - **Atomicity variants** (`transactor_test.go`) — ADR-016's bar asked for more than the `CreateCard` shape. `TransferOwnership` now has a rollback test and a success test (the latter pins `fromUserID`, which the broadcast depends on), and break-glass `self_join_board` has both a rollback test and a join-twice test proving `CreateIfAbsent` reports `inserted=false` and writes no second activity row. This closes the last open carry-over from the Transactor review.
 - **Position rebalance** (`positioning_test.go`) — `rebalanceIfNeeded` through both of its seams: cards partitioned by `column_id` and columns by `board_id`. Each gets all four cases: a sub-threshold gap rewrites the whole partition to `STEP` multiples in the order the move produced, the returned position is the one the DB actually holds (this was a real bug), a comfortable gap rewrites nothing, and an open end (`±Inf` neighbour) is not a packed one.
