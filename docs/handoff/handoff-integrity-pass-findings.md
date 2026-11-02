@@ -15,10 +15,9 @@ Finding #1 is a product defect that exists in `main` today. Finding #2 is why
 `go test ./... -race` fails intermittently — it is a test bug, not a product one. Neither
 blocks step ⑤ from closing.
 
-**Status 2026-10-27:** #2 is **fixed and verified** (details under that finding) — do not redo
-it. #1 is **still open and is the live task**; its test impact has been re-measured and is
-larger than first written. #3 is still open, still housekeeping. The three step-⑤ follow-ups at
-the bottom of this doc are all done.
+**Status 2026-11-02:** #1 and #2 are both **fixed and verified** — do not redo either. #3 is
+still open, still housekeeping. The three step-⑤ follow-ups at the bottom of this doc are all
+done. The branch is still unmerged.
 
 ## Verified clean (do not re-investigate)
 
@@ -33,7 +32,7 @@ the bottom of this doc are all done.
 
 ## Findings to action
 
-### 1. New boards get default columns at positions 0, 1, 2 instead of STEP multiples — FIX (correctness, present now, low severity)
+### 1. New boards get default columns at positions 0, 1, 2 instead of STEP multiples — ✅ FIXED 2026-11-02
 
 - File: `internal/repository/postgres/board.go:81-88` (`CreateWithOwner`).
 - The loop index is written in as the position:
@@ -75,11 +74,27 @@ the bottom of this doc are all done.
   self-healing — after the first rebalance the columns sit at 1000/2000/3000 and behave normally.
   Cosmetically, until then a user-added column sits at 1002 beside defaults at 0, 1, 2.
   No data corruption, no wrong ordering, nothing user-visible.
-- Fix direction: one line — space the defaults like everything else.
+- **Applied 2026-11-02** — one line, as directed:
 
   ```go
   float64(position+1) * domain.PositionStep
   ```
+
+  New boards now seed at 1000/2000/3000, matching `create_column.go`, `create_card.go` and
+  migration 000006's `rn * 1000`. No migration needed: boards predating 000006 are already on
+  STEP multiples, and any created since self-heal on their first rebalance.
+
+  **One extra change the plan did not anticipate.** `testutil.CreateTestColumn` hard-coded
+  `Position: 1000`, which after the fix collides exactly with the `To Do` default. It now seeds
+  at `(len(DefaultNewBoardColumnTitles)+1) * PositionStep` — i.e. one STEP past the last
+  default, the position `create_column.go` would really append it at. Eleven call sites across
+  four test files use that fixture; none assert the column's own position, so nothing else
+  moved. This is the fixture-wide risk the verification note warned about, and it is why the
+  whole suite had to run rather than just `positioning_test.go`.
+
+  **Verified:** 31 integration tests pass (same count as before — none lost or skipped), and
+  the full suite is green three runs in a row with `-race`: 632 tests, 31 packages, zero
+  `DATA RACE` reports.
 
 - **Test impact — three tests, not one.** Re-checked 2026-10-27 against `242a34d`, which
   expanded `positioning_test.go` by 95 lines after this finding was first written. All three
@@ -172,9 +187,8 @@ branch rather than mixing it into feature or test work.
 ## Suggested order
 
 1. ~~**#2 first**~~ — done 2026-10-27, see above.
-2. **#1 — the live task.** One line of product code plus three integration tests. Small and
-   safe, but it *is* product code, so per root `CLAUDE.md` › "Working With Me" it wants a short
-   plan and approval before coding. Needs Docker up to verify.
+2. ~~**#1**~~ — done 2026-11-02, see above. Approved as a plan first, then applied and
+   verified against a real container.
 3. **#3 whenever** — its own branch.
 
 Neither #1 nor #2 reopens ADR-016, step ④, or any Phase-2 deferral.

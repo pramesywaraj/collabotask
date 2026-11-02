@@ -14,9 +14,9 @@ Build order (spec §9.1): ① P0 fixes ✅ → ② positioning ✅ → ③ REST 
 
 Step ⑤ closed 2026-10-26 on branch `test/deferred-sql-tests` — **not yet merged.** The deferred repository-layer SQL tests are written (31 integration tests), the suite has been run end to end, and the Transactor carry-over items are all discharged. `-race` is clean after fixing a pre-existing shared-fixture race in `set_archived_test.go` (unit tree re-verified 8/8 on 2026-10-27; `tests/integration` verified 5/5 on 2026-10-26).
 
-**Two open backend items**, both pre-existing, both detailed in `docs/handoff/handoff-integrity-pass-findings.md`:
-- New boards seed their default columns at 0/1/2 instead of `PositionStep` multiples (`internal/repository/postgres/board.go:81`). Harmless today, but a client computing drop midpoints lands on the rebalance threshold on its very first drag — **fix before frontend work starts.** Three column cases in `positioning_test.go` encode today's spacing and move with it.
-- Five files fail `gofmt` (own branch, no rush — nothing enforces formatting).
+**One open backend item:** five files fail `gofmt` — own branch, no rush, nothing enforces formatting. See `docs/handoff/handoff-integrity-pass-findings.md` › #3.
+
+The default-column spacing defect (boards seeded at 0/1/2 instead of `PositionStep` multiples) was **fixed 2026-11-02** — new boards now seed at 1000/2000/3000, so the frontend's drag-and-drop starts with the gaps ADR-004 intends.
 
 Frontend: architecture is settled (ADR-011/012/013, `docs/architecture/frontend-architecture.md`); **no code written yet.** First decision when it starts is what to scaffold — the Vite app zone comes before the Astro landing.
 

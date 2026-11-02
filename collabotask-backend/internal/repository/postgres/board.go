@@ -78,13 +78,18 @@ func (br *boardRepository) CreateWithOwner(ctx context.Context, board *entity.Bo
 			return fmt.Errorf("failed to add owner to board: %w", err)
 		}
 
+		// Space the defaults by PositionStep, like every other seeding path
+		// (create_column.go, create_card.go, migration 000006's rn*1000 reseed).
+		// The range index would seed 0/1/2, leaving a gap of 1 between neighbours
+		// where ADR-004 intends 1000 — a client dropping at the midpoint would
+		// reach the rebalance threshold within two drags.
 		for position, colTitle := range domain.DefaultNewBoardColumnTitles {
 			_, err = br.exec(ctx).Exec(
 				ctx,
 				createColumnQuery,
 				board.ID,
 				colTitle,
-				position,
+				float64(position+1)*domain.PositionStep,
 			)
 			if err != nil {
 				var pgErr *pgconn.PgError
