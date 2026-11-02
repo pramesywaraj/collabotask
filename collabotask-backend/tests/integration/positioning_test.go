@@ -150,8 +150,8 @@ func TestCardMove_NoRebalanceAtOpenEnd(t *testing.T) {
 
 // TestColumnUpdatePosition_RebalancesWhenGapTooSmall exercises the second partition the
 // same helper serves — columns, partitioned by board_id. A fixture board arrives with the
-// three default columns at positions 0, 1, 2; dragging the last one 0.2 past the first
-// packs the gap and must rewrite the board's columns to clean STEP multiples.
+// three default columns one STEP apart; dragging the last one 0.2 past the first packs the
+// gap and must rewrite the board's columns to clean STEP multiples.
 func TestColumnUpdatePosition_RebalancesWhenGapTooSmall(t *testing.T) {
 	t.Cleanup(func() { testutil.TruncateAll(t, testPool) })
 
@@ -166,11 +166,13 @@ func TestColumnUpdatePosition_RebalancesWhenGapTooSmall(t *testing.T) {
 	require.Len(t, cols, len(domain.DefaultNewBoardColumnTitles), "a fixture board starts with its default columns")
 	toDo, inProgress, done := cols[0], cols[1], cols[2]
 
-	// 0.2 sits 0.2 after `toDo` (0) and 0.8 before `inProgress` (1) → min gap 0.2 < 0.5.
-	newPos, err := columnRepo.UpdatePosition(context.Background(), done.ID, 0.2)
+	// STEP+0.2 sits 0.2 after `toDo` (STEP) and nearly a full STEP before `inProgress`
+	// (2*STEP) → min gap 0.2 < 0.5.
+	packed := domain.PositionStep + 0.2
+	newPos, err := columnRepo.UpdatePosition(context.Background(), done.ID, packed)
 	require.NoError(t, err)
 	assert.Equal(t, 2*domain.PositionStep, newPos,
-		"UpdatePosition must report the rebalanced position, not the requested 0.2")
+		"UpdatePosition must report the rebalanced position, not the requested one")
 
 	stored, err := columnRepo.GetByID(context.Background(), done.ID)
 	require.NoError(t, err)
@@ -183,34 +185,34 @@ func TestColumnUpdatePosition_RebalancesWhenGapTooSmall(t *testing.T) {
 }
 
 // TestColumnUpdatePosition_NoRebalanceOnComfortableGap is the column mirror of the card
-// comfortable-gap case. The three default columns sit one apart at 0, 1, 2 — too packed
-// to drop anything between them — so a fourth column seeded at STEP opens a wide gap to
-// land in. Dropping the `Done` column into the middle of it keeps the requested position
-// and leaves every other column, including the packed 0/1 pair, exactly where it was.
+// comfortable-gap case. The three default columns sit a full STEP apart, so the midpoint
+// between two of them is a comfortable landing spot — dropping `Done` there keeps the
+// requested position and leaves every other column exactly where it was.
 func TestColumnUpdatePosition_NoRebalanceOnComfortableGap(t *testing.T) {
 	t.Cleanup(func() { testutil.TruncateAll(t, testPool) })
 
 	user := fx.CreateTestUser(t)
 	ws := fx.CreateTestWorkspace(t, user.ID)
 	board := fx.CreateTestBoard(t, ws.ID, user.ID)
-	extra := fx.CreateTestColumn(t, board.ID) // position 1000
 
 	columnRepo := pgRepos.NewColumnRepository(testPool)
 
 	cols, err := columnRepo.GetColumnsByBoard(context.Background(), board.ID)
 	require.NoError(t, err)
-	require.Len(t, cols, len(domain.DefaultNewBoardColumnTitles)+1, "three default columns plus the seeded one")
+	require.Len(t, cols, len(domain.DefaultNewBoardColumnTitles), "a fixture board starts with its default columns")
 	toDo, inProgress, done := cols[0], cols[1], cols[2]
 
-	// 500 sits 499 after `inProgress` (1) and 500 before `extra` (1000) → both gaps clear 0.5.
-	newPos, err := columnRepo.UpdatePosition(context.Background(), done.ID, 500)
+	// The midpoint of `toDo` (STEP) and `inProgress` (2*STEP): both gaps are STEP/2,
+	// comfortably clear of the 0.5 threshold.
+	midpoint := 1.5 * domain.PositionStep
+	newPos, err := columnRepo.UpdatePosition(context.Background(), done.ID, midpoint)
 	require.NoError(t, err)
-	assert.Equal(t, 500.0, newPos, "a comfortable gap must leave the requested position intact")
+	assert.Equal(t, midpoint, newPos, "a comfortable gap must leave the requested position intact")
 
 	ids, positions := columnOrder(t, board.ID)
-	assert.Equal(t, []uuid.UUID{toDo.ID, inProgress.ID, done.ID, extra.ID}, ids)
-	assert.Equal(t, []float64{0, 1, 500, domain.PositionStep}, positions,
-		"no rewrite: the other columns keep their positions, packed 0/1 pair included")
+	assert.Equal(t, []uuid.UUID{toDo.ID, done.ID, inProgress.ID}, ids)
+	assert.Equal(t, []float64{domain.PositionStep, midpoint, 2 * domain.PositionStep}, positions,
+		"no rewrite: the other columns keep their seeded STEP multiples")
 }
 
 // TestColumnUpdatePosition_NoRebalanceAtOpenEnd covers both open ends of the board
@@ -230,22 +232,22 @@ func TestColumnUpdatePosition_NoRebalanceAtOpenEnd(t *testing.T) {
 	require.Len(t, cols, len(domain.DefaultNewBoardColumnTitles), "a fixture board starts with its default columns")
 	toDo, inProgress, done := cols[0], cols[1], cols[2]
 
-	// Drag `toDo` past the end: no next neighbour (+Inf), prev gap 4998.
+	// Drag `toDo` past the end: no next neighbour (+Inf), prev gap 5000-3*STEP = 2000.
 	newPos, err := columnRepo.UpdatePosition(context.Background(), toDo.ID, 5000)
 	require.NoError(t, err)
 	assert.Equal(t, 5000.0, newPos, "a trailing open end must not trigger a rebalance")
 
 	ids, positions := columnOrder(t, board.ID)
 	assert.Equal(t, []uuid.UUID{inProgress.ID, done.ID, toDo.ID}, ids)
-	assert.Equal(t, []float64{1, 2, 5000}, positions)
+	assert.Equal(t, []float64{2 * domain.PositionStep, 3 * domain.PositionStep, 5000}, positions)
 
 	// The other open end: first position in the partition, no previous neighbour (-Inf),
-	// next gap 1.75.
+	// next gap 3*STEP - 0.25.
 	newPos, err = columnRepo.UpdatePosition(context.Background(), inProgress.ID, 0.25)
 	require.NoError(t, err)
 	assert.Equal(t, 0.25, newPos, "the leading open end must not trigger a rebalance either")
 
 	ids, positions = columnOrder(t, board.ID)
 	assert.Equal(t, []uuid.UUID{inProgress.ID, done.ID, toDo.ID}, ids)
-	assert.Equal(t, []float64{0.25, 2, 5000}, positions)
+	assert.Equal(t, []float64{0.25, 3 * domain.PositionStep, 5000}, positions)
 }

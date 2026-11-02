@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
+	"collabotask/internal/domain"
 	"collabotask/internal/domain/entity"
 	pgRepos "collabotask/internal/repository/postgres"
 )
@@ -56,14 +57,16 @@ func (f *Fixtures) CreateTestBoard(t *testing.T, workspaceID, ownerID uuid.UUID)
 	return f.CreateTestBoardWithVisibility(t, workspaceID, ownerID, entity.BoardVisibilityWorkspace)
 }
 
-// CreateTestColumn inserts a column in the given board and returns it.
+// CreateTestColumn inserts a column in the given board and returns it. It lands one
+// PositionStep past the last default column — the same position create_column.go would
+// append it at — so it never collides with a default.
 func (f *Fixtures) CreateTestColumn(t *testing.T, boardID uuid.UUID) *entity.Column {
 	t.Helper()
 	repo := pgRepos.NewColumnRepository(f.pool)
 	col := &entity.Column{
 		BoardID:  boardID,
 		Title:    fmt.Sprintf("Column-%s", uuid.New().String()[:8]),
-		Position: 1000,
+		Position: float64(len(domain.DefaultNewBoardColumnTitles)+1) * domain.PositionStep,
 	}
 	require.NoError(t, repo.Create(context.Background(), col))
 	return col
