@@ -196,7 +196,7 @@ func TestTransferOwnership(t *testing.T) {
 		},
 		{
 			// Case 4: admin who has joined the private board → success
-			name:  "admin joined PRIVATE board → success",
+			name: "admin joined PRIVATE board → success",
 			input: board.TransferOwnershipInput{
 				RequesterID: requesterID,
 				WorkspaceID: workspaceID,

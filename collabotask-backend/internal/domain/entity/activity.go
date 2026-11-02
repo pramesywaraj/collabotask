@@ -54,7 +54,7 @@ const (
 type Activity struct {
 	ID         uuid.UUID
 	BoardID    uuid.UUID
-	UserID     *uuid.UUID     // actor; SET NULL-able on Phase-2 account deletion; never nil in Phase 1
+	UserID     *uuid.UUID // actor; SET NULL-able on Phase-2 account deletion; never nil in Phase 1
 	ActionType ActivityActionType
 	EntityType ActivityEntityType
 	EntityID   uuid.UUID
