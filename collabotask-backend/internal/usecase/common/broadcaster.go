@@ -48,9 +48,10 @@ type Event interface {
 }
 
 // Broadcaster is the usecase-layer port over the realtime hub. Best-effort,
-// after-commit, swallow-on-error — identical contract to WriteActivity: a failed
-// broadcast NEVER fails or rolls back the mutation. The concrete adapter lives in
-// internal/realtime/broadcast.
+// after-commit, swallow-on-error: a failed broadcast NEVER fails or rolls back the
+// mutation. Activity writes take the opposite contract — atomic with the mutation
+// they describe (ADR-016) — so do not reason about the two alike. The concrete
+// adapter lives in internal/realtime/broadcast.
 //
 // Part C uses only Broadcast. EvictUser/EvictExcept/EvictUserFromRooms are the
 // settled surface (index §1) and the hub already implements them (Part A); they

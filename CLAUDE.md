@@ -8,20 +8,17 @@ The frontend architecture is settled and documented (`docs/architecture/frontend
 
 ## Now
 
-**Phase 1 backend — step ⑤ (post-Phase-1 integrity pass), in progress.**
+**Phase 1 backend is complete. Frontend implementation — not started.**
 
-Build order (spec §9.1):
-① P0 fixes ✅ → ② positioning ✅ → ③ REST features ✅ → ③.5 cookie auth ✅ → ④ WebSocket ✅ → **⑤ integrity pass ◀ here**
+Build order (spec §9.1): ① P0 fixes ✅ → ② positioning ✅ → ③ REST features ✅ → ③.5 cookie auth ✅ → ④ WebSocket ✅ → ⑤ integrity pass ✅ — **all closed.**
 
-⑤: harness ✅ → composite-FK ✅ → Transactor ✅ (merged, PR #14) → **deferred SQL tests ◀ next**
-(board unassign cascade, position rebalance, visibility filter, `card_count` — all repo-layer, deferred from earlier steps until the harness existed)
+Step ⑤ closed 2026-10-26 on branch `test/deferred-sql-tests` — **not yet merged.** The deferred repository-layer SQL tests are written (31 integration tests), the suite has been run end to end, and the Transactor carry-over items are all discharged. `-race` is clean after fixing a pre-existing shared-fixture race in `set_archived_test.go` (unit tree re-verified 8/8 on 2026-10-27; `tests/integration` verified 5/5 on 2026-10-26).
 
-Carry-over from the Transactor review (merged with these still open — do them first on the next branch):
-- 3 stale comments still name the deleted `WriteActivity`; `activity_repository.go:10` is actively wrong.
-- ADR-016's integration test #3 covers only the `CreateCard` shape; `TransferOwnership` and break-glass `self_join_board` are unit-only.
-- The testcontainers integration suite has never been run end to end — only compiled.
+**Two open backend items**, both pre-existing, both detailed in `docs/handoff/handoff-integrity-pass-findings.md`:
+- New boards seed their default columns at 0/1/2 instead of `PositionStep` multiples (`internal/repository/postgres/board.go:81`). Harmless today, but a client computing drop midpoints lands on the rebalance threshold on its very first drag — **fix before frontend work starts.** Three column cases in `positioning_test.go` encode today's spacing and move with it.
+- Five files fail `gofmt` (own branch, no rush — nothing enforces formatting).
 
-After ⑤: frontend implementation. Architecture is settled (ADR-011/012/013); no code written.
+Frontend: architecture is settled (ADR-011/012/013, `docs/architecture/frontend-architecture.md`); **no code written yet.** First decision when it starts is what to scaffold — the Vite app zone comes before the Astro landing.
 
 **Don't touch:** Phase-2 deferrals — comments, labels, attachments, public boards, refresh tokens, account deletion.
 

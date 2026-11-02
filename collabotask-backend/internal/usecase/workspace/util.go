@@ -44,7 +44,7 @@ func (wu *WorkspaceUseCase) fanOutParticipationCascade(
 	if err != nil {
 		// Best-effort fallback: evict over member-boards so removal still tears down
 		// every board X held membership on; only the rare workspace-visible-watcher
-		// edge is missed. Log the degraded path (mirrors WriteActivity's swallow);
+		// edge is missed. Log the degraded path (mirrors the broadcaster's swallow);
 		// never fail the mutation — it already committed.
 		log.Error().Err(err).
 			Str("workspace_id", workspaceID.String()).
