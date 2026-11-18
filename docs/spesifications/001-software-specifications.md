@@ -363,6 +363,13 @@ UPDATE workspace_members SET role=$3 WHERE workspace_id=$1 AND user_id=$2 RETURN
 
 ### 4.3 Board Management
 
+> **`background_color` is an identity accent, not a canvas colour.** It renders as the swatch on the
+> board's tile in the board list and as a 4px rail at the top of the board; the board canvas itself is
+> always the neutral surface ([ADR-017](../architecture/adr/adr-017-ui-foundations.md) §3.3). Valid
+> values are the eight identity hues in ADR-017 §3.3. The API validates length only (`min=4,max=8`),
+> so out-of-palette values are accepted — clients map any unrecognised value, including the legacy
+> default, to a palette entry derived from the board id. No backend change is required.
+
 #### UC-07: Create Board
 - **API:** `POST /api/v1/workspace/:workspace_id/board` · Auth · **any workspace member**
 - **Request:** `{ "title", "description"?, "background_color"?, "visibility"? }` — `visibility` default `WORKSPACE`. **(`visibility` is NEW — not in code yet.)**
@@ -668,7 +675,7 @@ The §5.2 Broadcast rule and UC-20 govern how a client reconciles **mutation** f
 
 **workspace_members**: pk `(workspace_id, user_id)`, `workspace_id → workspaces cascade`, `user_id → users cascade`, `role varchar(50) not null default 'MEMBER' check (ADMIN|MEMBER)`, `joined_at`.
 
-**boards**: `id uuid pk`, `workspace_id → workspaces cascade not null`, `title varchar(255) not null`, `description text null`, `background_color varchar(8) not null default '#0079BF'`, `is_archived boolean not null default false`, **[NEW]** `visibility varchar(20) not null default 'WORKSPACE' check (PRIVATE|WORKSPACE)`, `created_by uuid references users on delete SET NULL` **[CHANGE: NULLABLE + SET NULL]**, `created_at`, `updated_at`.
+**boards**: `id uuid pk`, `workspace_id → workspaces cascade not null`, `title varchar(255) not null`, `description text null`, `background_color varchar(8) not null default '#0079BF'` **[legacy default — not one of the eight ADR-017 identity hues; clients map it on read]**, `is_archived boolean not null default false`, **[NEW]** `visibility varchar(20) not null default 'WORKSPACE' check (PRIVATE|WORKSPACE)`, `created_by uuid references users on delete SET NULL` **[CHANGE: NULLABLE + SET NULL]**, `created_at`, `updated_at`.
 
 **board_members**: pk `(board_id, user_id)`, cascades, `role varchar(50) not null default 'BOARD_MEMBER' check (BOARD_OWNER|BOARD_MEMBER)`, `joined_at`.
 
