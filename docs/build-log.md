@@ -183,3 +183,66 @@ Zone split: **Vite SPA** for the app zone (`app.collabotask.com`), **Astro** SSG
 State: **TanStack Query** for server/REST state, **Zustand** for WS push and UI state, with WebSocket patching the query cache (ADR-012).
 
 Also: React Router v7; URL-based card modal; `_authenticated` layout route as the auth guard; feature-based folders; shadcn/ui + Tailwind; axios with a CSRF interceptor; WS connects once on app mount.
+
+---
+
+## UI foundations ✅ settled, not built
+
+[ADR-017](architecture/adr/adr-017-ui-foundations.md) · supersedes the uncommitted `architecture/design-tokens.md` proposal
+
+The visual baseline for the app zone, decided by grilling then by rendering. Settled: density (2-line card clamp, 8 cards at 1440×900 — verified 612px of cards against 704px of visible column), **contained column panels** as the board structure, plum `#6B4E9E` as the primary (6.54:1 on white, so one value serves fill, ring and link text), warm stone neutrals, an eight-hue identity palette whose roles swap between modes, **no shadow on a resting card** (shadow means "temporarily lifted", nothing else), a 4/6/8 radius ladder, Poppins at a 14px default across five steps, dark-ready-but-not-dark-shipped, and a pointer-only ≥1024px scope. **The scope clause was superseded on 2026-11-17 by [ADR-019](architecture/adr/adr-019-responsive-touch-scope.md)**; everything else in ADR-017 stands.
+
+Chosen by looking, not arguing: three structural directions were rendered side by side in both themes before anything was locked. Direction C ("bare") was eliminated by measurement — a card with no surface step needs a 3:1 border to identify itself, so the least-drawn direction ends up with the heaviest edges.
+
+Seven defects found and fixed along the way, four of them in the superseded draft: `--drag-over` at 1.02:1 and `--drop-placeholder` at 1.37:1 on the P0 drag path, `--success` shipped unaudited at 2.54:1, `--column-header` identical to `--column`, plus three found while deriving the dark values — `--muted-foreground` fails on a column panel at stone-500, `--primary-foreground` inverts between modes, and every identity rail fails in dark unless the palette swaps roles.
+
+ADR-017 deliberately spends **no** channel on interaction state. The channels left unspent — opacity, motion, dashed border, cursor, icon, column-panel tint — are listed in the ADR as ADR-018's budget. ADR-019 later struck **cursor** from that budget at coarse pointer (a touchscreen has no cursor) and added three constraints of its own.
+
+---
+
+## Responsive scope and touch interaction ✅ settled, not built
+
+[ADR-019](architecture/adr/adr-019-responsive-touch-scope.md) · supersedes [ADR-017](architecture/adr/adr-017-ui-foundations.md) §8 only
+
+Phones and tablets move **into** Phase 1, with card dragging working on touch. Settled by grilling: two adaptation axes (width drives layout, pointer drives density, touch sensors always registered), **two board layouts with the crossover at 640px** — chosen over 768px because an iPad mini in portrait is 744px and would otherwise render one ~670px column — a **horizontal snap strip** below that with the next column peeking by exactly 44px, **long-press pickup** at 200–250ms with no grip handle, **adjacent-only drag reach** on the strip, a **coarse-pointer density scale** (6 cards at 390×844; the smallest possible card is exactly 44px tall), and presence capped at 3 avatars plus an overflow chip.
+
+ADR-017 §8's third argument did not survive: *"a drag must cross columns the user cannot see"* assumed a fixed 280px column, which is a premise rather than a property of phones. Its other two arguments — that a second density scale is real cost, and that a phone board deserves design — both stand and are paid rather than dodged.
+
+A **"Move to…" picker ships at every breakpoint**, not just on phones: WCAG 2.2 SC 2.5.7 requires a no-drag alternative to every drag, so the picker is what makes drag-and-drop AA-conformant at *desktop* width too. It is also the keyboard move path, and it makes a cross-board phone move one activity row instead of three.
+
+Two findings surfaced that ADR-018 inherits: the **cursor** channel is void on touch, and the **read-only banner must be persistent** — a non-joined member on a workspace-visible board gets a fully visible, entirely uneditable board (`CheckMutateAccess`), and on touch the banner is the only signal distinguishing "no permission" from "broken".
+
+---
+
+## State vocabulary ✅ settled, not built
+
+[ADR-018](architecture/adr/adr-018-state-vocabulary.md) · spends the budget [ADR-017](architecture/adr/adr-017-ui-foundations.md) reserved, under [ADR-019](architecture/adr/adr-019-responsive-touch-scope.md)'s four constraints · supersedes nothing · PRD §5.4 SC 2.5.8 gap **closed**
+
+What every interaction state looks like, with real values. Written after ADR-019 despite the lower number, which ADR-017 had reserved by filename.
+
+**Enumeration came first, deliberately.** ADR-017 records that the draft it replaced failed by assigning every channel *before* counting what needed one, then running out. So ADR-018 lists **39 states** — grouped by cause, including the six that nearly got cut (connection health, other people's changes) and session-expiry, which was missed on the first pass — and assigns nothing until the list is closed. Every one is covered at the end, and no channel carries two meanings.
+
+Of ADR-017's seven reserved channels: **four confirmed** (opacity, dashed border, column tint, lock icon), **one overturned**, **one demoted**, **one struck**.
+
+**Motion was overturned by measurement.** ADR-017 reserved it for "server-corrected". That state needs **eleven consecutive drops into the same shrinking gap** to fire (`PositionStep` 1000 against a 0.5 threshold) and **preserves visible order when it does** — the rebalance rewrites positions with `ROW_NUMBER() OVER (ORDER BY position ASC, id ASC)`, so nothing on screen moves. Zero render sites, the same shape of defect as the draft's unaudited `--success`. Re-pointed to **"a teammate did this"**, which fires constantly and is PRD §4.2's literal promise. It needs no actor field — which the backend does not have — because movement is triggered by a position actually changing, and the broadcast for your own move is a no-op.
+
+**Settled by looking, not arguing**, as ADR-017 did for board structure: two throwaway pages, one comparing four movement policies on live boards and one showing every state value on its real surfaces.
+
+**Three defects found that arithmetic alone would have shipped**, all of which look fine on screen — plus one value that passes and still should not be used:
+
+- **`opacity: 50%` for "saving" fails body text at 3.44:1.** The whole card is one compositing layer, so its text blends toward the *column*, not the card fill.
+- **The meta row fails long before the title** — muted grey under a fade clears 4.5:1 only at 80%, where the card looks untouched. Resolved by promoting the meta row to `--foreground` while in flight: the card is de-emphasised as a whole, so its internal hierarchy has nothing left to express.
+- **ADR-017's own `--input` is too thin for the drop placeholder** at 3.22:1 — it clears the 3:1 minimum by 0.22, having been chosen for a white field. The placeholder only ever appears inside a column you are already over, so it sits on the drag-over tint, never the bare panel; ADR-017 stated the 3:1 requirement without noticing it had already darkened that surface.
+- **shadcn's `hover:bg-accent` dissolves a card into its column**, since ADR-017 sets `--accent` and `--board-column` to the same `#F5F5F4`. Hover moved to the card edge, walking three consecutive stone steps.
+
+A fifth collision was headed off: shadcn's `disabled:opacity-50` would have put two meanings on the opacity channel on day one. **Nothing in the app is "disabled"** — the three situations split into *not allowed* (remove the control plus a persistent banner), *in flight* (plum-subtle, says "wait" not "no"), and *form not satisfied* (grey but still a button). **Dimming means one thing: your change hasn't landed** — and the object is genuinely inert, backed by a `timeout: 10000` on the axios client, which currently has none at all, so a hung request would otherwise freeze a card until reload.
+
+Values, all computed: drag-over `#D6D3D1` at **1.37:1** against the panel (the draft's was 1.02:1) on the column **body only**, since the header's rule vanishes on a tint · placeholder `#57534E` 2px dashed at **5.12:1** · in-flight 60% · 24×24 hit areas at mouse density with both 20px avatars declared **not targets**, which closes PRD §5.4's first gap.
+
+**Motion specifics**, which ADR-017 deferred here by name: 120ms chrome / 200ms board objects / 260ms containers, arriving decelerates and leaving accelerates. A rejected move is **not** animated — easing it back would be indistinguishable from a teammate putting it there. Nothing animates unless visible before *and* after, because an unbounded column can move a card thousands of pixels. Under `prefers-reduced-motion` movement becomes a **cross-fade, not nothing**: removing it outright would take the only explanation of a changing board away from the people least able to absorb one.
+
+**Icons: Phosphor v2, Regular at 16px** — which renders at exactly 1.00px, matching ADR-017's 1px borders (Lucide would give 1.33px). **Regular is furniture, Fill is the channel**: a filled icon means a state, a Regular one labels an action. Costs roughly ten import rewrites, since shadcn's components ship Lucide.
+
+**Two channels have no Phase-1 render site, both recorded rather than fixed:** the archive icon (archived boards are filtered out of the list and 404 on every access path, so Unarchive is unreachable too) and `--done`/emerald (cards have no status field; a column titled "Done" is free text).
+
+Figma covers both densities without doubling: the state values turn out to be **density-independent** — every one is a colour, an opacity, a stroke weight or a duration — so a second two-mode collection carries only ADR-019 §7's seven numbers, states are component variants rather than frames, and the frame budget is the fine set plus exactly one 390×844 phone board, since layout is a breakpoint and cannot be produced by flipping a mode.

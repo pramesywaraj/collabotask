@@ -18,7 +18,7 @@ Step ⑤ closed 2026-10-26 on branch `test/deferred-sql-tests` — **not yet mer
 
 The default-column spacing defect (boards seeded at 0/1/2 instead of `PositionStep` multiples) was **fixed 2026-11-02** — new boards now seed at 1000/2000/3000, so the frontend's drag-and-drop starts with the gaps ADR-004 intends.
 
-Frontend: architecture is settled (ADR-011/012/013, `docs/architecture/frontend-architecture.md`); **no code written yet.** First decision when it starts is what to scaffold — the Vite app zone comes before the Astro landing.
+Frontend: architecture is settled (ADR-011/012/013, `docs/architecture/frontend-architecture.md`), the **visual baseline is settled — [ADR-017](docs/architecture/adr/adr-017-ui-foundations.md)** (supersedes the uncommitted `docs/architecture/design-tokens.md`), the **responsive + touch scope is settled — [ADR-019](docs/architecture/adr/adr-019-responsive-touch-scope.md)** (supersedes ADR-017 §8: phones and tablets are in scope for Phase 1, card dragging works on touch), and the **state vocabulary is settled — [ADR-018](docs/architecture/adr/adr-018-state-vocabulary.md)** (2026-11-18, written after ADR-019): 39 interaction states enumerated before any channel was spent, every value measured, motion re-pointed from server-correction to "a teammate did this", Phosphor icons. Still **no code written.** Next: **scaffolding** — the Vite app zone before the Astro landing. ADR-018 §*Downstream edits* ends with a scaffold-time checklist (override shadcn's `disabled:opacity-50`, set `timeout: 10000` on axios, confirm the Tailwind major version); start there.
 
 **Don't touch:** Phase-2 deferrals — comments, labels, attachments, public boards, refresh tokens, account deletion.
 
