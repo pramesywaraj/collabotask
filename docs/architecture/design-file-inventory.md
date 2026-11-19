@@ -6,6 +6,8 @@
 > **Status:** Living document. **Owner:** pramesywaraj. **Date:** 2026-11-19.
 > **Audience:** whoever authors the design file — today that's the solo dev; written so a future teammate can pick it up without re-reading five ADRs.
 >
+> **Starting a drawing session? Read [§7](#7-the-order-to-draw-in-and-what-is-already-drawn) first.** It holds the order to draw in, what is already in the file, and a query you can paste into Penpot to see the real state rather than this document's guess at it.
+>
 > **2026-11-19 — §6 is closed.** The five open questions were grilled against the running API rather than against the other ADRs, which turned three of them into facts and found four gaps §6 never asked about. Everything settled there is now recorded in **[ADR-021](adr/adr-021-design-inventory-corrections.md)**, and this document is again purely derived. §6 below keeps the answers for reference; nothing in it is still open.
 
 ---
@@ -339,6 +341,173 @@ See the table in §3. The deciding fact is structural rather than per-overlay: t
 **One was struck: "empty team".** §1.4 used to list it, and it can never happen — you are always a member of the workspace you are looking at, so that list always contains at least you.
 
 **Six is why ADR-018's count is now wrong**, and harmlessly so: it said *"empty (five flavours)"* and deferred the copy as not a vocabulary decision. The copy is still not a vocabulary decision; there is just one more line of it to write.
+
+---
+
+## 7. The order to draw in, and what is already drawn
+
+**Why this section exists.** This file is about forty separate pieces of work spread over many sittings, and **Penpot is not stored in git** — so nothing in this repository can tell you what has actually been drawn. That gap has already caused one error: `CLAUDE.md` described the design file as untouched while the full set of colour and spacing values, and the whole Card, were already sitting in it.
+
+Two habits prevent a repeat:
+
+1. **Draw in the order in §7.3.** It is not a preference. Each stage uses what the stage before it produced.
+2. **Ask Penpot what exists; do not trust a written list** (§7.5). The checklist in §7.6 is a plan, not a record.
+
+### 7.1 The five words this section leans on
+
+Everything else in this document is product language. These five are tool language, so they are defined once, here.
+
+| Word | What it means, plainly |
+|---|---|
+| **Token** | A named value — `color.card`, `spacing.card-padding-x` — used in place of typing a colour code or a number. Change the token once and everything using it changes. |
+| **Token set** | A bundle of tokens switched on or off together. There are five: one shared, one each for light and dark, one each for the two spacing scales. |
+| **Theme** | A saved choice of which sets are switched on. Four exist, in two independent groups: Light / Dark, and Fine / Coarse. |
+| **Variant container** | One component holding all of a thing's appearances. The Card holds five — resting, hovered, pressed, `InFlight` (the moment after you act, before the server answers), and being dragged — so it is **one** item in the file instead of five near-identical copies. |
+| **Bound** | A shape's colour or spacing is *bound* when it points at a token instead of holding a typed-in value. An unbound value looks identical on screen and silently ignores the Light/Dark and Fine/Coarse switches. Finding unbound values is the entire job of §7.5's second check. |
+
+### 7.2 What is already drawn
+
+Read directly from the live file on 2026-11-19, not assumed.
+
+| Thing | State |
+|---|---|
+| The five token sets | **Done** — `base` 17, `theme-light` 34, `theme-dark` 34, `density-fine` 9, `density-coarse` 9. **103 tokens.** |
+| The four themes, in two groups | **Done** — `Theme`: Light, Dark. `Density`: Fine, Coarse. |
+| Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. |
+| The other nine variant containers | Not started |
+| Foundations board | Not started |
+| The 15 whole-screen boards | Not started — page `Page 1` is empty |
+| The ~16 overlays | Not started |
+
+The foundation is laid and one component stands on it. Everything below picks up from there.
+
+### 7.3 The order
+
+**Stage 1 — the foundations board** (§4.1).
+
+Before any component, for a reason that is easy to miss: it carries the **14px-against-16px specimen**, which [ADR-017](adr/adr-017-ui-foundations.md) puts first on the page *so the default text size can be reconsidered by looking at it rather than by arguing about it*. If that size is ever going to move, it has to move before ten components are built on top of it.
+
+**Stage 2 — the nine remaining components** (§4.2). The largest block of work before any screen, and the one that decides whether this file is still true in a month.
+
+**Why these are components and not just drawings.** [ADR-020](adr/adr-020-design-tool-penpot.md) §4 settles it: every appearance is a **variant of one component**, never a separate frame. The Card is the worked example — five appearances across two densities and two themes is **one** item in the file rather than twenty copies of a rectangle. The difference shows up on the first change, not at the start: move the card's padding token once and every card on every board moves with it. Draw the twenty copies instead and the file is out of date the first time anything shifts — and a design file nobody trusts is one nobody opens.
+
+Draw them in this order:
+
+| # | Component | Draw it from | Why it sits here |
+|---|---|---|---|
+| — | ~~Card~~ ✅ | §1.5, §2.14 | Done. The pattern every row below follows |
+| 1 | **Input** | §1.1, §1.2 (the fields), §1.6 (inline title editing) | Login and Register need only this and Button |
+| 2 | **Button** | §1.1, §1.2 | With Input, the cheapest possible proof that a token reaches a component reaches a finished screen |
+| 3 | **Avatar** | §1.5 (initials, and the empty-name fallback), §4.1 (eight hues in **both** role assignments) | Cards, board tiles and the presence cluster all need it. Always initials — uploads are Phase 2, so never draw a photo |
+| 4 | **Count chip** | §1.5 (column header), §1.4 (board tiles) | Small, and the column header needs it to exist first |
+| 5 | **Column header** | §1.5 (title, count, `⋯` with move left / move right), §2.14 (drag-over, header left **untinted**) | Needs Count chip |
+| 6 | **Banner** | §2.7 (read-only — persistent, non-dismissible, **and it carries Join**) | One board uses it, but that board cannot be drawn without it |
+| 7 | **Skeleton block** | §2.9 (card and column geometry, `--muted` fill, **no shimmer**) | Only board 2.9 — shimmer is movement, and movement means a teammate acted |
+| 8 | **Toast** | §3 (its own design is deferred; the **four** access-revoked wordings are not) | Draw the container and the longest message it must hold |
+| 9 | **Presence cluster** | §1.5 (app bar), §3 (the `+N` overflow sheet) | **Last.** It is a cluster *of Avatars* — the only hard dependency in this stage |
+
+**Which appearances each one needs is in §4.2, and that table is the authority.** It is not repeated here on purpose: two lists of the same thing drift, and §4.2 is the one already cited by the §Appendix coverage check.
+
+**Stage 3 — the fifteen whole-screen boards** (§2), in five groups:
+
+| Group | Boards | Why here |
+|---|---|---|
+| a | 2.1 Login, 2.2 Register | Need only Input and Button |
+| b | 2.3 Workspaces, 2.4 Workspace detail | Need Avatar and Count chip |
+| c | **2.5 Board — at rest** | §2 calls it *"the reference frame everything else varies from"*. This is the hinge of the whole stage |
+| d | 2.6 drawer, 2.7 + 2.8 (**one component, two settings**), 2.9 cold load, 2.10 empty, 2.11 load failed, 2.12 gone, 2.13 session expired | Each is a variation on 2.5, and cheap once 2.5 exists |
+| e | 2.14 Drag, then 2.15 Phone | 2.14 needs 2.5 plus **both** placeholders. 2.15 is a different layout rather than a switch, so it is drawn by hand and goes last |
+
+**Stage 4 — the ~16 overlays** (§3).
+
+Last, and not arbitrarily. §3's entire rule for what happens below 640px is written *relative to the card drawer already filling the screen on a phone*. Until 2.6 exists there is nothing to judge that against.
+
+**Stage 5 — the completeness check** (§7.5, and [ADR-020](adr/adr-020-design-tool-penpot.md) §6).
+
+**The standing rule: run the check at the end of every stage, not at the end of the file.** [ADR-020](adr/adr-020-design-tool-penpot.md) warns that a single typed-in number quietly turns the Light/Dark and Fine/Coarse switches from a test into decoration. Better to learn that after one component than after forty.
+
+### 7.4 The three things that fix this order
+
+Everything else above could be rearranged. These three cannot:
+
+1. **Values before components.** A component built on typed-in numbers has to be rebuilt, not corrected.
+2. **Components before screens.** The fifteen boards are assembled *from* the ten components. Drawing a screen first means drawing its furniture twice — once loose, once properly.
+3. **2.5 before 2.6–2.14.** Nine of the fifteen boards are described in §2 as differences from 2.5. Without it there is no "from".
+
+### 7.5 How to check progress, and how to check quality
+
+**Progress — run this rather than trusting a list.** Paste into the Penpot tool's `execute_code`. It reports what the file contains right now:
+
+```js
+const cat = penpot.library.local.tokens;
+return {
+  tokenSets: cat.sets.map(s => `${s.name}: ${s.tokens.length}`),
+  themes: cat.themes.map(t => `${t.group}/${t.name}`),
+  components: penpot.library.local.components.map(c => c.name),
+  pages: penpotUtils.getPages().map(p => ({
+    page: p.name,
+    boards: penpotUtils.getPageById(p.id).root.children.map(c => c.name),
+  })),
+};
+```
+
+**Quality — find typed-in values that should be tokens.** This is [ADR-020](adr/adr-020-design-tool-penpot.md) §6's check. It is recorded here as a starting point, not a finished tool: no board exists to run it against yet, so **expect to adjust the watched-property list on first use.**
+
+```js
+const board = penpotUtils.findShape(s => s.name === "2.5 Board — at rest");
+const watched = ["fill", "strokeColor", "paddingLeft", "paddingTop", "paddingRight",
+                 "paddingBottom", "rowGap", "columnGap", "borderRadiusTopLeft"];
+return penpotUtils.analyzeDescendants(board, (root, s) => {
+  const bound = s.tokens || {};
+  const loose = watched.filter(p => s[p] !== undefined && !bound[p]);
+  return loose.length ? `${s.name} → ${loose.join(", ")}` : null;
+}).map(r => r.result);
+```
+
+**By eye — only where looking genuinely beats checking.** Use `export_shape` on the phone board (2.15) and on the state boards as whole compositions. For everything else the two checks above are stricter than an eye.
+
+### 7.6 The checklist
+
+A plan, not a record — §7.5 is the record. Tick a stage when it closes, and if the two ever disagree, re-derive rather than trust this.
+
+**Stage 0 — foundations in place** ✅ *(2026-11-19)*
+
+- [x] Five token sets, 103 tokens · [x] Four themes in two groups · [x] Card variant container
+
+**Stage 1 — foundations board** (1)
+
+- [ ] 4.1 Foundations board — token catalogue, eight identity hues in both assignments, elevation ladder, radius ladder, five type steps, 14px/16px specimen
+
+**Stage 2 — variant containers** (9 remaining of 10)
+
+- [ ] Input · [ ] Button · [ ] Avatar · [ ] Count chip · [ ] Column header
+- [ ] Banner · [ ] Skeleton block · [ ] Toast · [ ] Presence cluster
+
+**Stage 3 — whole-screen boards** (15)
+
+- [ ] 2.1 Login · [ ] 2.2 Register
+- [ ] 2.3 Workspaces · [ ] 2.4 Workspace detail
+- [ ] **2.5 Board — at rest**
+- [ ] 2.6 Card drawer · [ ] 2.7 + 2.8 Read-only / join gate · [ ] 2.9 Cold load · [ ] 2.10 Empty board
+- [ ] 2.11 Load failed · [ ] 2.12 Gone · [ ] 2.13 Session expired
+- [ ] 2.14 Drag · [ ] 2.15 Phone board
+
+**Stage 4 — overlays** (~16)
+
+- [ ] Workspace team panel · [ ] Create workspace · [ ] Invite people · [ ] Create board
+- [ ] Board settings · [ ] Board members · [ ] Add people · [ ] Transfer ownership
+- [ ] Move card to… · [ ] Destructive confirmation · [ ] Board `⋯` · [ ] Column `⋯` + inline rename
+- [ ] Card `⋯` · [ ] User menu · [ ] Presence overflow · [ ] Toast content · [ ] Date + assignee pickers
+
+**Stage 5 — checks**
+
+- [ ] Binding check clean on every board · [ ] Light/Dark flip reviewed · [ ] Fine/Coarse flip reviewed · [ ] 2.15 exported and the "6 cards visible" number confirmed by eye
+
+### 7.7 What is deliberately not part of this order
+
+- **The `archived` query parameter.** The one open backend item. It decides whether the Archived list can be *filled with real data*, never whether board 2.4 can be *drawn*. Build it whenever.
+- **Scaffolding the React app.** A separate root, with no edge to this one in either direction. [ADR-020](adr/adr-020-design-tool-penpot.md) is explicit that the design file generates no code and exists as a reference, so neither effort ever waits on the other.
+- **The Astro landing page.** Outside this document entirely (§0).
 
 ---
 
