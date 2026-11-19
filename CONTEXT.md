@@ -52,6 +52,16 @@ There are two independent role layers. **Effective permission is always computed
 
 ---
 
+## Board Lifecycle
+
+**Archived** — A board set aside without being destroyed. It is a **reversible flag on the board, not a deletion**: an archived board keeps its columns, cards, members and history, and unarchiving restores it whole. Archive and unarchive are both Phase-1 actions, both recorded in the activity log, and both broadcast.
+
+An archived board **disappears from the normal board list and 404s on every read path** — opening one is refused even for its owner. It is reachable only through the *archived* view of the board list, where the single available action is Unarchive. "Archived" therefore describes *where a board can be found*, never *what a user may do to it*: authority is unchanged by archiving, and the same people who could manage the board before can unarchive it.
+
+**Archive is the only removal a board has.** There is no delete-a-board action in Phase 1 — a board disappears only with its whole workspace. "Deleting a board" is not a thing that happens; say **archiving** a board. See [ADR-021](docs/architecture/adr/adr-021-design-inventory-corrections.md).
+
+---
+
 ## Positioning
 
 **Position** — Where a card sits within a column, or a column within a board. Stored as fractional `NUMERIC`. A position is a **coordinate on an infinite line, not an index or a count** — `0` and negative values are valid and expected (repeated inserts at the head produce them). The only thing that matters is relative order; absolute values are meaningless. A move changes exactly one row's position; neighbors are never touched.
@@ -82,3 +92,4 @@ There are two independent role layers. **Effective permission is always computed
 | Ticket | Card | Card is canonical |
 | Co-owner | — | Concept does not exist; use transfer |
 | Admin join without logging | Break-glass (logged) | The log is the point |
+| Deleting a board | Archiving a board | No delete-board action exists in Phase 1; archive is the only removal |

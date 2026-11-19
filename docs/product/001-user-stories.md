@@ -70,6 +70,7 @@ Scenario: Authenticated
   When I request my profile while logged in
   Then I get my id, email, name, and avatar
 ```
+> **Where it appears:** the user menu in the app bar — name, email, initials, and Log out. There is no profile *page* in Phase 1 and nothing here is editable, because no endpoint changes any of it; editing arrives with avatar uploads in Phase 2 ([ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md), PRD §5.1).
 
 ---
 
@@ -251,6 +252,12 @@ Scenario: I see what I'm allowed to
   And as a member I see workspace-visible boards plus private boards I'm on
   And each board shows my role, whether I've joined or can join, and its member and card counts
   And archived boards are not shown
+
+Scenario: Browsing the archived ones
+  When I switch the list to Archived
+  Then I see the archived boards in this workspace, under the same visibility rules as above
+  And I see the same tile information, but Unarchive is the only thing I can do with one
+  And when nothing is archived, I'm told so rather than shown a blank space
 ```
 
 ### US-09 — Join a Board (UC-09) · P0
@@ -273,7 +280,15 @@ Scenario: Not allowed to join
   Given the board is private and I'm a plain member who isn't on it
   When I try to join
   Then I get a 403
+
+Scenario: Joining from inside the board I'm reading
+  Given the board is workspace-visible and I opened it without joining
+  Then I can read everything but change nothing, and a banner tells me so
+  And that banner carries the Join action — it's the way out, not just a notice
+  When I join from it
+  Then the banner goes and the board becomes editable without a reload
 ```
+> Why the banner carries it: anyone who ever sees that read-only board is, by definition, a workspace member looking at a workspace-visible board — and that is exactly the person allowed to join it. See [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md) §6.
 
 ### US-10 — Leave a Board (UC-10) · P1
 **As** a board member, **I want** to leave a board, **so that** I'm no longer involved in it.
@@ -314,15 +329,24 @@ Scenario: Validation
   Given I can't manage the board → 403
 ```
 
-### US-11b — See Who I Can Add (UC-11b) · P2
+### US-11b — See Who I Can Add (UC-11b) · P1
 **As** a board owner or workspace admin, **I want** to see which workspace members aren't on the board yet, **so that** adding people is easy.
+
+> **Already built.** Raised from P2 to P1 by [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md): the endpoint ships, and the Add-people panel depends on it to avoid a failure it cannot otherwise prevent — adding people to a board is **all-or-nothing**, so one person who's already on it fails the whole batch (US-11). Showing who's already there is what stops that happening.
 
 **AC**
 ```
 Scenario: List candidates
   Given I can manage the board
   When I ask who I can add
-  Then I get the workspace members who aren't on the board yet
+  Then I get every member of the workspace, each marked as already on the board or not
+  And only the unmarked ones can be selected
+
+Scenario: Everyone is already on the board
+  Given every workspace member has already been added
+  When I open the add-people panel
+  Then I'm told everyone in this workspace is already on this board
+  And I'm not left looking at a list where nothing can be picked
 ```
 
 ### US-12 — Open a Board (UC-12) · P0
@@ -371,7 +395,22 @@ Scenario: Archive and restore
   When I archive it
   Then it drops out of the normal board list and viewers see it was archived
   And when I unarchive it, it comes back
+
+Scenario: I archive the board I'm currently looking at
+  Given I'm on the board and I can manage it
+  When I archive it
+  Then I'm returned to the workspace with a confirmation that offers Undo
+  And Undo unarchives it and puts the board back in the normal list
+  And anyone else who had it open is told the board is no longer available
+
+Scenario: Finding an archived board again
+  Given a board in this workspace is archived
+  When I switch the workspace's board list to Archived
+  Then I see it there, with Unarchive as its only action
+  And I see only the archived boards I'd have been allowed to see before they were archived
+  And trying to open an archived board still fails (404) — archived boards are not browsable
 ```
+> Where Unarchive is reached from is settled by [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md). The unarchive endpoint, its activity record and its broadcast already existed; what was missing was a list an archived board appears in.
 
 ### US-12d — Remove Someone from a Board (UC-12d) · P1
 **As** a board owner or workspace admin, **I want** to remove a member from a board, **so that** I can manage who's involved.
@@ -441,10 +480,24 @@ Scenario: Delete
 ### US-13d — Reorder Columns (UC-13d) · P1
 **As** a team member working on a board, **I want** to drag a column to a new position.
 ```
-Scenario: Reorder
+Scenario: Reorder by dragging
+  Given my screen is 640px wide or more
   When I drop a column in a new spot
   Then it settles there for everyone viewing the board
+
+Scenario: Reorder without dragging
+  Given a column has a neighbour on that side
+  When I pick "Move left" or "Move right" from the column's ⋯ menu
+  Then it swaps with that neighbour for everyone viewing the board
+  And this works at every screen width, with a mouse, a finger or a keyboard
+  And the leftmost column offers no "Move left", nor the rightmost a "Move right"
+
+Scenario: On a phone, dragging a column isn't offered
+  Given my screen is narrower than 640px
+  Then columns are reordered only through the ⋯ menu
+  And dragging a card still works as normal (US-15)
 ```
+> The non-drag path is required, not a convenience: WCAG 2.2 SC 2.5.7 asks that anything done by dragging also be doable without it, and [ADR-019](../architecture/adr/adr-019-responsive-touch-scope.md) §6 already applies that to cards. [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md) extends it to columns and explains why columns get left/right rather than the card's "Move to…" picker.
 
 ### US-14 — Add a Card (UC-14) · P1
 **As** a team member working on a board, **I want** to add a card, **so that** I can capture a task.

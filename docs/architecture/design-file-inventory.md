@@ -1,10 +1,12 @@
 # Design File Inventory — What To Draw in Penpot
 
 > **What this doc is:** the authoring checklist for the Penpot file `Collabotask App` — every screen, overlay, whole-screen board and variant set the app zone needs, and what sits on each one.
-> **What this doc is *not*:** a decision record. It **decides nothing.** Every row is derived from an accepted ADR, a user story or the route tree, and cites its source. Where no document settles a question, the row is marked **[unsettled]** and listed again in §6.
+> **What this doc is *not*:** a decision record. It **decides nothing.** Every row is derived from an accepted ADR, a user story or the route tree, and cites its source.
 >
-> **Status:** Living document. **Owner:** pramesywaraj. **Date:** 2026-11-18.
-> **Audience:** whoever authors the design file — today that's the solo dev; written so a future teammate can pick it up without re-reading four ADRs.
+> **Status:** Living document. **Owner:** pramesywaraj. **Date:** 2026-11-19.
+> **Audience:** whoever authors the design file — today that's the solo dev; written so a future teammate can pick it up without re-reading five ADRs.
+>
+> **2026-11-19 — §6 is closed.** The five open questions were grilled against the running API rather than against the other ADRs, which turned three of them into facts and found four gaps §6 never asked about. Everything settled there is now recorded in **[ADR-021](adr/adr-021-design-inventory-corrections.md)**, and this document is again purely derived. §6 below keeps the answers for reference; nothing in it is still open.
 
 ---
 
@@ -12,7 +14,7 @@
 
 The **app zone** only — the React + Vite SPA ([ADR-011](adr/adr-011-frontend-framework.md)). The Astro landing page is explicitly outside this file: [ADR-020](adr/adr-020-design-tool-penpot.md) excludes it, and [ADR-017](adr/adr-017-ui-foundations.md) §3 leaves it free to carry more colour than a dense board. It needs its own, later effort.
 
-Four documents fix everything here; this one only arranges it.
+Five documents fix everything here; this one only arranges it.
 
 | Source | Fixes |
 |---|---|
@@ -20,6 +22,7 @@ Four documents fix everything here; this one only arranges it.
 | [ADR-019](adr/adr-019-responsive-touch-scope.md) | Two layouts (crossover 640px), touch drag, the coarse density scale |
 | [ADR-018](adr/adr-018-state-vocabulary.md) | All 39 interaction states and the channel each one spends |
 | [ADR-020](adr/adr-020-design-tool-penpot.md) | Penpot as the medium; token sets, theme groups, variants, which boards exist |
+| [ADR-021](adr/adr-021-design-inventory-corrections.md) | Archive is two-way and has a list; column reorder without dragging; how overlays present below 640px; the read-only board's exit |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -39,12 +42,16 @@ Six routes, one of which is an overlay over another. Every state named in a row 
 | Email and password fields with the `--input` stone-500 `#78716C` boundary, deliberately heavier than most shipped systems | ADR-017 §3.4 |
 | Plum primary submit; inline plum link across to register | ADR-017 §3.1 |
 | Variants: field invalid (36), busy (17 — `--primary-subtle` fill, spinner, label becomes the progressive verb), form not satisfied (16 — `--muted` fill), focus-visible (14 — 2px `--ring`, 2px offset) | ADR-018 §5, §6 |
+| **No "forgot password" link.** There is no reset endpoint, and the product cannot send email at all — invites resolve an address that already has an account. The absence is now a recorded deferral rather than an omission, so **don't draw a link that would have nowhere to go** | PRD §5.2; ADR-021 *Out of scope* |
 
 No separate narrow board. A two-field form reflows at any width, and the density flip supplies the 44px targets.
 
 ### 1.2 `/register`
 
-Same furniture plus a name field. One addition worth drawing: a **duplicate-email conflict renders as field-invalid, not as a toast** — it points at a field, so it belongs on the field.
+Same furniture plus a name field. Two additions worth drawing:
+
+- A **duplicate-email conflict renders as field-invalid, not as a toast** — it points at a field, so it belongs on the field.
+- **The password minimum is 8 characters and it is the only limit a real person will hit here.** Say it before they submit, not after. (Name 1–255 and a valid email address are the other two; neither needs stating.)
 
 ### 1.3 `/workspaces`
 
@@ -55,22 +62,33 @@ Same furniture plus a name field. One addition worth drawing: a **duplicate-emai
 | "Create workspace" primary action | US-03 |
 | Variants: cold load (19 — static skeleton, no shimmer), empty (21, flavour 1), load failed (22) | ADR-018 §7 |
 
+**Creating a workspace puts you inside it.** The panel closes and the app navigates to the new workspace — it does not return you to a list with one more tile on it. Same rule one level down (§1.4), and together they are the whole of the product's onboarding: PRD §4.1's "about a minute" is a consequence of these two navigations, not of a welcome tour. There is no welcome tour (ADR-021 *Downstream edits*; PRD §4.1).
+
+The **empty state here is the first screen a new account ever sees**, so it carries the weight a welcome screen otherwise would: one sentence and one button.
+
 ### 1.4 `/workspaces/:wsId`
 
-One route carries both the boards and the team, so this is the densest screen after the board itself — and the one whose composition no document settles. **[unsettled — see §6.1]**
+One route carries both the boards and the team. **Composition settled by [ADR-021](adr/adr-021-design-inventory-corrections.md): the board grid fills the screen; the team opens over it from a member-count button.** Boards are why you come here almost every time; the team is managed once, at the start. That keeps this as **one** board in the file rather than two, and the team list becomes an overlay (§3) that inherits §3's presentation rule for free.
 
 | On it | Source |
 |---|---|
+| Workspace header: name, **description**, my role, and a **"N members" button** that opens the team panel | US-05b |
+| An **Active / Archived** switch above the board grid. Not a route — the same grid, one filter | US-12c; ADR-021 §1 |
 | Board tiles: title, **identity swatch** from `board.background_color`, my role, joined / can-join, member count, card count | ADR-017 §3.3; US-08 |
 | A **filled** Phosphor lock on private boards — the icon channel's only Phase-1 meaning, and the only place fill is permitted | ADR-018 §9 |
 | A Join affordance on a board I may join but haven't | US-09 |
-| Team list: name, email, role, promote / demote, remove, leave | US-06, US-06b, US-06c |
-| Invite by email — a batch, with **per-email results**: unknown email reported not-found, existing member reported a conflict, and the valid invites still succeed | US-04 |
 | Create board; delete workspace behind a destructive confirmation (38) | US-07, US-06d |
-| Archived boards are **absent** from the list, not greyed | US-08 |
-| Variants: cold load (19), empty boards (21, flavour 2), empty team, load failed (22), and the non-member case which is refused rather than rendered | ADR-018 §7, §10 |
+| Variants: cold load (19), empty boards (21, flavour 2), **empty archived list (21, flavour 3)**, load failed (22), and the non-member case which is refused rather than rendered | ADR-018 §7, §10 |
 
-The swatch is constrained to the eight identity hues and **must fall back on read** — `background_color` validates only `min=4,max=8` and is not a hex validator, so the string `"pink"` reaches the client (ADR-017 §3.3).
+**Archived boards.** Under *Active* they are absent — not greyed, not iconned (US-08). Under *Archived* every tile is archived, so the archive icon would mark nothing the filter has not already said: **ADR-018 §9's single-meaning icon channel is untouched by this filter** (ADR-021 §2). An archived tile's only action is **Unarchive**; it cannot be opened, and that is deliberate — an archived board can be found, never browsed.
+
+**Delete workspace is owner-only, so for an admin who is not the owner the control is _absent_, not refused** (US-06d; ADR-018 §5).
+
+**Creating a board puts you on it**, columns and all — same rule as §1.3, and the second half of PRD §4.1's minute.
+
+**The swatch must fall back on read.** It is constrained to the eight identity hues, but `background_color` validates only `min=4,max=8` and is not a hex validator, so the string `"pink"` reaches the client (ADR-017 §3.3). There is a second field of the same species on the card itself — see §1.5.
+
+**The workspace's name and description cannot be edited** — there is no update endpoint, so what was typed at creation is what this header shows forever (PRD §5.1). Don't draw an edit affordance on them.
 
 ### 1.5 `/workspaces/:wsId/boards/:boardId` — the board
 
@@ -78,18 +96,44 @@ The product. Two layouts, crossing over at 640px (ADR-019 §2); from 640px up, A
 
 | Region | Contents | Fine → Coarse |
 |---|---|---|
-| App bar, 56px | Board name 20/28; **presence cluster**; board `⋯`; add-column and add-card actions | — |
+| App bar, 56px | Board name 20/28; **presence cluster**; board `⋯`; add-column action | — |
 | Board accent | A 4px identity rail at the top, from the eight hues. **Not** a canvas colour — the canvas is always neutral `--board-canvas` | — |
 | Canvas | `--board-canvas` `#E7E5E4`, horizontal scroll | — |
 | Column panel | Own `--board-column` fill, 8px radius, 8px padding, 280px wide | 280px → `min(100vw − 72px, 420px)` below 640 |
-| Column header | Shares the panel fill; `border-bottom: 1px solid var(--border)` is **load-bearing** because columns are unbounded and cards scroll under it. Title, count chip, `⋯` (rename, delete) | 36px → 44px |
+| Column header | Shares the panel fill; `border-bottom: 1px solid var(--border)` is **load-bearing** because columns are unbounded and cards scroll under it. Title, count chip, `⋯` (rename, **move left**, **move right**, delete) | 36px → 44px |
 | Card | 14/20 title clamped to **2 lines** (mandatory — titles accept 500 characters), 1px `--border`, **no resting shadow**, conditional meta row, `⋯` top-right | padding 8/12 → 12/12; avatar 20 → 24; meta row 24 → 28; gap 8 → 12; title right padding 24 → 32 |
 | Meta row | Rendered **only** when the card has an assignee or a due date. Initials avatar, due date in `tabular-nums`, amber when due soon, rose when overdue | — |
+| Avatars, everywhere | **Always initials in Phase 1.** Uploads are deferred (PRD §5.2), so `avatar_url` is never set — don't draw a photo variant | PRD §5.2 |
 | Column footer | Add card | — |
 
 Per-card height is `8 + lines×20 + (24 if meta) + 8` at Fine and `12 + lines×20 + (28 if meta) + 12` at Coarse. The smallest card is 36px at Fine and exactly 44px at Coarse, so cards clear the target floor by construction rather than by special-casing.
 
-The `⋯` is **hover-revealed at fine pointer and persistent at coarse** (ADR-019 §6), and it does not go in the meta row — that row is conditional, and putting `⋯` there would force it onto every card.
+**The initials avatar needs a fallback, for the same reason the colour swatch does.** An assigned card always carries an assignee object, but its `name` is filled only if the server's user lookup succeeded — so `{"id": "…", "name": "", "avatar_url": null}` is representable. Initials derived from an empty string produce an empty circle. Draw the fallback (a neutral `--muted` circle, or the Phosphor user glyph) rather than discovering it as a blank on screen. Same species as `background_color: "pink"` in §1.4: a field the API's validation does not actually guarantee.
+
+The card's `⋯` is **hover-revealed at fine pointer and persistent at coarse** (ADR-019 §6), and it does not go in the meta row — that row is conditional, and putting `⋯` there would force it onto every card.
+
+**There is no board-level "add card".** A card belongs to a column, so a top-bar Add card would have to ask which one first. The column footer already answers that by standing in the column. Removed from this table on 2026-11-19.
+
+#### The board `⋯` menu
+
+Never enumerated before 2026-11-19, and it is the only home five P1 stories have. Entries the viewer may not use are **absent, not greyed** (ADR-018 §5), so this menu has three shapes:
+
+| Entry | Opens | Who sees it | Source |
+|---|---|---|---|
+| Board settings… | Overlay (§3) — title, description, colour, visibility | Board owner or workspace admin | US-12b |
+| Members… | Overlay (§3) — add, remove, transfer ownership | Anyone who can read the board; add/remove/transfer inside it are owner-or-admin only | US-11, US-12d, US-12e |
+| Archive board | Destructive-shaped confirmation (38), then **navigates out** | Board owner or workspace admin | US-12c |
+| Leave board | Confirmation (38) | Anyone on the board **except its owner** | US-10 |
+
+**The owner sees no Leave.** US-10 refuses it until ownership is handed over, and ADR-018 §5 says a refused action is absent rather than present-and-blocked. The consequence has to be drawn for: Members… must make "You own this board" and **Transfer ownership** visible enough that the owner finds the route, because the menu gives them no hint that leaving exists at all.
+
+**Archiving navigates the person who did it back to the workspace**, with a confirmation message carrying **Undo** — the same endpoint with the flag flipped. Everyone else holding the board open gets the gone state (board 2.12). Without this, the actor would land on the screen that says their board no longer exists, which reads as a failure rather than as the thing they just asked for (ADR-021 §1).
+
+#### Column drag has two homes, cards have one
+
+**Columns are reordered by dragging only at 640px and up.** Below that, the `⋯` menu's Move left / Move right is the only route — dragging a column along the axis the snap strip scrolls on is the problem ADR-019 §5 froze the board to avoid (ADR-021 §4). Card dragging is unaffected at every width.
+
+At either end of the board the inapplicable entry is **absent**: the leftmost column has no Move left.
 
 ### 1.6 `.../cards/:cardId` — card detail
 
@@ -99,12 +143,14 @@ A URL-based overlay: the board renders underneath and browser back closes it. A 
 |---|---|
 | Title at 20/28, editable inline (37 — the `--input` boundary doing the editing job) | ADR-017 §6; ADR-018 §10 |
 | Description at 16/24 — the **only** use of that step in the app | ADR-017 §6 |
-| Assignee picker, limited to board members | US-16; assignment-is-participation |
+| Assignee picker, limited to board members, **and clearable** — US-16 requires leaving a card unassigned | US-16; assignment-is-participation |
 | Due-date picker; Phosphor calendar, Regular, 16px | ADR-018 §9 |
 | **"Move to…"** — required here at every width | ADR-019 §6 |
 | Delete, behind a destructive confirmation (38) | US-17 |
 | Created / updated timestamps, `tabular-nums` | ADR-017 §6 |
 | Variant: remote deletion of the open card (32) — the drawer closes with a toast | ADR-018 §10 |
+
+**Below 640px this drawer is the thing everything else opens on top of**, which is what shapes §3's presentation rule. The date picker, the assignee picker and the delete confirmation are all reached from inside it, so none of them may become a second full-height sheet: the two pickers **expand in place inside the drawer**, and the confirmation stays a centred dialog at every width (ADR-021 §5).
 
 ---
 
@@ -120,19 +166,41 @@ A URL-based overlay: the board renders underneath and browser back closes it. A 
 | 2.4 | Workspace detail | §1.4 |
 | 2.5 | Board — at rest | §1.5. The reference frame everything else varies from |
 | 2.6 | Card drawer over the board | §1.6, at ≥640 |
-| 2.7 | **Read-only board** (24) | Mutating controls are **absent**, plus a persistent, **non-dismissible** banner. On touch the banner is the only remaining signal — a read-only user presses and holds and nothing happens. Routine browsing, not an edge case |
-| 2.8 | **Join-required gate** (25) | A private board an admin hasn't joined: they see it exists, not its contents. One Join action, and joining is recorded |
+| 2.7 | **Read-only board** (24) — *join to edit* | Mutating controls are **absent**, plus a persistent, non-dismissible banner **that carries the Join action**. On touch the banner is the only remaining signal — a read-only user presses and holds and nothing happens. Routine browsing, not an edge case |
+| 2.8 | **Join-required gate** (25) — *join to look* | A private board an admin hasn't joined: they see it exists, not its contents. One Join action, and joining is recorded as break-glass |
 | 2.9 | **Cold load** (19) | Static skeleton blocks at the card and column geometry, `--muted` fill, **no shimmer** — shimmer is movement, and movement means a teammate acted |
 | 2.10 | **Empty board** (21) | No columns. New boards seed To Do / In Progress / Done, so this is the deleted-them-all case |
 | 2.11 | **Load failed** (22) | Message plus a retry control |
-| 2.12 | **Gone** (23) | Deleted, archived, or access lost |
+| 2.12 | **Gone** (23) | **Archived while you had it open**, or its workspace deleted while you had it open. *Not* "deleted" — there is no delete-a-board action in Phase 1 and no `BOARD_DELETED` event. *Not* "access lost" either: that is state 26, which navigates you out with a toast rather than rendering a screen |
 | 2.13 | **Session expired** (39) | A 7-day JWT dying mid-session, drawn *before* the hard navigation to `/login`. Without it, expiry looks exactly like a crash |
-| 2.14 | **Drag** | Four states at once, which is why it earns a board: source at 60% opacity (6), overlay with `--shadow-dragged` and `scale(1.02)` (7), a 2px dashed `--drop-placeholder` (8), and the column **body** tinted `--drag-over` with the header left untinted (9) |
+| 2.14 | **Drag** | Four states at once, which is why it earns a board: source at 60% opacity (6), overlay with `--shadow-dragged` and `scale(1.02)` (7), a 2px dashed `--drop-placeholder` (8), and the column **body** tinted `--drag-over` with the header left untinted (9). **Draw two placeholders** — see the note below |
 | 2.15 | **Phone board, 390×844** | Density is a variable; layout is a breakpoint. Also the only place ADR-019 §7's "6 cards visible" gets checked by eye — the one number in its table resting on an assumption |
 
 **On 2.14, the two things easiest to draw wrong.** The tint covers the column body only: on either tint the header's `--border` rule sits at about 1.19:1 and vanishes, exactly when it is most needed. And the placeholder is `#57534E`, not `--input` — measured against the tint rather than against white, `--input` thins from 4.80:1 to 3.22:1.
 
+**And a third, added 2026-11-19: 2.14 carries _two_ placeholders, not one.** Cards and columns are both draggable, and their drop placeholders are different shapes drawn from the same token:
+
+| Dragging | Placeholder | Where it exists |
+|---|---|---|
+| A card | 2px dashed `--drop-placeholder` at **card** geometry | Every width |
+| A column | 2px dashed `--drop-placeholder` at **column-panel** geometry — full panel height, panel width | **640px and up only** |
+
+Below 640px columns are reordered from the `⋯` menu instead, so the column placeholder has no phone state to draw (ADR-021 §4). Card drag is unchanged at every width.
+
 **On 2.15**, the strip is `min(100vw − 72px, 420px)`, and the 72px reservation is not arbitrary: it leaves the next column peeking by exactly **44px**, one tap target, which is what makes it a legal drop target. Below 640px the board does **not** scroll during a drag — valid targets are the current column and that peek.
+
+**On 2.7 and 2.8 — draw them as one component with two settings, not two screens.** They are the same question asked at two visibility levels, and the differences are mechanical:
+
+| | 2.7 — join to edit | 2.8 — join to look |
+|---|---|---|
+| Board visibility | WORKSPACE | PRIVATE |
+| Who is standing here | A plain workspace member who hasn't joined | A workspace admin who hasn't joined |
+| Board contents | Fully visible, nothing editable | Hidden |
+| Roster | Visible | **Empty** — the server withholds it until you join |
+| The action | Join, in the banner | Join, the only thing on screen |
+| Recorded as | An ordinary join | Break-glass |
+
+The empty roster on 2.8 is not a drawing choice: `GetBoardDetail` deliberately returns no members to a non-joined requester on a private board. The gate can state a member *count* — the board tile on §1.4 has one — but cannot name anybody. And 2.7 has exactly one possible occupant, who is always allowed to join, which is why its banner is an invitation rather than a refusal (ADR-021 §6).
 
 ---
 
@@ -142,23 +210,38 @@ Drawn as component variant sets rather than boards, and placed on one or two hol
 
 | Overlay | Notable content | Source |
 |---|---|---|
-| Create workspace | Name only | US-03 |
-| Invite people | Email batch plus **per-row results** — the mixed batch is the normal case, not the error case | US-04 |
-| Create board | Title, visibility, colour picker restricted to the eight hues | US-07 |
+| **Workspace team panel** | The team list: name, email, role, promote / demote, remove, leave. Opened from the "N members" button in §1.4's header | US-05b, US-06, US-06b, US-06c |
+| Create workspace | Name (**2+ characters**) and an optional description. **Both are permanent** — no rename exists, so this panel is the only chance to get them right. Worth a word of warning in the copy | US-03 |
+| Invite people | Email batch plus **per-row results** — the mixed batch is the normal case, not the error case. Exactly two failure messages to write: the address has no account, and they're already in the workspace | US-04 |
+| Create board | Title (**3+ characters** — the only minimum here that will trip anyone), visibility, colour picker restricted to the eight hues | US-07 |
 | Board settings | Title, description, colour, visibility | US-12b |
 | Board members | Add, remove (**which unassigns their cards on this board**), transfer ownership, leave | US-11, US-12d, US-12e, US-10 |
-| Add people — candidate list | "Who I can add" is **P2** (US-11b), so Phase 1 may select from the full workspace member list instead **[unsettled — see §6.5]** | US-11b |
+| Add people — candidate list | **Settled by fact, not by choice: the endpoint ships.** It returns *every* workspace member flagged as already-on-the-board, so draw the whole roster with the already-added rows marked and unselectable | US-11b |
 | Transfer ownership | Target must **already** be a board member; a non-member is refused rather than auto-added | US-12e |
 | **Move card to…** | A **column** plus a **neighbour** — top of column, after «card», bottom of column — because position is a float, not an index. Three entry points: card drawer, card `⋯`, and `M` on a focused card | ADR-019 §6 |
 | Destructive confirmation (38) | Rose confirm. Its unsatisfied state is drawn in `--muted` tokens, **never** in transparency | ADR-018 §5 |
-| Column `⋯` and inline rename (37) | Rename, delete | US-13b, US-13c |
+| **Board `⋯`** | Board settings, Members, Archive board, Leave board — enumerated in §1.5, and shaped by who is looking | US-10, US-11, US-12b, US-12c |
+| Column `⋯` and inline rename (37) | Rename, **move left, move right**, delete | US-13b, US-13c, US-13d |
 | Card `⋯` | Open, Move, Delete | US-15, US-17 |
-| User menu | Name, email, initials — and logout **[unsettled — see §6.2]** | US-02b |
+| User menu | Name, email, initials — and logout. **This is the profile surface**; nothing in it is editable, because no endpoint changes any of it | US-02b; ADR-021 |
 | Presence overflow sheet | The `+N` chip's full list, below 640px | ADR-019 §8 |
-| Toast | Carries several states' messages; its own design is deferred | ADR-018 *Out of scope* |
-| Date picker, assignee picker | Phosphor Regular 16px throughout | ADR-018 §9 |
+| Toast | Carries several states' messages; its own design is deferred. One content requirement that is *not* deferred: **access-revoked has four distinct reasons** and needs four wordings — removed from this board, board made private, removed from the workspace, and the silent voluntary case which shows nothing | ADR-018 *Out of scope* |
+| Date picker, assignee picker | Phosphor Regular 16px throughout. **Not separate layers** — see the rule below | ADR-018 §9 |
 
-**Presentation below 640px.** ADR-019 §3 commits only the *card modal* to becoming a full-height sheet. Whether the other fourteen follow is not settled anywhere. **[unsettled — see §6.4]**
+**Two batch behaviours that look alike and are not.** Inviting to a *workspace* is per-row: unknown addresses and existing members are reported individually and the valid invites still land. Adding people to a *board* is **all-or-nothing** — one person already on it fails the entire batch with a single error. So the board panel must **not** be drawn with per-row result rows. It doesn't need them: the candidate list already flags who's on the board, which is what prevents the failure in the first place.
+
+### Presentation below 640px — four kinds, one rule each
+
+ADR-019 §3 committed only the card modal. [ADR-021](adr/adr-021-design-inventory-corrections.md) §5 settles the rest in one pass, because the deciding fact is structural rather than per-overlay: **several of these open on top of something that is already a full-height sheet.**
+
+| Kind | Members | Below 640px | 640px and up |
+|---|---|---|---|
+| **Forms and lists** | Card drawer, create workspace, create board, board settings, board members, add people, transfer ownership, Move card to…, the workspace team panel, presence overflow | **Full-height sheet** | Centred dialog or drawer |
+| **Menus** | Board `⋯`, column `⋯`, card `⋯`, user menu | **Bottom action sheet** | Anchored popover |
+| **Confirmations** (38) | Delete column, delete card, delete workspace, archive board, leave board | **Centred dialog — unchanged at every width** | Centred dialog |
+| **Inline pickers** | Due date, assignee | **Expand in place inside the card drawer** | Expand in place, or an anchored popover |
+
+The last two rows are the rule's whole point. Delete is reached from inside the card drawer; so is the date picker. Promoting either to a second sheet puts two full-height layers on a phone, which is the state in which nobody can see what they're about to delete.
 
 ---
 
@@ -183,9 +266,10 @@ Per [ADR-020](adr/adr-020-design-tool-penpot.md) §4, every state is a variant. 
 | Card | the five above |
 | Button | rest, hover, pressed, focus-visible, busy, not-satisfied |
 | Input | rest, focus, invalid, inline-editing |
-| Avatar | eight hues × two role assignments |
+| Avatar | eight hues × two role assignments, **plus a no-name fallback** — initials from an empty string render an empty circle (§1.5) |
 | Column header | rest, drag-over (header **untinted**) |
-| Count chip, banner, toast, skeleton block | — |
+| Banner | informational, **and with an action** — the read-only banner carries Join (§2, board 2.7) |
+| Count chip, toast, skeleton block | — |
 | Presence cluster | live, **reconnecting** — hues drop to flat `--muted` with a "Reconnecting…" label beside them, spending no hue |
 
 Hover, pressed and the border ladder are three consecutive stone steps on the **edge**, never a fill: shadcn hovers to `--accent`, which is `--board-column`'s own value, so a card hovering to accent dissolves into the panel behind it.
@@ -203,45 +287,64 @@ Hover, pressed and the border ladder are three consecutive stone steps on the **
 | | Count |
 |---|---|
 | Whole-screen boards | **15** (§2) |
-| Overlay variant sets | ~**15** (§3) |
+| Overlay variant sets | ~**16** (§3) |
 | Foundations board | **1** |
 | Component variant containers | ~**10** (§4.2) |
+
+**The board count did not move, and that was the point of §6.1.** Putting the team behind a button rather than in tabs keeps the workspace screen as one board; the Active/Archived switch is a filter on the same grid rather than a route; and 2.7 and 2.8 collapse into one component. The one addition is on the overlay side — the workspace team panel, which inherits §3's presentation rule for free.
 
 Verification is a **predicate, not an eyeball** (ADR-020 §6): walk each board with `analyzeDescendants` and flag any descendant whose padding, gap, fill, radius or size is not token-bound, reading `shape.tokens`. Export only what genuinely needs looking at — the phone board, and the state boards as compositions.
 
 ---
 
-## 6. Open questions — settle before drawing
+## 6. The questions that were open — all five settled 2026-11-19
 
-Five. Three change what gets drawn; two are one-liners.
+Settled by grilling the inventory against the running API rather than against the other ADRs, which turned three of these into facts. All five are recorded in **[ADR-021](adr/adr-021-design-inventory-corrections.md)**; kept here so the reasoning is next to the rows it changed.
 
-### 6.1 Workspace detail composition — **changes the board count**
+### 6.1 Workspace detail composition — **settled: boards fill the screen, team opens over it**
 
-One route carries both the board grid and the team list, and nothing picks a composition: tabs, a persistent side panel, or team-behind-a-dialog. Worth settling first because it bakes into component structure, and ADR-017's own Context is the argument — changing a thing's *role* after components reference it is a sweep.
+The board grid gets the whole screen with the Active/Archived switch above it; a **"N members" button** in the header opens the team as a panel. Chosen on frequency: you come to this screen for a board nearly every visit and manage the team once, at the start. Tabs would have made Team a peer of Boards and cost a second board in the file; a permanent side panel costs width on every visit and still needs a separate phone answer. **The board count did not move** (§5).
 
-### 6.2 There is no profile surface
+### 6.2 There is no profile surface — **settled: the user menu, and nothing is editable**
 
-US-02b (P1) wants a profile; the route tree has none. Either it's the user-menu popover or a route is missing. Reversible either way, so decide it in a line.
+`GET /user/profile` has no counterpart — no endpoint changes a name, an email or an avatar, and uploads are Phase 2. A profile *page* would therefore be a page of three read-only facts. The user menu carries them, which is all US-02b asks for. A real profile page arrives with Phase-2 editing; this is a deferral, not a rejection (PRD §5.1).
 
-### 6.3 Archive has no exit — **a scope conflict, not a drawing question**
+### 6.3 Archive has no exit — **settled: it had one all along, and now it has a list**
 
-US-12c (P1) promises archive **and unarchive**. [ADR-018](adr/adr-018-state-vocabulary.md) §9 established that archived boards are filtered out of every list and 404 on every access path, and struck the archive icon on exactly that basis. So there is nowhere to click Unarchive, and nothing to click it on.
+The premise was wrong, and the SRS had said so since it was written. ADR-018 struck the archive icon on the finding that archived boards 404 everywhere *"and so is Unarchive"* — but `SetArchived` is the one board path that **does not** go through `BoardAccessChecker`. It fetches the board directly and runs its own permission check, so unarchiving an archived board **succeeds today**, writes an `unarchived` activity row, and broadcasts a `BOARD_UNARCHIVED` frame the realtime contract already defines.
 
-Three ways out, and this one flows **upstream** to the PRD and user stories rather than into the design file: draw Archive as one-way for Phase 1 and amend US-12c; add an archived-boards view and reopen the icon decision; or drop archive from Phase 1. Drawing the button before this is settled draws a trapdoor.
+What was missing was **discovery**: the board list hardcodes `AND b.is_archived = FALSE` with no parameter, so no list contains an archived board and there is nothing to press Unarchive on.
 
-### 6.4 One sheet rule, or fourteen decisions
+So the resolution is the smallest of the three the old §6.3 offered: **keep archive two-way, add an `archived` parameter to the board list, and draw an Active / Archived switch on the grid.** US-12c is honoured as written rather than amended to match a UI omission.
 
-ADR-019 §3 commits only the card modal to becoming a full-height sheet below 640px. Decide the rule once for create-board, settings, members, confirmations and the rest; discovering it per-overlay while drawing is the expensive order.
+**It does not reopen the archive icon.** In the Active list no archived board appears; in the Archived list every row is archived, so the icon marks nothing the filter has not already said. ADR-018 §9's single-meaning icon channel stands — only its stated reason changes from *unreachable* to *redundant*.
 
-### 6.5 The five empty flavours are not enumerated
+**This is the one item here with a backend cost**, and it reopens a backend `CLAUDE.md` records as complete. One query parameter, one predicate.
 
-ADR-018 counts "empty (five flavours)" and defers the *copy* as not a vocabulary decision — but the five surfaces themselves are never listed. My read, recorded as a reading and not a decision: **no workspaces, no boards in a workspace, no columns on a board, no cards in a column, nobody left to add to a board.** Worth pinning before the copy is written.
+### 6.4 One sheet rule, or fourteen decisions — **settled: four kinds, one rule each**
+
+See the table in §3. The deciding fact is structural rather than per-overlay: the confirmation and the two pickers are routinely opened from *inside* the card drawer, which is already full-height on a phone. So they cannot be sheets, and everything else can.
+
+### 6.5 The five empty flavours are not enumerated — **settled: there are six, and one on the old list was impossible**
+
+| # | Surface | Where |
+|---|---|---|
+| 1 | No workspaces | Board 2.3 — the first screen a new account ever sees |
+| 2 | No boards in this workspace | Board 2.4, Active |
+| 3 | **Nothing archived** | Board 2.4, Archived — new, from §6.3 |
+| 4 | No columns on a board | Board 2.10 |
+| 5 | No cards in a column | In-column surface |
+| 6 | Everyone in this workspace is already on this board | The add-people panel (§3) |
+
+**One was struck: "empty team".** §1.4 used to list it, and it can never happen — you are always a member of the workspace you are looking at, so that list always contains at least you.
+
+**Six is why ADR-018's count is now wrong**, and harmlessly so: it said *"empty (five flavours)"* and deferred the copy as not a vocabulary decision. The copy is still not a vocabulary decision; there is just one more line of it to write.
 
 ---
 
 ## Appendix — the 39 states, and where each is drawn
 
-A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Three states are closed by inspection rather than drawn.
+A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two states are closed by inspection rather than drawn — 35 was a third until 2026-11-19.
 
 | # | State | Drawn on |
 |---|---|---|
@@ -259,10 +362,11 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Thr
 | 18 | Selected | **Does not exist in Phase 1** — which is what released 2px border weight for the placeholder |
 | 19 | Cold load | Board 2.9 |
 | 20 | Background refresh | **Nothing** — what's on screen is correct |
-| 21 | Empty, five flavours | Boards 2.3, 2.4, 2.10 plus two in-column surfaces (§6.5) |
+| 21 | Empty, **six** flavours | Boards 2.3, 2.4 (Active **and** Archived), 2.10, the in-column surface, and the add-people panel (§6.5) |
 | 22, 23 | Load failed, gone | Boards 2.11, 2.12 |
-| 24, 25 | Read-only, join gate | Boards 2.7, 2.8 |
-| 26, 27 | Access revoked, action forbidden | Toast; the optimistic change reverts |
+| 24, 25 | Read-only, join gate | Boards 2.7, 2.8 — **one component, two settings**, and 2.7's banner carries Join |
+| 26 | Access revoked | **Navigates you off the board**, plus a toast naming the reason. Nothing reverts — this is not 27. Four reasons, four wordings |
+| 27 | Action forbidden | Toast; the optimistic change reverts via the in-flight dim |
 | 28 | Connecting | Part of cold load (2.9) |
 | 29 | Reconnecting | Presence cluster variant (§4.2) |
 | 30 | Live | **No treatment** — colour is an event, not a texture |
@@ -270,7 +374,7 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Thr
 | 32 | Remote deletion of the open card | Card drawer variant (§1.6) |
 | 33 | Presence change | Presence cluster |
 | 34 | Private board | Filled Phosphor lock, on board tiles (§1.4) |
-| 35 | Archived board | **Unreachable in Phase 1** — see §6.3 |
+| 35 | Archived board | **Reachable after all** (§6.3) — but it still spends no channel. An archived board appears only in the Archived list, where every row is archived, so nothing on the tile needs to mark it. The filter is the signal |
 | 36 | Field invalid | Input variant; boards 2.1, 2.2 |
 | 37 | Inline editing | Input variant; column rename, card title |
 | 38 | Destructive confirmation | Overlay (§3) |
@@ -284,5 +388,6 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Thr
 - **Responsive and touch:** [ADR-019](adr/adr-019-responsive-touch-scope.md) — layouts, drag, the coarse scale
 - **State vocabulary:** [ADR-018](adr/adr-018-state-vocabulary.md) — all 39 states and their measured values
 - **The medium:** [ADR-020](adr/adr-020-design-tool-penpot.md) — Penpot sets, themes, variants, verification
+- **What this document's own open questions settled into:** [ADR-021](adr/adr-021-design-inventory-corrections.md) — archive, column reorder, overlay presentation, the read-only exit
 - **Routes and data flow:** [frontend-architecture.md](frontend-architecture.md)
 - **Product intent:** [001-PRD.md](../product/001-PRD.md) · **Acceptance per feature:** [001-user-stories.md](../product/001-user-stories.md)

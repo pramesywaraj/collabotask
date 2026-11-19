@@ -167,8 +167,9 @@ Card and column ordering uses **fractional positions** stored as `NUMERIC`, not 
   - *Rebalance can deadlock under contention.* Rebalancing rewrites the whole partition (`UPDATE … WHERE column_id = …`); two threshold-crossing moves in the **same** column at the same instant can deadlock — Postgres aborts one (`40P01`) and the client retries. Rare (rebalancing itself is rare) and recoverable; a retry-on-deadlock wrapper is later hardening, not Phase-1.
 
 ### 3.3 Delete strategy
-- Workspace and board deletion = **hard delete relying on `ON DELETE CASCADE`** (boards→columns→cards→…). UI must show a confirmation dialog.
-- `is_archived` stays as a column + filter (`WHERE is_archived = FALSE`); archive/unarchive **is in Phase 1** (endpoint already exists in code).
+- **Workspace** deletion = **hard delete relying on `ON DELETE CASCADE`** (boards→columns→cards→…). UI must show a confirmation dialog.
+- **A board has no delete.** There is no delete-board endpoint and no `BOARD_DELETED` frame in Phase 1; a board disappears only when its workspace does. *(Corrected 2026-11-19 — this line previously said "workspace and board deletion"; no such board endpoint has ever existed.)* **Archiving is the only removal a board has**, which is why §1 of [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md) treats it as a feature rather than a flag.
+- `is_archived` stays as a column + filter; archive/unarchive **is in Phase 1** (endpoint already exists in code). The filter is **parameterised, not fixed** — see UC-08's `archived` query parameter, which is what makes unarchive reachable.
 
 ### 3.4 FK on-delete policy (per-column, by meaning)
 | FK | Policy | Reason |
@@ -388,14 +389,16 @@ COMMIT;
 ```
 
 #### UC-08: List Boards in Workspace
-- **API:** `GET /api/v1/workspace/:workspace_id/board` · Auth · workspace member
-- **Response 200:** for each board: details + `user_role` + `access_status` (`JOINED` | `CAN_JOIN`) + `member_count` + `card_count`.
-- **Visibility rule:** admins see all boards; members see WORKSPACE-visible boards + PRIVATE boards they belong to. `access_status` is `CAN_JOIN` for a non-member who may still join (admin on any board, member on a WORKSPACE board); `created_by` is **not** consulted — `board_members` is the sole source of role/access truth (ADR-005).
+- **API:** `GET /api/v1/workspace/:workspace_id/board[?archived=true|false]` · Auth · workspace member
+- **Query:** `archived` — optional boolean, **default `false`**. Absent or `false` → active boards (current behaviour, unchanged). `true` → archived boards only. Never both: the two lists are disjoint, and there is no "all" value.
+- **Response 200:** for each board: details + `user_role` + `access_status` (`JOINED` | `CAN_JOIN`) + `member_count` + `card_count`. Identical shape for both values of `archived`.
+- **Visibility rule:** admins see all boards; members see WORKSPACE-visible boards + PRIVATE boards they belong to. `access_status` is `CAN_JOIN` for a non-member who may still join (admin on any board, member on a WORKSPACE board); `created_by` is **not** consulted — `board_members` is the sole source of role/access truth (ADR-005). **The visibility clause is unchanged by `archived`** — archiving moves a board between two lists, it never changes who may see it.
 ```sql
--- conceptually: WHERE b.workspace_id=$ws AND b.is_archived=FALSE AND (
+-- conceptually: WHERE b.workspace_id=$ws AND b.is_archived=$archived AND (
 --   wm.role='ADMIN' OR b.visibility='WORKSPACE' OR bm.user_id IS NOT NULL )
 -- card_count via LEFT JOIN columns → cards, COUNT(DISTINCT c.id)
 ```
+> **Added 2026-11-19 by [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md).** `archived=true` is the **only** path on which an archived board is ever returned — UC-05b's detail, UC-12's kanban and every other read still 404 them via `BoardAccessChecker` (`board.IsArchived → ErrBoardNotFound`), and that is deliberate: an archived board can be *found* and unarchived, never *browsed*. Before this parameter existed, UC-12c's unarchive endpoint was fully functional with no list an archived board appeared in — i.e. nothing to call it on. **This is the one Phase-1 backend item still open.**
 
 #### UC-09: Admin Joins Board (self-service / break-glass)
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/join` · Auth
@@ -425,7 +428,8 @@ ON CONFLICT (board_id, user_id) DO NOTHING RETURNING *;
 
 #### UC-11b: Get Invitable Workspace Members
 - **API:** `GET /api/v1/workspace/:workspace_id/board/:board_id/invitees` · Auth · can_administer_board
-- **Response:** workspace members not yet on the board.
+- **Response:** `{ "members": [ { user_id, email, name, avatar_url, workspace_role, is_board_member } ] }` — **every** workspace member, each flagged with `is_board_member`. *(Corrected 2026-11-19: this line previously said "members not yet on the board". The code has always returned the full roster with a flag, and the UI depends on it — see below.)*
+- **Why the flag rather than a filtered list:** UC-11 is **all-or-nothing** (one already-member aborts the whole batch with a single 409), so the client must be able to exclude those people *before* submitting. A flagged roster does that; a pre-filtered list would too, but the flag also lets the UI distinguish "nobody left to add" from "this workspace is empty", which is one of the six empty states the design file enumerates.
 
 #### UC-12: View Board (Open / Kanban)
 - **API (detail):** `GET /api/v1/workspace/:workspace_id/board/:board_id` · Auth
