@@ -1,12 +1,12 @@
 # User Stories & Acceptance Criteria — CollaboTask (Phase 1)
 
-> **Purpose:** the user-facing behavior of each Phase-1 feature, written so it can be verified. Each story maps 1:1 to a use case in [001-software-specifications.md §4](./001-software-specifications.md). The *why* (product) lives in [001-PRD.md](./001-PRD.md); the *how* (API contracts, SQL, schema, internal mechanics) lives in the spec.
+> **Purpose:** the user-facing behavior of each Phase-1 feature, written so it can be verified. Each story maps 1:1 to a use case in [001-software-specifications.md §4](../spesifications/001-software-specifications.md). The *why* (product) lives in [001-PRD.md](./001-PRD.md); the *how* (API contracts, SQL, schema, internal mechanics) lives in the spec.
 >
 > **How to read:**
 > - Each story is **what a user wants** ("As a… I want… so that…").
 > - **Acceptance Criteria** (Given/When/Then) are the **observable behavior** that must hold — what a tester checks. They name endpoints, status codes, and live events because those *are* the contract; they do **not** describe internal database mechanics (those are in the spec).
 > - `US-xx` ↔ `UC-xx` (same number). Priority: **P0** = correctness/security blocker · **P1** = core Phase-1 feature · **P2** = polish.
-> - Build order and the audit→story map live in [spec §9.1 / §9.2](./001-software-specifications.md).
+> - Build order and the audit→story map live in [spec §9.1 / §9.2](../spesifications/001-software-specifications.md).
 
 ## Conventions for every story
 These hold for **all** stories unless a story says otherwise — not repeated each time:
@@ -59,7 +59,7 @@ Scenario: Wrong credentials
   Then I get a 401 UNAUTHORIZED
   And the message does NOT reveal which of the two was wrong
 ```
-> Note: there is **no** "account disabled" path in Phase 1 (deactivation is deferred — see spec [§3.5](./001-software-specifications.md); product rationale in PRD §5.2).
+> Note: there is **no** "account disabled" path in Phase 1 (deactivation is deferred — see spec [§3.5](../spesifications/001-software-specifications.md); product rationale in PRD §5.2).
 
 ### US-02b — View My Profile (UC-02b) · P1
 **As** a logged-in user, **I want** to see my own profile, **so that** the app can show who I am.
@@ -611,4 +611,4 @@ Scenario: Act now, confirm in the background
 | US-13 … US-17 | UC-13 … UC-17 | Columns & cards |
 | US-18 … US-20 | UC-18 … UC-20 | Real-time collaboration |
 
-> Every Phase-1 use case (UC-01 … UC-20) has a matching story. For build order and how each story relates to the implementation audit, see [spec §9.1 / §9.2](./001-software-specifications.md).
+> Every Phase-1 use case (UC-01 … UC-20) has a matching story. For build order and how each story relates to the implementation audit, see [spec §9.1 / §9.2](../spesifications/001-software-specifications.md).

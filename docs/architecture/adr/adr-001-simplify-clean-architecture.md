@@ -89,7 +89,9 @@ dan `go test ./...` semua bersih/lulus.
   dipertahankan karena menyembunyikan `PasswordHash`).
 - ✅ **`internal/dto` dihapus seluruhnya** — tak ada lagi DTO global.
 - ✅ Update `docs/architecture.md` — tabel "Data layers", folder map, dan langkah
-  endpoint sudah disesuaikan.
+  endpoint sudah disesuaikan. *(File tersebut kemudian dipindah dan diganti nama
+  menjadi [`docs/architecture/backend-architecture.md`](../backend-architecture.md);
+  nama lama dipertahankan di sini sebagai catatan sejarah.)*
 
 ### Tidak dikerjakan (sengaja, di luar scope ADR ini)
 
@@ -98,5 +100,5 @@ dan `go test ./...` semua bersih/lulus.
   Saat ditulis nanti, interface mock diperkenalkan **di sisi handler**, bukan
   menghidupkan kembali interface use case.
 
-Detail langkah per modul: lihat [refactor-playbook.md](./refactor-playbook.md).
-Penjelasan mendalam + contoh: lihat [refactor-learning-notes.md](./refactor-learning-notes.md).
+Detail langkah per modul: lihat `refactor-playbook.md` — *tidak pernah di-commit ke repo ini.*
+Penjelasan mendalam + contoh: lihat `refactor-learning-notes.md` — *tidak pernah di-commit ke repo ini.*

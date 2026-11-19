@@ -7,8 +7,17 @@ columns, and move cards (tasks) across columns to track progress.
 Built in Go with **Clean Architecture** — business logic is isolated from HTTP,
 the database, and any framework, so it stays testable and easy to change.
 
-> Status: Phase 1 (REST API). Real-time collaboration (WebSocket) is planned —
-> see [requirements](../requirements-phase-1.md).
+> **Status: Phase 1 is built.** The REST API, httpOnly-cookie auth, and real-time
+> collaboration — WebSocket broadcast, presence, and participation cascades — are
+> all in place, along with the activity log that records what a team did. See the
+> [PRD](../docs/product/001-PRD.md) and [user stories](../docs/product/001-user-stories.md)
+> for what that covers, and the [build log](../docs/build-log.md) for how it got here.
+>
+> One API contract item is still open: `GET /workspace/:id/board` needs an
+> `archived` query parameter, without which archived boards cannot be listed and
+> so cannot be unarchived
+> ([ADR-021](../docs/architecture/adr/adr-021-design-inventory-corrections.md)).
+> The frontend is designed but not yet written.
 
 ---
 
@@ -113,7 +122,7 @@ migrations/           SQL migration files
 
 The dependency rule: **everything points inward**. `usecase` and `domain` never
 import HTTP, the database, or any framework. See
-[docs/architecture.md](./docs/architecture.md) for the full picture.
+[docs/architecture/backend-architecture.md](../docs/architecture/backend-architecture.md) for the full picture.
 
 ---
 
@@ -136,14 +145,15 @@ go doc ./internal/usecase/board BoardUseCase   # list a use case's methods
 - Interfaces live on the **consumer** side, only when there's a real reason
   (repositories, the shared board-access checker, the auth ports).
 
-Full conventions and the "add an endpoint" recipe: [docs/architecture.md](./docs/architecture.md).
+Full conventions and the "add an endpoint" recipe: [docs/architecture/backend-architecture.md](../docs/architecture/backend-architecture.md).
 
 ## Documentation
 
 | Doc | What it covers |
 |---|---|
-| [docs/architecture.md](./docs/architecture.md) | Layers, conventions, how to add a feature |
-| [docs/architecture/adr-001-...md](./docs/architecture/adr-001-simplify-clean-architecture.md) | Why DTOs & ceremonial interfaces were removed |
-| [docs/architecture/adr-002-...md](./docs/architecture/adr-002-by-component-layout-and-ports.md) | Why by-component layout, auth ports, validator in `pkg/` |
-| [docs/architecture/refactor-learning-notes.md](./docs/architecture/refactor-learning-notes.md) | Go idioms behind the design |
-| [requirements-phase-1.md](../requirements-phase-1.md) | Product requirements & user stories |
+| [docs/architecture/backend-architecture.md](../docs/architecture/backend-architecture.md) | Layers, conventions, how to add a feature |
+| [docs/architecture/adr/adr-001-…](../docs/architecture/adr/adr-001-simplify-clean-architecture.md) | Why DTOs & ceremonial interfaces were removed |
+| [docs/architecture/adr/adr-002-…](../docs/architecture/adr/adr-002-by-component-layout-and-ports.md) | Why by-component layout, auth ports, validator in `pkg/` |
+| [docs/product/001-PRD.md](../docs/product/001-PRD.md) | Product requirements |
+| [docs/product/001-user-stories.md](../docs/product/001-user-stories.md) | User stories & acceptance criteria |
+| [docs/spesifications/001-software-specifications.md](../docs/spesifications/001-software-specifications.md) | API contracts, schema, permission rules |

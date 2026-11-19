@@ -81,7 +81,7 @@ Examples of justified result types: `board.BoardWithMeta`, `workspace.WorkspaceD
 `auth.UserProfile` (the last one hides `entity.User.PasswordHash`).
 
 Rule of thumb: *transforms the data → make a type; copies the entity 1:1 → return
-the entity.* See [ADR-001](./architecture/adr-001-simplify-clean-architecture.md).
+the entity.* See [ADR-001](./adr/adr-001-simplify-clean-architecture.md).
 
 ### Interfaces only where there is a reason
 
@@ -165,7 +165,7 @@ Or rely on the one-file-per-operation convention: the file names in
 
 For the **why** behind the structure and the simplification history, see:
 
-- [adr-001-simplify-clean-architecture.md](./architecture/adr-001-simplify-clean-architecture.md) — buang DTO/interface seremonial
-- [adr-002-by-component-layout-and-ports.md](./architecture/adr-002-by-component-layout-and-ports.md) — layout by-component, auth ports, validator→pkg
-- [refactor-learning-notes.md](./architecture/refactor-learning-notes.md) — explanations & examples
-- [refactor-playbook.md](./architecture/refactor-playbook.md) — the per-module refactor record
+- [adr-001-simplify-clean-architecture.md](./adr/adr-001-simplify-clean-architecture.md) — buang DTO/interface seremonial
+- [adr-002-by-component-layout-and-ports.md](./adr/adr-002-by-component-layout-and-ports.md) — layout by-component, auth ports, validator→pkg
+
+> `refactor-learning-notes.md` and `refactor-playbook.md` are referenced by ADR-001 but were never committed to this repo. Unlinked rather than left dangling.

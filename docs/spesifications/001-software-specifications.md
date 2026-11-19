@@ -743,7 +743,7 @@ The §5.2 Broadcast rule and UC-20 govern how a client reconciles **mutation** f
 **🔵 P2 — Self-join validation:** confirm `self_join_board.go` verifies the joiner is a workspace member and the board is WORKSPACE-visible (or the joiner is an admin) before inserting.
 
 ### 9.1 Suggested build order
-Correctness/security first, then features. (Story IDs reference [001-user-stories.md](./001-user-stories.md).)
+Correctness/security first, then features. (Story IDs reference [001-user-stories.md](../product/001-user-stories.md).)
 1. ~~**P0 fixes:** layered permission for board management + `cards.created_by` NULLABLE bug.~~ **✅ DONE** (`canAdministerBoard` helper across update/archive/invite/remove; migration 000005). Tests pending — approach TBD.
 2. ~~**Fractional positioning:** migrate card-move and column-reorder off integer-shift to NUMERIC (§3.2).~~ **✅ DONE** (ADR-004, migration 000006). Repository-layer rebalance tests deferred (no DB harness yet).
 3. **REST features — complete the Phase 1 surface before realtime.** Build order within this step: visibility first (cross-cutting), then workspace ops, then board ops, then assignee validation + cascade, then activities.
