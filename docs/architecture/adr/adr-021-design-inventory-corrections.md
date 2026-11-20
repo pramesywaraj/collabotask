@@ -83,6 +83,8 @@ Beside Rename and Delete. Available at every width, on every pointer type, and k
 
 Both entries compute a midpoint client-side and call the existing `PATCH …/columns/:id/position`, exactly as a drop does. At either end of the board the inapplicable entry is **absent**, per ADR-018 §5 — the leftmost column has no *Move left*.
 
+> **The `⋯` that opens this menu is shown at rest, at every pointer.** ADR-019 §6 hides the *card's* `⋯` until hover at a fine pointer, and this section did not say whether the column's follows it. It does not: see **[ADR-027](adr-027-column-header.md)** §4 (2026-11-20).
+
 ### 4. Column dragging exists at **640px and up only**.
 
 Below 640px, columns are reordered through §3 and not by gesture. This is the same trade ADR-019 §5 made for card reach: *"Freezing the board deletes that entire class of problem."* Dragging a column along the axis the strip scrolls on reopens the snap-versus-drag arbitration that §5 was written to avoid, and it would do so for the one object on the board that has a complete, equally fast alternative one tap away.

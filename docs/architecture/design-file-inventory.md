@@ -16,7 +16,7 @@
 
 The **app zone** only — the React + Vite SPA ([ADR-011](adr/adr-011-frontend-framework.md)). The Astro landing page is explicitly outside this file: [ADR-020](adr/adr-020-design-tool-penpot.md) excludes it, and [ADR-017](adr/adr-017-ui-foundations.md) §3 leaves it free to carry more colour than a dense board. It needs its own, later effort.
 
-Ten documents fix everything here; this one only arranges it.
+Eleven documents fix everything here; this one only arranges it.
 
 | Source | Fixes |
 |---|---|
@@ -30,6 +30,7 @@ Ten documents fix everything here; this one only arranges it.
 | [ADR-024](adr/adr-024-control-and-field-internals.md) | Inside one field and one control — the label gap, icon size and gap, the focus ring as a shadow, the input's fill, pressed on a filled button |
 | [ADR-025](adr/adr-025-identity-hues-as-tokens.md) | The identity hues as design-file tokens (`subtle` / `strong`, flipping with Theme); `size.avatar`; the Avatar's ten appearances, including the no-name glyph |
 | [ADR-026](adr/adr-026-count-chip.md) | The count chip — its own fill (`color.chip`, not `color.border`), its 20px height and minimum width, its 6px side padding; one appearance that holds any text |
+| [ADR-027](adr/adr-027-column-header.md) | The inside of the column header — its 12px inset (the card titles' left edge), `spacing.inline-gap` 8 between title, count and `⋯`, the `⋯` as Phosphor `DotsThree` shown at rest; one appearance, no axis |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -107,7 +108,7 @@ The product. Two layouts, crossing over at 640px (ADR-019 §2); from 640px up, A
 | Board accent | A 4px identity rail at the top, from the eight hues. **Not** a canvas colour — the canvas is always neutral `--board-canvas` | — |
 | Canvas | `--board-canvas` `#E7E5E4`, horizontal scroll. 16px side inset (`spacing.screen-x`) and **no top or bottom padding**: the column panels run from under the app bar to the bottom of the screen (ADR-023 §2.3) | column gap 8 → 12 (`spacing.column-gap`) |
 | Column panel | Own `--board-column` fill, 8px radius, 8px padding, 280px wide | 280px → `min(100vw − 72px, 420px)` below 640 |
-| Column header | Shares the panel fill; `border-bottom: 1px solid var(--border)` is **load-bearing** because columns are unbounded and cards scroll under it. Title, count chip, `⋯` (rename, **move left**, **move right**, delete) | 36px → 44px |
+| Column header | Shares the panel fill; `border-bottom: 1px solid var(--border)` is **load-bearing** because columns are unbounded and cards scroll under it. Title, count chip, `⋯` (rename, **move left**, **move right**, delete). The `⋯` is **shown at rest at every pointer**, unlike the card's ([ADR-027](adr/adr-027-column-header.md) §4), and the title starts where the card titles start | 36px → 44px; `⋯` area 24 → 44 |
 | Card | 14/20 title clamped to **2 lines** (mandatory — titles accept 500 characters), 1px `--border`, **no resting shadow**, conditional meta row, `⋯` top-right | padding 8/12 → 12/12; avatar 20 → 24; meta row 24 → 28; gap 8 → 12; title right padding 24 → 32 |
 | Meta row | Rendered **only** when the card has an assignee or a due date. Initials avatar, due date in `tabular-nums`, amber when due soon, rose when overdue | — |
 | Avatars, everywhere | **Always initials in Phase 1.** Uploads are deferred (PRD §5.2), so `avatar_url` is never set — don't draw a photo variant | PRD §5.2 |
@@ -274,7 +275,7 @@ Per [ADR-020](adr/adr-020-design-tool-penpot.md) §4, every state is a variant. 
 | Button | rest, hover, pressed, focus-visible, busy, not-satisfied |
 | Input | rest, focus, invalid, inline-editing |
 | Avatar | eight hues, **plus Muted** (initials, for the presence cluster's reconnecting state) **and Unknown** (the no-name fallback — initials from an empty string render an empty circle, §1.5). The two role assignments are not an axis: the hues are tokens that follow the Theme switch ([ADR-025](adr/adr-025-identity-hues-as-tokens.md)) |
-| Column header | rest, drag-over (header **untinted**) |
+| Column header | — . **One appearance.** Drag-over leaves the header **untinted** (§2.14), so it changes nothing on the part. The part's board shows the header twice instead, above an untinted body and above a `color.drag-over` one, so the rule can be seen against the tint ([ADR-027](adr/adr-027-column-header.md) §5) |
 | Banner | informational, **and with an action** — the read-only banner carries Join (§2, board 2.7) |
 | Count chip | — . One appearance that holds any text: `12` in a column header, `12 cards` and `3 members` on a board tile, because two bare numbers on one tile cannot be told apart ([ADR-026](adr/adr-026-count-chip.md) §4) |
 | Toast, skeleton block | — |
@@ -379,19 +380,20 @@ Read directly from the live file on 2026-11-20, not assumed.
 
 | Thing | State |
 |---|---|
-| The five token sets | **Done** — `base` 29, `theme-light` 52, `theme-dark` 52, `density-fine` 12, `density-coarse` 12. **157 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set), the 16 identity tokens from [ADR-025](adr/adr-025-identity-hues-as-tokens.md) (written once per theme set), and the three count-chip tokens from [ADR-026](adr/adr-026-count-chip.md) (`color.chip` written once per theme set). ADR-025 also renamed `size.card-avatar` to `size.avatar`. Every addition was flip-verified on 2026-11-20, and Stage 2 has tested the catalogue against a real screen |
+| The five token sets | **Done** — `base` 30, `theme-light` 52, `theme-dark` 52, `density-fine` 12, `density-coarse` 12. **158 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set), the 16 identity tokens from [ADR-025](adr/adr-025-identity-hues-as-tokens.md) (written once per theme set), the three count-chip tokens from [ADR-026](adr/adr-026-count-chip.md) (`color.chip` written once per theme set), and `spacing.inline-gap` from [ADR-027](adr/adr-027-column-header.md). ADR-025 also renamed `size.card-avatar` to `size.avatar`. Every addition was flip-verified on 2026-11-20, and Stage 2 has tested the catalogue against a real screen |
 | The four themes, in two groups | **Done** — `Theme`: Light, Dark. `Density`: Fine, Coarse. |
 | Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. **2026-11-20:** outline width bound to `border.width`, and the avatar corrected. It had been bound to `size.title-reserve` for width (24 → 32) with a typed 20px height, which made an oval; it is now `size.card-avatar` on both axes (20 → 24). The binding check cannot see sizes, which is why it never caught this. **Later on 2026-11-20** the placeholder was replaced by a real Avatar instance in all five variants ([ADR-025](adr/adr-025-identity-hues-as-tokens.md) §5); heights unchanged at 80 / 92 |
 | Input variant container | **Done** 2026-11-20, on page `Components`, board `Input — states`. Four appearances: `Rest` (placeholder), `Focus` (the ring), `Invalid` (destructive edge and a message below), `InlineEditing` (the 20/28 title in the same box, no label). A field is the whole field: label, box and message, so a screen needs nothing loose around it |
 | Button variant container | **Done** 2026-11-20, board `Button — states`. Six appearances: `Rest`, `Hover`, `Pressed` (the same fill as `Hover`, by decision: ADR-024 §3), `FocusVisible`, `Busy` (Phosphor `CircleNotch` at 16 and *Logging in…*), `NotSatisfied`. **Primary only**: other kinds become a second axis when a screen needs one |
 | Avatar variant container | **Done** 2026-11-20, board `Avatar — states`. One axis, `Hue`, ten appearances: the eight hues (fill `color.identity.<hue>.subtle`, initials `.strong`), `Muted` (initials on `color.muted`), `Unknown` (Phosphor `User` on `color.muted`). Sized by `size.avatar` with an ellipse behind, so no radius to bind. Flips with Theme by itself |
 | Count chip | **Done** 2026-11-20, board `Count chip — states`. **One component, no axis**: fill `color.chip`, height and minimum width `size.chip-height`, side padding `spacing.chip-padding-x`, corners `radius.badge`, text `type.meta` in `color.muted-foreground`; its width follows the text. Shown with `3`, `12` and `128` on a column-coloured surface and `12 cards` and `3 members` on a tile-coloured one. **Penpot does not draw the minimum width** on a board that follows its content, so a `1` chip draws 16 wide here and 20 in the app ([ADR-026](adr/adr-026-count-chip.md) *Operational note*) |
-| The other five parts | Not started |
-| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine. **Updated 2026-11-20 with ADR-025:** the catalogue tables were regenerated to 153 rows. That also adds the five ADR-024 tokens, which Stage 2 had left off the board. The identity notes now say the hues are tokens; this section's two side-by-side pairings stay typed in. **Updated again 2026-11-20 with ADR-026:** three rows added, so the catalogue now reads 157 |
+| Column header | **Done** 2026-11-20, board `Column header — states`. **One component, no axis**: height `size.column-header`, fill `color.board-column`, a bottom-only rule (`color.border`, `border.width` on `strokeWidthBottom`), side padding `spacing.card-padding-x`, gap `spacing.inline-gap`. Inside: `Lead` (title in `type.body` and `color.foreground`, then a `Count chip` instance) and `Menu` (`size.target-min`, centring Phosphor `DotsThree` at `size.icon` in `color.muted-foreground`). Shown as `In Progress` / `12` on two bound column panels, one above an untinted body and one above a `color.drag-over` body. **No export shows the rule**: Penpot's exporter drops a stroke whose sides differ, so check it on the canvas ([ADR-027](adr/adr-027-column-header.md) *Operational note*) |
+| The other four parts | Not started |
+| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine. **Updated 2026-11-20 with ADR-025:** the catalogue tables were regenerated to 153 rows. That also adds the five ADR-024 tokens, which Stage 2 had left off the board. The identity notes now say the hues are tokens; this section's two side-by-side pairings stay typed in. **Updated again 2026-11-20 with ADR-026:** three rows added, so the catalogue read 157. **And with ADR-027:** one row added to the `base` table, so it reads 158. Its two loose column headers in the elevation ladder (a title only) predate the Column header part and have not yet been replaced by instances |
 | The 15 whole-screen boards | **2.1 Login done** 2026-11-20, on page `Page 1`, built from Input and Button instances plus its heading and the register line. Drawn as it first appears: empty fields, the email placeholder only, the button `NotSatisfied`. The binding check returns nothing, and all four Theme × Density combinations were looked at. The other fourteen are not started |
 | The ~16 overlays | Not started |
 
-The foundation is laid, five parts stand on it, and one screen has been built from them end to end. Everything below picks up from there.
+The foundation is laid, six parts stand on it, and one screen has been built from them end to end. Everything below picks up from there.
 
 ### 7.3 The order
 
@@ -512,6 +514,25 @@ Two things it raised were not gaps. `tabular-nums` cannot be drawn (§4.3). ADR-
 
 Question 4 has now fired at five stages out of five.
 
+#### What question 4 returned for the Column header — and what closed it
+
+Asked on 2026-11-20 before drawing. Height, fill, rule, title type and colour, the chip, and the `⋯`'s colour and tap area were all in the catalogue. Two values were not:
+- **the inset of the header's contents.** `spacing.column-padding` is the panel's own padding and is already spent outside the header: ADR-019 §7's *"16 padding"* counts the 8 above it.
+- **the gap between the title, the chip and the `⋯`.** `spacing.icon-gap` holds the same 8 for a different job.
+
+Three choices no ADR had made came with them: the `⋯`'s glyph, whether it is shown before hover, and whether drag-over changes the header at all.
+
+**Settled by [ADR-027](adr/adr-027-column-header.md)** (2026-11-20):
+- the inset binds `spacing.card-padding-x` (12), by rule: the column title starts where the card titles start, and at Fine the header's `⋯` sits directly above the cards'
+- `spacing.inline-gap` 8, in `base`, for neighbours in one row that are not an icon and its label
+- the `⋯` is Phosphor `DotsThree` at `size.icon` in a `size.target-min` area, all bound; the Card's typed 13px `⋯` is left as it is
+- the column's `⋯` is shown at rest at every pointer, unlike the card's
+- one appearance, no axis: drag-over leaves the header untinted, so the board shows it above a tinted body instead of as a second variant
+
+Not gaps: the title's weight (`type.body`, from the 2026-11-18 weight decision), the menu itself (Stage 5) and truncating a long title (code only).
+
+Question 4 has now fired at six stages out of six.
+
 **Stage 4 — the remaining fourteen screens** (§2), in five groups:
 
 | Group | Boards | Why here |
@@ -616,6 +637,8 @@ Widened from sizes alone to all geometry on 2026-11-20, before the foundations b
 
 **By eye — only where looking genuinely beats checking.** Use `export_shape` on the phone board (2.15) and on the state boards as whole compositions. For everything else the two checks above are stricter than an eye.
 
+**One thing no export shows: a stroke whose sides differ in width.** Penpot's PNG and SVG exports draw the column header's bottom-only rule as a zero-width outline, and so it is invisible in every export, on the Foundations board as on the part. Confirm it from the shape's stroke data and `penpot.generateStyle`, or on the canvas ([ADR-027](adr/adr-027-column-header.md) *Operational note*).
+
 ### 7.6 The checklist
 
 A plan, not a record — §7.5 is the record. Tick a stage when it closes, and if the two ever disagree, re-derive rather than trust this.
@@ -636,7 +659,7 @@ A plan, not a record — §7.5 is the record. Tick a stage when it closes, and i
 
 **Stage 3 — the remaining seven parts** (7)
 
-- [x] Avatar *(2026-11-20; question 4 fired and [ADR-025](adr/adr-025-identity-hues-as-tokens.md) closed it)* · [x] Count chip *(2026-11-20; question 4 fired and [ADR-026](adr/adr-026-count-chip.md) closed it)* · [ ] Column header · [ ] Banner
+- [x] Avatar *(2026-11-20; question 4 fired and [ADR-025](adr/adr-025-identity-hues-as-tokens.md) closed it)* · [x] Count chip *(2026-11-20; question 4 fired and [ADR-026](adr/adr-026-count-chip.md) closed it)* · [x] Column header *(2026-11-20; question 4 fired and [ADR-027](adr/adr-027-column-header.md) closed it)* · [ ] Banner
 - [ ] Skeleton block · [ ] Toast · [ ] Presence cluster
 
 **Stage 4 — the remaining fourteen screens** (14)
@@ -718,6 +741,7 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two
 - **Control and field internals:** [ADR-024](adr/adr-024-control-and-field-internals.md) — label gap, icon size and gap, the focus ring as a shadow, the input's fill, pressed on a filled button; extends ADR-017 §9
 - **Identity hues in the design file:** [ADR-025](adr/adr-025-identity-hues-as-tokens.md) — the 16 identity colours as `subtle` / `strong` tokens that follow Theme, `size.avatar`, the Avatar's appearances; supersedes ADR-020 §3's identity exclusion
 - **The count chip:** [ADR-026](adr/adr-026-count-chip.md) — `color.chip` as its own role, the 20px height and minimum width, the 6px side padding, one appearance holding any text; extends ADR-017 §9
+- **The column header:** [ADR-027](adr/adr-027-column-header.md) — the inset bound to `spacing.card-padding-x`, `spacing.inline-gap`, the `⋯` as Phosphor `DotsThree` shown at rest, one appearance; extends ADR-017 §9
 - **What this document's own open questions settled into:** [ADR-021](adr/adr-021-design-inventory-corrections.md) — archive, column reorder, overlay presentation, the read-only exit
 - **Routes and data flow:** [frontend-architecture.md](frontend-architecture.md)
 - **Product intent:** [001-PRD.md](../product/001-PRD.md) · **Acceptance per feature:** [001-user-stories.md](../product/001-user-stories.md)
