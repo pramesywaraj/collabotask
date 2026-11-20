@@ -1,6 +1,6 @@
 # ADR-020: The Design File Lives in Penpot
 
-- **Status:** Accepted
+- **Status:** Accepted — **§3's type mapping extended by [ADR-023](adr-023-spacing-between-objects.md)** (2026-11-20): one `borderWidth` row, for the 1px edge and the 2px ring and placeholder. Everything else stands as written.
 - **Date:** 2026-11-18
 - **Scope:** Which tool holds the app zone's design file, and how [ADR-018](adr-018-state-vocabulary.md) §12's structure is expressed in it. **Supersedes [ADR-018](adr-018-state-vocabulary.md) §12 only.** Everything else in ADR-018 stands unchanged — the 39-state inventory, the channel ledger, the in-flight rule, drag, the three disabled states, affordance, loading/empty/gone, motion, icons, connection and permission states, and §11's token additions. This ADR changes the *medium*, not one value of the design. ADR-017's tokens and ADR-019's density scale are untouched. No code or token file is written here; this is a tooling and structure decision taken before the file is authored.
 

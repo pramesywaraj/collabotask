@@ -16,7 +16,7 @@
 
 The **app zone** only — the React + Vite SPA ([ADR-011](adr/adr-011-frontend-framework.md)). The Astro landing page is explicitly outside this file: [ADR-020](adr/adr-020-design-tool-penpot.md) excludes it, and [ADR-017](adr/adr-017-ui-foundations.md) §3 leaves it free to carry more colour than a dense board. It needs its own, later effort.
 
-Six documents fix everything here; this one only arranges it.
+Seven documents fix everything here; this one only arranges it.
 
 | Source | Fixes |
 |---|---|
@@ -26,6 +26,7 @@ Six documents fix everything here; this one only arranges it.
 | [ADR-020](adr/adr-020-design-tool-penpot.md) | Penpot as the medium; token sets, theme groups, variants, which boards exist |
 | [ADR-021](adr/adr-021-design-inventory-corrections.md) | Archive is two-way and has a list; column reorder without dragging; how overlays present below 640px; the read-only board's exit |
 | [ADR-022](adr/adr-022-form-control-geometry.md) | Form-control geometry — control height, horizontal padding, the gap between stacked fields, form width |
+| [ADR-023](adr/adr-023-spacing-between-objects.md) | Spacing between objects — the screen's side inset, the column gap, no vertical canvas padding, the section break; the rail height, the two border widths, the initials' type step |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -101,7 +102,7 @@ The product. Two layouts, crossing over at 640px (ADR-019 §2); from 640px up, A
 |---|---|---|
 | App bar, 56px | Board name 20/28; **presence cluster**; board `⋯`; add-column action | — |
 | Board accent | A 4px identity rail at the top, from the eight hues. **Not** a canvas colour — the canvas is always neutral `--board-canvas` | — |
-| Canvas | `--board-canvas` `#E7E5E4`, horizontal scroll | — |
+| Canvas | `--board-canvas` `#E7E5E4`, horizontal scroll. 16px side inset (`spacing.screen-x`) and **no top or bottom padding**: the column panels run from under the app bar to the bottom of the screen (ADR-023 §2.3) | column gap 8 → 12 (`spacing.column-gap`) |
 | Column panel | Own `--board-column` fill, 8px radius, 8px padding, 280px wide | 280px → `min(100vw − 72px, 420px)` below 640 |
 | Column header | Shares the panel fill; `border-bottom: 1px solid var(--border)` is **load-bearing** because columns are unbounded and cards scroll under it. Title, count chip, `⋯` (rename, **move left**, **move right**, delete) | 36px → 44px |
 | Card | 14/20 title clamped to **2 lines** (mandatory — titles accept 500 characters), 1px `--border`, **no resting shadow**, conditional meta row, `⋯` top-right | padding 8/12 → 12/12; avatar 20 → 24; meta row 24 → 28; gap 8 → 12; title right padding 24 → 32 |
@@ -372,11 +373,11 @@ Read directly from the live file on 2026-11-20, not assumed.
 
 | Thing | State |
 |---|---|
-| The five token sets | **Done** — `base` 19, `theme-light` 34, `theme-dark` 34, `density-fine` 11, `density-coarse` 11. **109 tokens**: 103 derived from ADR-017 §9 in full (not yet tested against a board), plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), flip-verified 2026-11-20 |
+| The five token sets | **Done** — `base` 24, `theme-light` 34, `theme-dark` 34, `density-fine` 12, `density-coarse` 12. **116 tokens**: 103 derived from ADR-017 §9 in full (not yet tested against a board), plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md) and the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set). Both additions were flip-verified on 2026-11-20 |
 | The four themes, in two groups | **Done** — `Theme`: Light, Dark. `Density`: Fine, Coarse. |
-| Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. |
+| Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. **2026-11-20:** outline width bound to `border.width`, and the avatar corrected. It had been bound to `size.title-reserve` for width (24 → 32) with a typed 20px height, which made an oval; it is now `size.card-avatar` on both axes (20 → 24). The binding check cannot see sizes, which is why it never caught this |
 | The other nine variant containers | Not started |
-| Foundations board | Not started |
+| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine |
 | The 15 whole-screen boards | Not started — page `Page 1` is empty |
 | The ~16 overlays | Not started |
 
@@ -387,6 +388,19 @@ The foundation is laid and one component stands on it. Everything below picks up
 **Stage 1 — the foundations board** (§4.1).
 
 Before any component, for a reason that is easy to miss: it carries the **14px-against-16px specimen**, which [ADR-017](adr/adr-017-ui-foundations.md) puts first on the page *so the default text size can be reconsidered by looking at it rather than by arguing about it*. If that size is ever going to move, it has to move before ten components are built on top of it.
+
+#### What question 4 returned at Stage 1 — and what closed it
+
+Stage 2's question 4 (below) was asked early, on 2026-11-20, of every value this board needs, before anything was drawn. Every colour, radius and type step was there. What was missing was a whole family: **the space between objects**. Every spacing token in the catalogue sat either inside one object (card, column, control) or between items within one (cards in a column, fields in a form). This board is the first thing in the file to put objects side by side on a page, and its elevation ladder needs the same canvas inset and column gap that board 2.5 does.
+
+**Settled by [ADR-023](adr/adr-023-spacing-between-objects.md)** (2026-11-20):
+- `spacing.screen-x` 16
+- `spacing.column-gap` 8 / 12
+- no top or bottom canvas padding
+- `spacing.section-gap` 24
+- three values missing for the same reason: `size.board-rail` 4, `border.width` 1 and `border.width-strong` 2, and avatar initials at `type.meta`
+
+All of them are in the file and flip-verified. Question 4 has now fired twice in two stages, both times before a part was drawn, which is the whole case for asking it early.
 
 **Stage 2 — the proof run: two parts, one screen, one full check**
 
@@ -485,18 +499,61 @@ return {
 };
 ```
 
-**Quality — find typed-in values that should be tokens.** This is [ADR-020](adr/adr-020-design-tool-penpot.md) §6's check. It is recorded here as a starting point, not a finished tool: no board exists to run it against yet, so **expect to adjust the watched-property list on first use.**
+**Quality — find typed-in values that should be tokens.** This is [ADR-020](adr/adr-020-design-tool-penpot.md) §6's check. Change the board name in the first line and paste the rest unchanged:
 
 ```js
 const board = penpotUtils.findShape(s => s.name === "2.5 Board — at rest");
-const watched = ["fill", "strokeColor", "paddingLeft", "paddingTop", "paddingRight",
-                 "paddingBottom", "rowGap", "columnGap", "borderRadiusTopLeft"];
-return penpotUtils.analyzeDescendants(board, (root, s) => {
-  const bound = s.tokens || {};
-  const loose = watched.filter(p => s[p] !== undefined && !bound[p]);
-  return loose.length ? `${s.name} → ${loose.join(", ")}` : null;
-}).map(r => r.result);
+const loose = s => {
+  const b = s.tokens || {}, out = [];
+  if ((s.fills || []).some(f => f.fillColor) && !b.fill) out.push("fill");
+  if ((s.strokes || []).length) {
+    if (!b.strokeColor) out.push("strokeColor");
+    if (!Object.keys(b).some(k => k.startsWith("strokeWidth"))) out.push("strokeWidth");
+  }
+  const L = s.flex || s.grid;
+  if (L && !s.name.startsWith("Doc /")) {          // documentation geometry may be typed (below)
+    for (const [k, v] of [["paddingTop", L.topPadding], ["paddingRight", L.rightPadding],
+                          ["paddingBottom", L.bottomPadding], ["paddingLeft", L.leftPadding],
+                          ["rowGap", L.rowGap], ["columnGap", L.columnGap]])
+      if (v && !b[k]) out.push(`${k}=${v}`);
+  }
+  for (const k of ["borderRadiusTopLeft", "borderRadiusTopRight", "borderRadiusBottomRight", "borderRadiusBottomLeft"])
+    if (s[k] && !b[k]) out.push(`${k}=${s[k]}`);
+  if (s.type === "text" && !b.typography && !b.fontSize) out.push(`typography(${s.fontSize}px)`);
+  if ((s.shadows || []).length && !b.shadow) out.push("shadow");
+  if (s.opacity != null && s.opacity < 1 && !b.opacity) out.push(`opacity=${s.opacity}`);
+  return out;
+};
+const all = penpotUtils.findShapes(() => true, board);       // excludes the board itself
+const shapes = all.some(s => s.id === board.id) ? all : [board, ...all];
+return shapes
+  .filter(s => !(s.isVariantContainer && s.isVariantContainer()))  // Penpot's own frame, not design
+  .map(s => [s.name, loose(s)])
+  .filter(([, l]) => l.length)
+  .map(([n, l]) => `${n} → ${l.join(", ")}`);
 ```
+
+**Why it looks like this — replaced 2026-11-20.** The version first written here watched nine property names, and eight of them do not exist on Penpot shapes: colours are `fills[]` and `strokes[]`, and padding and gaps live on `board.flex`. So it could never report an unbound fill, padding or gap. The ninth, `borderRadiusTopLeft`, exists on every shape including text, so it reported every square corner, giving 41 false positives on the Card. Two traps the replacement avoids:
+- **Only non-zero values count.** A zero has nothing to bind, which matters because the canvas's vertical padding is 0 by design (ADR-023 §2.3).
+- **A bound stroke width can be any `strokeWidth*` key.** A column-header rule binds only `strokeWidthBottom` (ADR-023 *Operational note*). Likewise, an unset opacity reads as `null`, and `null < 1` is true in JavaScript, hence the guard.
+
+**What it does not see.**
+- **Width and height.** A size set by layout (fill, auto-height text) is indistinguishable here from a typed one.
+- **Stroke style** (the placeholder's dashes).
+- **Text content.**
+
+Look at those by eye.
+
+**What it is expected to report.** Anything not on this list is a defect:
+
+| Shape | Reported | Why it stays |
+|---|---|---|
+| Anything named `Hue / …` | `fill` | The 16 identity hex values of ADR-017 §3.3 are deliberately **not** tokens (ADR-020 §3). **Do not "fix" them by creating hue tokens** |
+| The Card's `Menu` | `typography(13px)` | The `⋯` glyph size has no token |
+
+**Shapes that exist only to document.** A shape whose name starts `Doc /` has **geometry** — size, padding, gaps — that belongs to this file's documentation rather than to the product. Examples are a swatch's dimensions, the gap between a swatch and its label, and the gap between eight avatars in a row. That geometry is not a token (ADR-023 *Out of scope*). Borrowing a product token for it, such as the card gap or field gap, is the coupling ADR-023 rejected: the documentation would reflow on Fine → Coarse, and a change to the card gap would move it. **Everything else about a `Doc /` shape is bound like any other shape: fill, stroke colour and width, radius, type, opacity and shadow.** That way the Light/Dark flip still tests the documentation. The check skips padding and gaps on `Doc /` shapes and nothing else. It cannot see sizes on any shape.
+
+Widened from sizes alone to all geometry on 2026-11-20, before the foundations board was drawn, once it was clear the board's own groups need inner gaps that no product token describes.
 
 **By eye — only where looking genuinely beats checking.** Use `export_shape` on the phone board (2.15) and on the state boards as whole compositions. For everything else the two checks above are stricter than an eye.
 
@@ -506,11 +563,12 @@ A plan, not a record — §7.5 is the record. Tick a stage when it closes, and i
 
 **Stage 0 — foundations in place** ✅ *(2026-11-19)*
 
-- [x] Five token sets, **109 tokens** (103 from ADR-017 §9 + 4 from [ADR-022](adr/adr-022-form-control-geometry.md)) · [x] Four themes in two groups · [x] Card variant container · [x] Form-control geometry settled and flip-verified
+- [x] Five token sets, **116 tokens** (103 from ADR-017 §9 + 6 entries from [ADR-022](adr/adr-022-form-control-geometry.md) + 7 from [ADR-023](adr/adr-023-spacing-between-objects.md)) · [x] Four themes in two groups · [x] Card variant container · [x] Form-control geometry settled and flip-verified · [x] Spacing between objects and border widths settled and flip-verified · [x] §7.5's binding check rewritten and proven against the Card
 
-**Stage 1 — foundations board** (1)
+**Stage 1 — foundations board** (1) ✅ *(2026-11-20)*
 
-- [ ] 4.1 Foundations board — token catalogue, eight identity hues in both assignments, elevation ladder, radius ladder, five type steps, 14px/16px specimen
+- [x] 4.1 Foundations board — token catalogue, eight identity hues in both assignments, elevation ladder, radius ladder, five type steps, 14px/16px specimen
+- [x] Binding check clean (expected rows only) · [x] Light → Dark · [x] Fine → Coarse · [x] Question 4 asked before drawing — it fired, and [ADR-023](adr/adr-023-spacing-between-objects.md) closed it
 
 **Stage 2 — the proof run** (2 parts, 1 screen, 1 check)
 
@@ -597,6 +655,7 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two
 - **State vocabulary:** [ADR-018](adr/adr-018-state-vocabulary.md) — all 39 states and their measured values
 - **The medium:** [ADR-020](adr/adr-020-design-tool-penpot.md) — Penpot sets, themes, variants, verification
 - **Form-control geometry:** [ADR-022](adr/adr-022-form-control-geometry.md) — control height, padding, field gap, form width; extends ADR-017 §9
+- **Spacing between objects:** [ADR-023](adr/adr-023-spacing-between-objects.md) — screen inset, column gap, no vertical canvas padding, section gap, rail height, border widths, initials; extends ADR-017 §9 and ADR-020 §3
 - **What this document's own open questions settled into:** [ADR-021](adr/adr-021-design-inventory-corrections.md) — archive, column reorder, overlay presentation, the read-only exit
 - **Routes and data flow:** [frontend-architecture.md](frontend-architecture.md)
 - **Product intent:** [001-PRD.md](../product/001-PRD.md) · **Acceptance per feature:** [001-user-stories.md](../product/001-user-stories.md)
