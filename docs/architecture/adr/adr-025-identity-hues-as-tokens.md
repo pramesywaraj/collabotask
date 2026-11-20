@@ -1,6 +1,6 @@
 # ADR-025: Identity Hues as Design-File Tokens
 
-- **Status:** Accepted
+- **Status:** Accepted — **§4's circle colour for Muted and Unknown superseded by [ADR-031](adr-031-presence-cluster.md)** (2026-11-20): `color.muted` cannot be seen on the white app bar, so both circles are `color.avatar-neutral`. The appearances, their content and every hue stand as written.
 - **Date:** 2026-11-20
 - **Scope:** The Penpot design file only. The 16 identity colours of [ADR-017](adr-017-ui-foundations.md) §3.3 become 32 token entries that follow the `Theme` switch; `size.card-avatar` is renamed `size.avatar`; and the Avatar part's appearances are fixed, including the no-name fallback inventory §1.5 left open. **Supersedes [ADR-020](adr-020-design-tool-penpot.md) §3's second exclusion, the identity palette, and nothing else.** The code is untouched: ADR-017 §9's rule that the palette lives in a TypeScript constant stands as written.
 
@@ -67,6 +67,8 @@ ADR-020 §3's mapping row says only "avatar size" and never named the token, so 
 | **Muted** | `color.muted` | initials in `color.muted-foreground` | The presence cluster's *reconnecting* state, where "hues drop to flat `--muted`" (inventory §4.2). It is an Avatar appearance, so it lives in the Avatar; the cluster only arranges it |
 | **Unknown** | `color.muted` | Phosphor `User` (Regular) at `size.icon`, in `color.muted-foreground` | A person whose name came back empty (inventory §1.5) |
 
+> **Both circles are now `color.avatar-neutral`.** `color.muted` is 1.09:1 on the white app bar, and in the presence cluster the faces overlap, so the circle in front cut off the initials behind at an edge nobody could see. **[ADR-031](adr-031-presence-cluster.md)** (2026-11-20) gives both appearances `color.avatar-neutral` (`#E7E5E4` / `#57534E`): 1.26 / 2.59 on the bar, with the initials and the glyph at 6.08 / 5.12. On a card, Unknown goes from 1.09 to 1.26 in Light and from 1.00 to 1.99 in Dark. Everything else in this table stands.
+
 **Unknown is a glyph, not an empty circle.** This settles inventory §1.5's *"a neutral `--muted` circle, or the Phosphor user glyph"*. A muted circle against its card is **1.09:1** in Light, almost invisible, and **1.00:1** in Dark, where `color.muted` *is* the card colour (`#292524`). An empty circle is the blank on screen §1.5 warns about. The glyph is 6.99:1 and 10.18:1. It stays 16px when the circle grows to 24 at Coarse, as the initials stay 12.
 
 Every appearance is the same build: a board sized by `size.avatar`, an ellipse behind it sized by the same token (so no corner radius to bind), and the content centred by layout.
@@ -114,6 +116,8 @@ Zero new parts. Rejected by §4's contrast figures.
 - **The board tile's identity swatch** (inventory §1.4). Which role it takes, `subtle` or `strong`, is decided when boards 2.3 and 2.4 are drawn.
 - **The rail itself.** Drawn with board 2.5; it binds `strong`.
 - **The presence cluster's own geometry**: the 8px overlap ADR-019 §8's arithmetic uses, any separating ring between overlapping avatars, and the `+N` chip. Part 9 asks its own question 4.
+
+  > **Asked, and settled.** **[ADR-031](adr-031-presence-cluster.md)** (2026-11-20): `spacing.avatar-overlap` −6 / −8, `shadow.avatar-ring` (2px in `{color.background}`), and `+N` as a round seat at a face's size rather than a chip.
 - **The create-board colour picker** (inventory §3). Stage 5.
 - **Avatar uploads.** Still Phase 2 (PRD §5.2), so there is still no photo appearance.
 

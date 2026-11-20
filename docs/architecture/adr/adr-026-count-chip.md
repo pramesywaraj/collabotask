@@ -70,6 +70,8 @@ Same value today, different job. ADR-017 §9 already sets the precedent in its o
 - **`tabular-nums` cannot be drawn.** ADR-017 §6 requires it on counts. Penpot has no token type for it and no setting for a font's alternate figures, so nothing is typed in instead and nothing is missing from the catalogue. It is code-only, like motion (inventory §4.3). The file shows Poppins's **default** digits, which are proportional, as measured in §2: `11` draws 8px wide and `88` 16px.
 - **ADR-019 §8's `+N` overflow chip is not this part.** It opens the presence list as a sheet, so it is a control, sized at 32 to sit in the avatar row. A count chip is a label. §7.3 already places the overflow sheet with the presence cluster (part 9), and that part's question 4 should note that 32 is below Coarse's 44px tap floor.
 
+  > **Not this part, for a different reason.** [ADR-018](adr-018-state-vocabulary.md) §6 makes the whole presence cluster the one target, so `+N` is a label inside it and the 44px floor is met by the cluster, `size.target-min` tall. **[ADR-031](adr-031-presence-cluster.md)** (2026-11-20) then draws `+N` as a round seat at a face's size rather than as a Count chip instance, by the user's choice: it sits in the stack, overlaps the last face and wears the same ring.
+
 ### 6. The code
 
 ADR-017 §9 gains one variable in each mode: `--chip: #E7E5E4` in `:root` and `--chip: #44403C` in `.dark`, exposed as a Tailwind utility alongside `--board-canvas`. The chip renders at 20px height and minimum width, 6px side padding, the 4px radius of §5, 12/16 text in `--muted-foreground`, with `tabular-nums`.
@@ -114,6 +116,8 @@ Rejected by §4.
 
 - **The board tile's composition and wording** (inventory §1.4). Settled with boards 2.3 and 2.4. This ADR only shows that the chip can hold the words.
 - **The `+N` overflow chip.** Part 9, the presence cluster.
+
+  > **Settled as a seat.** **[ADR-031](adr-031-presence-cluster.md)** §3 (2026-11-20): `size.avatar` tall, `radius.full`, `spacing.seat-padding-x` 2 / 4, filled `color.avatar-neutral`.
 - **A cap on large counts** (`999+`). Columns are unbounded (ADR-017 §2), so the chip simply grows. Truncating a count is a product decision nobody has asked for.
 
 ## Downstream edits this ADR requires

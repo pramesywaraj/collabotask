@@ -1,6 +1,6 @@
 # ADR-019: Responsive Scope and Touch Interaction
 
-- **Status:** Accepted
+- **Status:** Accepted — **§8's `+N` overflow chip and the arithmetic built on it superseded by [ADR-031](adr-031-presence-cluster.md)** (2026-11-20): `+N` is a round seat in the stack, so the phone's cluster is 72–75px wide, not 96. §8's cap of three faces below 640px and its 8px overlap at Coarse stand; from 640px up the cap is five. Everything else stands as written.
 - **Date:** 2026-11-17
 - **Scope:** The responsive and input scope of the **app zone** (React + Vite SPA — [ADR-011](adr-011-frontend-framework.md)): how many board layouts exist and where they change over, how a drag begins and how far it reaches on a touchscreen, and the coarse-pointer density scale. **Supersedes [ADR-017](adr-017-ui-foundations.md) §8 only.** Everything else in ADR-017 stands — the token vocabulary and values, §1's fine-pointer density, §2's contained-column structure, the type scale, elevation, and the colour modes. This ADR *narrows* §8 rather than replacing the design behind it. The public zone (Astro landing — [ADR-013](adr-013-public-zone-framework.md)) is **not** covered: a landing page is responsive by default and needs no decision record. The numbering skips 018, which [ADR-017](adr-017-ui-foundations.md) already reserves by filename for the state vocabulary; that ADR was written the following day (2026-11-18) and picks up all four constraints in §*What ADR-018 inherits* below.
 
@@ -164,6 +164,8 @@ title                           = 159px  ≈ 18–20 characters
 ```
 
 The cap is set by that arithmetic. Five avatars leaves the title ~15 characters, which truncates real board names.
+
+> **The chip became a seat, and the sum shrank.** **[ADR-031](adr-031-presence-cluster.md)** (2026-11-20) draws `+N` as a round seat at a face's size that overlaps the last face like another face, with no gap before it. It adds only its visible 16–19px, so three faces and the seat are 72–75px and the title gets about 180px. While reconnecting, the 90px *Reconnecting…* label takes the seat's place below 640px. The whole cluster, not the seat, is the one target (ADR-018 §6), `size.target-min` tall. From 640px up it shows at most five faces, with you first.
 
 ### 9. Build order — structural now, touch input as one pass
 
