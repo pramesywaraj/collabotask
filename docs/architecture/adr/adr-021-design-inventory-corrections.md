@@ -125,6 +125,8 @@ State 24's banner reads as an invitation, not a refusal, and holds the Join acti
 
 The roster row is not a design choice: `GetBoardDetail` returns `Members: []` for a non-joined requester on a PRIVATE board, by design. The gate can state a member *count* — the board tile carries one — but cannot name anybody.
 
+> **So the banner part has one appearance, and it always carries Join.** Inventory §4.2 listed an *informational* banner as well. By this section's own Context §4, nobody could ever see one, and it is the banner rejected below (*Join on the board tile only*), so it was not drawn. The banner's surface, padding and wording are in **[ADR-028](adr-028-banner.md)** (2026-11-20).
+
 ---
 
 ## Options Considered

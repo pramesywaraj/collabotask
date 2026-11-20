@@ -58,6 +58,8 @@ The catalogue goes from 157 to **158**: `base` 29 → 30, the theme and density 
 - **In `base`, not the density sets.** Type does not grow at Coarse (ADR-019 §7), and the row's only tap target, the `⋯`, already grows to 44 by itself.
 - **The name is general on purpose.** The banner (a message and Join) and the board tile (two chips side by side) look likely to need the same gap. Each still asks its own question 4: the token is offered to them, not imposed on them.
 
+> **The banner took it.** Its message and Join are neighbours in one row, and neither is an icon with its own label, so `spacing.inline-gap` is the gap between them. See **[ADR-028](adr-028-banner.md)** §2 (2026-11-20). The board tile has yet to ask.
+
 ### 3. The `⋯` is Phosphor `DotsThree`, not a typed character
 
 [ADR-018](adr-018-state-vocabulary.md) §9 makes Phosphor the icon set, so the code renders `DotsThree` rather than a `⋯` character. The file draws Phosphor's Regular path at `size.icon`, in a box bound to `size.icon` ([ADR-024](adr-024-control-and-field-internals.md)'s *Operational note*), filled `color.muted-foreground`. Every value is bound, so §7.5's list of expected rows does not grow.
