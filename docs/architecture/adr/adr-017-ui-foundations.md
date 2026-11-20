@@ -1,6 +1,6 @@
 # ADR-017: UI Foundations — Tokens, Density, Type and Elevation
 
-- **Status:** Accepted — **§8 superseded by [ADR-019](adr-019-responsive-touch-scope.md)** (2026-11-17); the *Motion* reservation re-pointed and the *archive* icon struck by [ADR-018](adr-018-state-vocabulary.md) (2026-11-18). Everything else stands as written.
+- **Status:** Accepted — **§8 superseded by [ADR-019](adr-019-responsive-touch-scope.md)** (2026-11-17); the *Motion* reservation re-pointed and the *archive* icon struck by [ADR-018](adr-018-state-vocabulary.md) (2026-11-18); **§9 extended by [ADR-022](adr-022-form-control-geometry.md)** (2026-11-20) — form-control geometry, which §9 did not cover. Everything else stands as written.
 - **Date:** 2026-11-13
 - **Scope:** The visual baseline for the **app zone** (React + Vite SPA — [ADR-011](adr-011-frontend-framework.md)), consumed through shadcn/ui + Tailwind. Covers the token vocabulary and values, the density target, board structure, the type scale, the radius and elevation policy, colour modes, and — as first written — the responsive scope (see *Status*). **Supersedes** `docs/architecture/design-tokens.md` (an unadopted, uncommitted proposal dated 2026-11-12 — see *Corrections* below). This ADR decides the **baseline only**: it deliberately does **not** assign a visual channel to any interaction state. §*Channel budget* names the channels left unspent, which [ADR-018](adr-018-state-vocabulary.md) will spend. The public zone (Astro landing — [ADR-013](adr-013-public-zone-framework.md)) may diverge; a landing page can carry more colour than a dense board.
 
@@ -199,6 +199,8 @@ PRD §5.3 states "not a native mobile app in Phase 1 (responsive web is the targ
 **A phone interface is a committed Phase 2 effort**, designed as its own thing rather than a reflow of this one. The likely shape is a "Move card to…" picker in place of drag: on a 375px screen only one 280px column is visible, so a drag must cross columns the user cannot see — which no amount of tuning fixes.
 
 ### 9. Token reference
+
+> **§9 fixes what a control looks like, not how big it is.** Control height, horizontal padding, the gap between stacked fields and the form container width are in **[ADR-022](adr-022-form-control-geometry.md)** (2026-11-20), which *extends* this section. Nothing below is changed or withdrawn by it.
 
 shadcn/ui vocabulary, Tailwind v4 / current shadcn format — full colour values, consumed as `var(--primary)`.
 
