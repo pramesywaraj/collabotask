@@ -27,6 +27,7 @@ Seven documents fix everything here; this one only arranges it.
 | [ADR-021](adr/adr-021-design-inventory-corrections.md) | Archive is two-way and has a list; column reorder without dragging; how overlays present below 640px; the read-only board's exit |
 | [ADR-022](adr/adr-022-form-control-geometry.md) | Form-control geometry — control height, horizontal padding, the gap between stacked fields, form width |
 | [ADR-023](adr/adr-023-spacing-between-objects.md) | Spacing between objects — the screen's side inset, the column gap, no vertical canvas padding, the section break; the rail height, the two border widths, the initials' type step |
+| [ADR-024](adr/adr-024-control-and-field-internals.md) | Inside one field and one control — the label gap, icon size and gap, the focus ring as a shadow, the input's fill, pressed on a filled button |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -373,15 +374,17 @@ Read directly from the live file on 2026-11-20, not assumed.
 
 | Thing | State |
 |---|---|
-| The five token sets | **Done** — `base` 24, `theme-light` 34, `theme-dark` 34, `density-fine` 12, `density-coarse` 12. **116 tokens**: 103 derived from ADR-017 §9 in full (not yet tested against a board), plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md) and the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set). Both additions were flip-verified on 2026-11-20 |
+| The five token sets | **Done** — `base` 27, `theme-light` 35, `theme-dark` 35, `density-fine` 12, `density-coarse` 12. **121 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), and the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set). All three additions were flip-verified on 2026-11-20, and Stage 2 has now tested the catalogue against a real screen |
 | The four themes, in two groups | **Done** — `Theme`: Light, Dark. `Density`: Fine, Coarse. |
 | Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. **2026-11-20:** outline width bound to `border.width`, and the avatar corrected. It had been bound to `size.title-reserve` for width (24 → 32) with a typed 20px height, which made an oval; it is now `size.card-avatar` on both axes (20 → 24). The binding check cannot see sizes, which is why it never caught this |
-| The other nine variant containers | Not started |
+| Input variant container | **Done** 2026-11-20, on page `Components`, board `Input — states`. Four appearances: `Rest` (placeholder), `Focus` (the ring), `Invalid` (destructive edge and a message below), `InlineEditing` (the 20/28 title in the same box, no label). A field is the whole field: label, box and message, so a screen needs nothing loose around it |
+| Button variant container | **Done** 2026-11-20, board `Button — states`. Six appearances: `Rest`, `Hover`, `Pressed` (the same fill as `Hover`, by decision: ADR-024 §3), `FocusVisible`, `Busy` (Phosphor `CircleNotch` at 16 and *Logging in…*), `NotSatisfied`. **Primary only**: other kinds become a second axis when a screen needs one |
+| The other seven variant containers | Not started |
 | Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine |
-| The 15 whole-screen boards | Not started — page `Page 1` is empty |
+| The 15 whole-screen boards | **2.1 Login done** 2026-11-20, on page `Page 1`, built from Input and Button instances plus its heading and the register line. Drawn as it first appears: empty fields, the email placeholder only, the button `NotSatisfied`. The binding check returns nothing, and all four Theme × Density combinations were looked at. The other fourteen are not started |
 | The ~16 overlays | Not started |
 
-The foundation is laid and one component stands on it. Everything below picks up from there.
+The foundation is laid, three parts stand on it, and one screen has been built from them end to end. Everything below picks up from there.
 
 ### 7.3 The order
 
@@ -433,6 +436,25 @@ Run on 2026-11-20, before a single part was drawn. The catalogue's original 103 
 **Settled by [ADR-022](adr/adr-022-form-control-geometry.md)** (2026-11-20), which extends §9 with four values: `size.control-height` 36 / 44, `spacing.control-padding-x` 12, `spacing.field-gap` 16 / 20, `size.form-width` 400. They are in the file and flip-verified, so **Stage 2 is a drawing task again.**
 
 **Run question 4 anyway.** It found this one before nine parts were built on top of it, which is the whole case for the order in §7.4.
+
+#### What question 4 returned when Stage 2 ran — and what closed it
+
+Asked again on 2026-11-20, when Stage 2 was actually run, of every value Input, Button and Login need, before drawing. ADR-022 had given a control its outside and ADR-023 the space between objects; neither needed **the inside of one field or one control**. Five values were missing:
+- the gap between a field's label, box and message
+- the focus ring's 2px offset, which a Penpot stroke cannot draw (ADR-023 *Out of scope* expected this)
+- the spinner's size
+- the gap between the spinner and the label
+- a fill for *pressed* on the plum button, since ADR-018 §6's pressed values are for an edge
+
+**Settled by [ADR-024](adr/adr-024-control-and-field-internals.md)** (2026-11-20):
+- `spacing.field-inner-gap` 8 and `spacing.icon-gap` 8, kept apart by ADR-022 §4's test
+- `size.icon` 16
+- `shadow.focus-ring`, two stacked shadows in each theme set: the way Tailwind's `ring-offset` renders, so the file draws what the code ships
+- pressed reuses `color.primary-hover`
+
+It also records one thing found **while** drawing: an input's box must be filled (`color.background`), because Penpot casts an unfilled board's shadow from its children, and a transparent box drew the ring around its letters.
+
+All five are in the file and flip-verified, and Stage 2 then drew clean on them. Question 4 has fired at three stages out of three, every time before a part was drawn.
 
 **Why Login and not Register.** Register is Login plus a name field (§1.2), so drawing it here would add work without adding an answer. It goes with the other screens in Stage 4.
 
@@ -541,6 +563,7 @@ return shapes
 - **Width and height.** A size set by layout (fill, auto-height text) is indistinguishable here from a typed one.
 - **Stroke style** (the placeholder's dashes).
 - **Text content.**
+- **Whether a shadow has a surface to cast from.** A shape with no fill casts its shadow from its children ([ADR-024](adr/adr-024-control-and-field-internals.md) *Operational note*). So `shadow.focus-ring` bound to an unfilled box passes this check and still draws the ring around the text.
 
 Look at those by eye.
 
@@ -570,10 +593,10 @@ A plan, not a record — §7.5 is the record. Tick a stage when it closes, and i
 - [x] 4.1 Foundations board — token catalogue, eight identity hues in both assignments, elevation ladder, radius ladder, five type steps, 14px/16px specimen
 - [x] Binding check clean (expected rows only) · [x] Light → Dark · [x] Fine → Coarse · [x] Question 4 asked before drawing — it fired, and [ADR-023](adr/adr-023-spacing-between-objects.md) closed it
 
-**Stage 2 — the proof run** (2 parts, 1 screen, 1 check)
+**Stage 2 — the proof run** (2 parts, 1 screen, 1 check) ✅ *(2026-11-20)*
 
-- [ ] Input · [ ] Button · [ ] Board 2.1 Login
-- [ ] Binding check · [ ] Light → Dark · [ ] Fine → Coarse · [ ] **Every value you had to type in is now a token**
+- [x] Input · [x] Button · [x] Board 2.1 Login
+- [x] Binding check (no rows at all) · [x] Light → Dark · [x] Fine → Coarse · [x] **Every value you had to type in is now a token** — question 4 fired before drawing, and [ADR-024](adr/adr-024-control-and-field-internals.md) closed it
 
 **Stage 3 — the remaining seven parts** (7)
 
@@ -656,6 +679,7 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two
 - **The medium:** [ADR-020](adr/adr-020-design-tool-penpot.md) — Penpot sets, themes, variants, verification
 - **Form-control geometry:** [ADR-022](adr/adr-022-form-control-geometry.md) — control height, padding, field gap, form width; extends ADR-017 §9
 - **Spacing between objects:** [ADR-023](adr/adr-023-spacing-between-objects.md) — screen inset, column gap, no vertical canvas padding, section gap, rail height, border widths, initials; extends ADR-017 §9 and ADR-020 §3
+- **Control and field internals:** [ADR-024](adr/adr-024-control-and-field-internals.md) — label gap, icon size and gap, the focus ring as a shadow, the input's fill, pressed on a filled button; extends ADR-017 §9
 - **What this document's own open questions settled into:** [ADR-021](adr/adr-021-design-inventory-corrections.md) — archive, column reorder, overlay presentation, the read-only exit
 - **Routes and data flow:** [frontend-architecture.md](frontend-architecture.md)
 - **Product intent:** [001-PRD.md](../product/001-PRD.md) · **Acceptance per feature:** [001-user-stories.md](../product/001-user-stories.md)

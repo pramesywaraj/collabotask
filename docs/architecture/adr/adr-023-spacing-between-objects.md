@@ -1,6 +1,6 @@
 # ADR-023: Spacing Between Objects
 
-- **Status:** Accepted
+- **Status:** Accepted — *Out of scope*'s focus-ring offset **closed by [ADR-024](adr-024-control-and-field-internals.md)** (2026-11-20): the ring is drawn as `shadow.focus-ring`, so its 2px width lives inside that token, and `border.width-strong` (§2.5) now carries the drop placeholder alone. Everything else stands as written.
 - **Date:** 2026-11-20
 - **Scope:** The space *between* objects in the app zone — the screen's horizontal inset, the gap between board columns, the canvas's vertical padding, and the break between page sections — plus three values the token catalogue lacks for the same reason: the 4px board rail, the two border widths, and the size of avatar initials. **Extends [ADR-017](adr-017-ui-foundations.md) §9 and adds one row to [ADR-020](adr-020-design-tool-penpot.md) §3's type mapping; supersedes nothing.** Six of the eight values are derived from accepted ADRs — four stated outright, two implied only by their arithmetic — and are merely missing from the catalogue; two are choices, and are marked as such. No code is written here.
 

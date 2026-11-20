@@ -1,6 +1,6 @@
 # ADR-018: State Vocabulary — What Every Interaction State Looks Like
 
-- **Status:** Accepted
+- **Status:** Accepted — **§6 given two things it left open by [ADR-024](adr-024-control-and-field-internals.md)** (2026-11-20): *pressed* (15) on a **filled** button reuses `--primary-hover`, since §6's pressed values are for an edge; and the focus ring's 2px offset is drawn as two stacked shadows (`shadow.focus-ring`), the way Tailwind's `ring-offset` renders it. Every value in §6 stands as written.
 - **Date:** 2026-11-18
 - **Scope:** Every interaction state in the **app zone** (React + Vite SPA — [ADR-011](adr-011-frontend-framework.md)), which visual channel expresses it, and its measured value. Spends the budget [ADR-017](adr-017-ui-foundations.md) §*Channel budget* reserved, under the four constraints [ADR-019](adr-019-responsive-touch-scope.md) §*What ADR-018 inherits* added. Also settles the three things ADR-017 deferred here by name: **motion specifics** (durations, easing, `prefers-reduced-motion`), the **icon family**, and the values for drag-over and the drop placeholder. **Supersedes nothing.** ADR-017's baseline and ADR-019's responsive scope both stand unchanged; this ADR re-points one unspent channel and strikes one unreachable meaning, both recorded in *Corrections* below. Does **not** close SC 4.1.3 (announcing changes that happen without user action) — PRD §5.4 keeps that open, and §10 only notes where the two touch.
 
