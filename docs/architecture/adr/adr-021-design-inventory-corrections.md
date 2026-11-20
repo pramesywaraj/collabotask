@@ -182,6 +182,8 @@ Keeps the banner purely declarative. Rejected on ADR-018 §6's own rule: a funct
 - **SC 4.1.3 — announcing changes that happen without user action.** Untouched. PRD §5.4 keeps it open and ADR-018 §8 still names the reduced-motion overlap.
 - **Column width at fine pointer.** 280px remains ungrilled, as ADR-017, ADR-019 and ADR-018 all record.
 - **Toast content.** Still scaffolding work, with one addition from this ADR: `ACCESS_REVOKED` carries four distinct reasons (`removed_from_board`, `board_made_private`, `removed_from_workspace`, and the silent voluntary case), so the toast needs four wordings, not one.
+
+  > **The three spoken wordings are written; the fourth case stays silent.** **[ADR-030](adr-030-toast.md)** §5 (2026-11-20): *You were removed from “title”.* / *“title” is now private. Only its members can open it.* / *You were removed from the workspace “name”.* None names who did it, since the frame carries no actor. The toast's own design is in the same ADR.
 - **Phase-2 deferrals** — comments, labels, attachments, public boards, refresh tokens, account deletion — untouched.
 
 ## Downstream edits this ADR requires

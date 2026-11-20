@@ -177,6 +177,8 @@ USER_JOINED / USER_LEFT / ACTIVE_USERS
 ACCESS_REVOKED
   → queryClient.removeQueries(['kanban', boardId])
   → navigate to /workspaces/:wsId  (leave the board view)
+     — or to /workspaces when reason is removed_from_workspace (ADR-030 §6)
+  → toast naming the reason (wordings: ADR-030 §5)
 ```
 
 Event applier functions (`applyCardMove`, `applyCardUpdate`, etc.) are **pure functions** — same input, same output. Both the optimistic update and the WS handler reuse them.

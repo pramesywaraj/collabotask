@@ -33,6 +33,7 @@ Thirteen documents fix everything here; this one only arranges it.
 | [ADR-027](adr/adr-027-column-header.md) | The inside of the column header — its 12px inset (the card titles' left edge), `spacing.inline-gap` 8 between title, count and `⋯`, the `⋯` as Phosphor `DotsThree` shown at rest; one appearance, no axis |
 | [ADR-028](adr/adr-028-banner.md) | The read-only banner — on `color.background` with a bottom rule, `spacing.screen-x` at the sides, `spacing.banner-padding-y` 8 above and below, `spacing.inline-gap` before Join; one appearance, because nobody can see an informational one |
 | [ADR-029](adr/adr-029-skeleton-block.md) | The cold-load skeleton block — its own fill (`color.skeleton`, because `color.muted` *is* the column in Light), `size.skeleton-height` 60 / 72, card-sized blocks inside real column panels, never on the bare canvas; one appearance, no outline |
+| [ADR-030](adr/adr-030-toast.md) | The toast — inverted (`color.toast` / `color.toast-foreground`, because `color.popover` is 1.00:1 over a card in Light and a column in Dark), no edge, `spacing.toast-padding` 12, `size.toast-width` 358, a close button shown at rest; the three access-revoked wordings; `/workspaces` after `removed_from_workspace`; one appearance, no axis |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -235,7 +236,7 @@ Drawn as component variant sets rather than boards, and placed on one or two hol
 | Card `⋯` | Open, Move, Delete | US-15, US-17 |
 | User menu | Name, email, initials — and logout. **This is the profile surface**; nothing in it is editable, because no endpoint changes any of it | US-02b; ADR-021 |
 | Presence overflow sheet | The `+N` chip's full list, below 640px | ADR-019 §8 |
-| Toast | Carries several states' messages; its own design is deferred. One content requirement that is *not* deferred: **access-revoked has four distinct reasons** and needs four wordings — removed from this board, board made private, removed from the workspace, and the silent voluntary case which shows nothing | ADR-018 *Out of scope* |
+| Toast | Carries several states' messages. **Its own design is settled and drawn as a part** ([ADR-030](adr/adr-030-toast.md)): inverted, one appearance, a close button. **Access-revoked has four reasons, and three wordings**: *You were removed from “title”.* · *“title” is now private. Only its members can open it.* · *You were removed from the workspace “name”.* The voluntary case shows nothing. **Still to write here:** the wordings for 4, 27 and 32, and where a toast sits | ADR-018 *Out of scope*; ADR-030 §5 |
 | Date picker, assignee picker | Phosphor Regular 16px throughout. **Not separate layers** — see the rule below | ADR-018 §9 |
 
 **Two batch behaviours that look alike and are not.** Inviting to a *workspace* is per-row: unknown addresses and existing members are reported individually and the valid invites still land. Adding people to a *board* is **all-or-nothing** — one person already on it fails the entire batch with a single error. So the board panel must **not** be drawn with per-row result rows. It doesn't need them: the candidate list already flags who's on the board, which is what prevents the failure in the first place.
@@ -281,7 +282,7 @@ Per [ADR-020](adr/adr-020-design-tool-penpot.md) §4, every state is a variant. 
 | Banner | — . **One appearance, and it carries Join** (§2, board 2.7). This row first listed an *informational* banner as well. Nobody can see one: the read-only board's only visitors can all join, and no other state is a banner ([ADR-028](adr/adr-028-banner.md) §4). Join's own looks, *Joining…* included, are the Button's |
 | Count chip | — . One appearance that holds any text: `12` in a column header, `12 cards` and `3 members` on a board tile, because two bare numbers on one tile cannot be told apart ([ADR-026](adr/adr-026-count-chip.md) §4) |
 | Skeleton block | — . **One appearance**: a flat `color.skeleton` block at a card's corners and width, `size.skeleton-height` tall, with no outline. It sits on a column panel or on the page background, **never directly on the canvas**, where in Light it disappears ([ADR-029](adr/adr-029-skeleton-block.md) §4) |
-| Toast | — |
+| Toast | — . **One appearance**: an inverted box (`color.toast`, text and close glyph `color.toast-foreground`) with no edge, `size.toast-width` wide, `spacing.toast-padding` inside, a message that wraps and a Phosphor `X` close shown at rest. Every Phase-1 toast says one thing and offers nothing but closing, so there are no kinds and no action button ([ADR-030](adr/adr-030-toast.md) §3) |
 | Presence cluster | live, **reconnecting** — hues drop to flat `--muted` with a "Reconnecting…" label beside them, spending no hue |
 
 Hover, pressed and the border ladder are three consecutive stone steps on the **edge**, never a fill: shadcn hovers to `--accent`, which is `--board-column`'s own value, so a card hovering to accent dissolves into the panel behind it.
@@ -383,7 +384,7 @@ Read directly from the live file on 2026-11-20, not assumed.
 
 | Thing | State |
 |---|---|
-| The five token sets | **Done** — `base` 31, `theme-light` 53, `theme-dark` 53, `density-fine` 13, `density-coarse` 13. **163 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set), the 16 identity tokens from [ADR-025](adr/adr-025-identity-hues-as-tokens.md) (written once per theme set), the three count-chip tokens from [ADR-026](adr/adr-026-count-chip.md) (`color.chip` written once per theme set), `spacing.inline-gap` from [ADR-027](adr/adr-027-column-header.md), `spacing.banner-padding-y` from [ADR-028](adr/adr-028-banner.md), and the four skeleton entries from [ADR-029](adr/adr-029-skeleton-block.md) (`color.skeleton` once per theme set, `size.skeleton-height` once per density set). ADR-025 also renamed `size.card-avatar` to `size.avatar`. Every addition was flip-verified on 2026-11-20, and Stage 2 has tested the catalogue against a real screen |
+| The five token sets | **Done** — `base` 33, `theme-light` 55, `theme-dark` 55, `density-fine` 13, `density-coarse` 13. **169 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set), the 16 identity tokens from [ADR-025](adr/adr-025-identity-hues-as-tokens.md) (written once per theme set), the three count-chip tokens from [ADR-026](adr/adr-026-count-chip.md) (`color.chip` written once per theme set), `spacing.inline-gap` from [ADR-027](adr/adr-027-column-header.md), `spacing.banner-padding-y` from [ADR-028](adr/adr-028-banner.md), the four skeleton entries from [ADR-029](adr/adr-029-skeleton-block.md) (`color.skeleton` once per theme set, `size.skeleton-height` once per density set), and the six toast entries from [ADR-030](adr/adr-030-toast.md) (`color.toast` and `color.toast-foreground` once per theme set, `spacing.toast-padding` and `size.toast-width` in `base`). ADR-025 also renamed `size.card-avatar` to `size.avatar`. Every addition was flip-verified on 2026-11-20, and Stage 2 has tested the catalogue against a real screen |
 | The four themes, in two groups | **Done** — `Theme`: Light, Dark. `Density`: Fine, Coarse. |
 | Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. **2026-11-20:** outline width bound to `border.width`, and the avatar corrected. It had been bound to `size.title-reserve` for width (24 → 32) with a typed 20px height, which made an oval; it is now `size.card-avatar` on both axes (20 → 24). The binding check cannot see sizes, which is why it never caught this. **Later on 2026-11-20** the placeholder was replaced by a real Avatar instance in all five variants ([ADR-025](adr/adr-025-identity-hues-as-tokens.md) §5); heights unchanged at 80 / 92 |
 | Input variant container | **Done** 2026-11-20, on page `Components`, board `Input — states`. Four appearances: `Rest` (placeholder), `Focus` (the ring), `Invalid` (destructive edge and a message below), `InlineEditing` (the 20/28 title in the same box, no label). A field is the whole field: label, box and message, so a screen needs nothing loose around it |
@@ -393,12 +394,13 @@ Read directly from the live file on 2026-11-20, not assumed.
 | Column header | **Done** 2026-11-20, board `Column header — states`. **One component, no axis**: height `size.column-header`, fill `color.board-column`, a bottom-only rule (`color.border`, `border.width` on `strokeWidthBottom`), side padding `spacing.card-padding-x`, gap `spacing.inline-gap`. Inside: `Lead` (title in `type.body` and `color.foreground`, then a `Count chip` instance) and `Menu` (`size.target-min`, centring Phosphor `DotsThree` at `size.icon` in `color.muted-foreground`). Shown as `In Progress` / `12` on two bound column panels, one above an untinted body and one above a `color.drag-over` body. **No export shows the rule**: Penpot's exporter drops a stroke whose sides differ, so check it on the canvas ([ADR-027](adr/adr-027-column-header.md) *Operational note*) |
 | Banner | **Done** 2026-11-20, board `Banner — states`. **One component, no axis**: fill `color.background`, a bottom-only rule (`color.border`, `border.width`), side padding `spacing.screen-x`, top and bottom `spacing.banner-padding-y`, gap `spacing.inline-gap`, height following the content (52 at Fine, 60 at Coarse). Inside: `Message` (*You’re viewing this board. Join it to add, edit and move cards.*, `type.body` in `color.foreground`, fills the row and wraps) and `Join` (a `Button` instance, `Rest`, labelled *Join board*). Shown at 1024 on one line and at 390 wrapped to two, each above a `Doc / Canvas` strip: in Dark the banner and the canvas are the same colour, and the rule is the only edge. No informational appearance ([ADR-028](adr/adr-028-banner.md) §4) |
 | Skeleton block | **Done** 2026-11-20, board `Skeleton block — states`. **One component, no axis**: a board with no layout, fill `color.skeleton`, four corners `radius.surface`, height `size.skeleton-height` (60 at Fine, 72 at Coarse), width filling its column, no outline. Shown as the main and two instances in one `Doc / Surface / Column` (bound to `color.board-column`, `size.column-width`, `spacing.column-padding`, `radius.surface`, row gap `spacing.card-gap`) on a `Doc / Canvas` bound to `color.board-canvas`, so the Light check shows canvas, column and block together. ADR-018 §7's `--muted` fill is withdrawn: in Light it is the column's own colour ([ADR-029](adr/adr-029-skeleton-block.md)) |
-| The other two parts | Not started |
-| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine. **Updated 2026-11-20 with ADR-025:** the catalogue tables were regenerated to 153 rows. That also adds the five ADR-024 tokens, which Stage 2 had left off the board. The identity notes now say the hues are tokens; this section's two side-by-side pairings stay typed in. **Updated again 2026-11-20 with ADR-026:** three rows added, so the catalogue read 157. **And with ADR-027:** one row added to the `base` table, so it reads 158. **And with ADR-028:** one more `base` row, so it reads 159. **And with ADR-029:** a `color.skeleton` row in the theme table (swatch bound) and a `size.skeleton-height` row in the density table, so it reads 163, with the theme table titled 53 each and the density table 13 each. Its two loose column headers in the elevation ladder (a title only) predate the Column header part and have not yet been replaced by instances |
+| Toast | **Done** 2026-11-20, board `Toast — states`. **One component, no axis**: a flex row, fill `color.toast`, no edge, four corners `radius.surface`, `shadow.overlay`, padding `spacing.toast-padding` on all sides, gap `spacing.inline-gap`, width `size.toast-width`, height following the content (48 for one line and 64 for two at Fine, 68 at Coarse). Inside: `Message` (`type.body` in `color.toast-foreground`, fills the row and wraps) and `Close` (`size.target-min`, centring Phosphor `X` at `size.icon` in `color.toast-foreground`). The main holds the longest wording, *“Q3 Product Launch Plan” is now private. Only its members can open it.*, floating over three Card instances in a bound column on a 390 `Doc / Canvas`. One instance, with the shortest wording, sits on a `Doc / Page` bound to `color.background` ([ADR-030](adr/adr-030-toast.md)) |
+| The other part | Not started |
+| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine. **Updated 2026-11-20 with ADR-025:** the catalogue tables were regenerated to 153 rows. That also adds the five ADR-024 tokens, which Stage 2 had left off the board. The identity notes now say the hues are tokens; this section's two side-by-side pairings stay typed in. **Updated again 2026-11-20 with ADR-026:** three rows added, so the catalogue read 157. **And with ADR-027:** one row added to the `base` table, so it reads 158. **And with ADR-028:** one more `base` row, so it reads 159. **And with ADR-029:** a `color.skeleton` row in the theme table (swatch bound) and a `size.skeleton-height` row in the density table, so it reads 163, with the theme table titled 53 each and the density table 13 each. **And with ADR-030:** two `base` rows and two theme rows (both swatches rebound), so it reads 169, with `base` titled 33 and the theme table 55 each. Its two loose column headers in the elevation ladder (a title only) predate the Column header part and have not yet been replaced by instances |
 | The 15 whole-screen boards | **2.1 Login done** 2026-11-20, on page `Page 1`, built from Input and Button instances plus its heading and the register line. Drawn as it first appears: empty fields, the email placeholder only, the button `NotSatisfied`. The binding check returns nothing, and all four Theme × Density combinations were looked at. The other fourteen are not started |
 | The ~16 overlays | Not started |
 
-The foundation is laid, eight parts stand on it, and one screen has been built from them end to end. Everything below picks up from there.
+The foundation is laid, nine parts stand on it, and one screen has been built from them end to end. Everything below picks up from there.
 
 ### 7.3 The order
 
@@ -483,7 +485,7 @@ All five are in the file and flip-verified, and Stage 2 then drew clean on them.
 | 5 | **Column header** | §1.5 (title, count, `⋯` with move left / move right), §2.14 (drag-over, header left **untinted**) | Needs Count chip |
 | 6 | **Banner** | §2.7 (read-only — persistent, non-dismissible, **and it carries Join**) | One board uses it, but that board cannot be drawn without it |
 | 7 | **Skeleton block** | §2.9 (card-sized blocks in column panels, `color.skeleton` fill, **no shimmer**) | Only board 2.9 — shimmer is movement, and movement means a teammate acted |
-| 8 | **Toast** | §3 (its own design is deferred; the **four** access-revoked wordings are not) | Draw the container and the longest message it must hold |
+| 8 | **Toast** | §3 (its design and the access-revoked wordings are settled by [ADR-030](adr/adr-030-toast.md); placement and the other wordings are not) | Draw the container and the longest message it must hold |
 | 9 | **Presence cluster** | §1.5 (app bar), §3 (the `+N` overflow sheet) | **Last.** It is a cluster *of Avatars* — the only hard dependency here |
 
 Numbering carries on from Stage 2, because Input and Button are parts 1 and 2. The Card, drawn in Stage 0, is the pattern every row follows.
@@ -570,6 +572,26 @@ Asked on 2026-11-20 before drawing. The corners, the gap between blocks and the 
 **One consequence for the code:** shadcn's Skeleton ships `animate-pulse`, and it is removed in the same pass as ADR-018's `disabled:` override.
 
 Question 4 has now fired at eight stages out of eight, and this is the first time it found a value that existed but could not be seen.
+
+#### What question 4 returned for the Toast — and what closed it
+
+Asked on 2026-11-20 before drawing. The corners, the shadow, the message's type, the gap before the close button and the close glyph's size and area were all in the catalogue, each bound by a rule. Three things were not usable:
+- **the fill.** shadcn's toast is `color.popover`, and a toast floats over everything. Measured against the canvas, a column, a card and the page, it is 1.00:1 over a card and over the page in Light and 1.00:1 over a column in Dark. The `color.border` edge reaches 1.26 at best in Light.
+- **the padding**
+- **the width.** ADR-022 had said a toast needs no size token, and drawing one needs a width that is either typed or a token.
+
+It also found that the access-revoked wordings did not exist anywhere. Only their reasons did. And after `removed_from_workspace`, ADR-018 §10's destination is a workspace you can no longer open.
+
+**Settled by [ADR-030](adr/adr-030-toast.md)** (2026-11-20):
+- an inverted grey toast: `color.toast` `#44403C` / `#E7E5E4` (stone-700 / stone-200, not the text colours) with `color.toast-foreground` `#FFFFFF` / `#0C0A09`, written as values. It is 8.18:1 or better over every surface in both themes, so it has no edge.
+- `spacing.toast-padding` 12 on all sides, in `base`, the inset every other surface gives its text
+- `size.toast-width` 358, which is `390 − 2 × spacing.screen-x`, so a message wraps the same way on the phone and on a desktop
+- one appearance, no axis, no icon, no hue, and a Phosphor `X` close shown at rest at every pointer
+- three wordings that name what you lost and not who did it, and `/workspaces` as the destination after `removed_from_workspace`
+
+**One consequence for the code:** if the scaffold uses shadcn's Sonner wrapper, its `--normal-*` variables are re-pointed to the new ones.
+
+Question 4 has now fired at nine stages out of nine.
 
 **Stage 4 — the remaining fourteen screens** (§2), in five groups:
 
@@ -699,7 +721,8 @@ A plan, not a record — §7.5 is the record. Tick a stage when it closes, and i
 
 - [x] Avatar *(2026-11-20; question 4 fired and [ADR-025](adr/adr-025-identity-hues-as-tokens.md) closed it)* · [x] Count chip *(2026-11-20; question 4 fired and [ADR-026](adr/adr-026-count-chip.md) closed it)* · [x] Column header *(2026-11-20; question 4 fired and [ADR-027](adr/adr-027-column-header.md) closed it)* · [x] Banner *(2026-11-20; question 4 fired and [ADR-028](adr/adr-028-banner.md) closed it)*
 - [x] Skeleton block *(2026-11-20; question 4 fired and [ADR-029](adr/adr-029-skeleton-block.md) closed it)*
-- [ ] Toast · [ ] Presence cluster
+- [x] Toast *(2026-11-20; question 4 fired and [ADR-030](adr/adr-030-toast.md) closed it)*
+- [ ] Presence cluster
 
 **Stage 4 — the remaining fourteen screens** (14)
 
@@ -752,7 +775,7 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two
 | 21 | Empty, **six** flavours | Boards 2.3, 2.4 (Active **and** Archived), 2.10, the in-column surface, and the add-people panel (§6.5) |
 | 22, 23 | Load failed, gone | Boards 2.11, 2.12 |
 | 24, 25 | Read-only, join gate | Boards 2.7, 2.8 — **one component, two settings**, and 2.7's banner carries Join |
-| 26 | Access revoked | **Navigates you off the board**, plus a toast naming the reason. Nothing reverts — this is not 27. Four reasons, four wordings |
+| 26 | Access revoked | **Navigates you off the board**, plus a toast naming the reason. Nothing reverts — this is not 27. Four reasons: three wordings, and the voluntary case shows nothing. After `removed_from_workspace` it goes to `/workspaces`, not the workspace ([ADR-030](adr/adr-030-toast.md) §5–6) |
 | 27 | Action forbidden | Toast; the optimistic change reverts via the in-flight dim |
 | 28 | Connecting | Part of cold load (2.9) |
 | 29 | Reconnecting | Presence cluster variant (§4.2) |
@@ -783,6 +806,7 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two
 - **The column header:** [ADR-027](adr/adr-027-column-header.md) — the inset bound to `spacing.card-padding-x`, `spacing.inline-gap`, the `⋯` as Phosphor `DotsThree` shown at rest, one appearance; extends ADR-017 §9
 - **The banner:** [ADR-028](adr/adr-028-banner.md) — `color.background` for Join's focus ring, the bottom rule, `spacing.screen-x`, `spacing.banner-padding-y`, `spacing.inline-gap`, one appearance with Join, no icon; extends ADR-017 §9
 - **The skeleton block:** [ADR-029](adr/adr-029-skeleton-block.md) — `color.skeleton` because `color.muted` is the column in Light, `size.skeleton-height` 60 / 72, card-sized blocks in real column panels, never on the bare canvas, no `animate-pulse`; supersedes ADR-018 §7's fill only and extends ADR-017 §9
+- **The toast:** [ADR-030](adr/adr-030-toast.md) — inverted, no edge, `spacing.toast-padding`, `size.toast-width`, a Phosphor `X` close shown at rest, one appearance, the three access-revoked wordings; supersedes ADR-018 §10's row 26 destination for `removed_from_workspace` only and extends ADR-017 §9
 - **What this document's own open questions settled into:** [ADR-021](adr/adr-021-design-inventory-corrections.md) — archive, column reorder, overlay presentation, the read-only exit
 - **Routes and data flow:** [frontend-architecture.md](frontend-architecture.md)
 - **Product intent:** [001-PRD.md](../product/001-PRD.md) · **Acceptance per feature:** [001-user-stories.md](../product/001-user-stories.md)

@@ -109,6 +109,8 @@ Rejected after verifying that it would work. See *Decision* §4 — the mechanis
 
 - **Every control geometry already fixed elsewhere.** The column header's 36 / 44, the card's padding and gap ladders, the 56px app bar and the 280px column are untouched; this ADR adds the form case and changes nothing it finds.
 - **Toast, menu and overlay geometry.** The toast's own design is already deferred by ADR-018, and overlay presentation is settled as four rules by [ADR-021](adr-021-design-inventory-corrections.md) §5. Neither needs a size token to be drawn.
+
+  > **The toast did need two.** Drawing it on 2026-11-20 needed a width and a padding, and typing either is what question 4 exists to catch. **[ADR-030](adr-030-toast.md)** adds `size.toast-width` (358) and `spacing.toast-padding` (12). Overlays and menus are unaffected by it.
 - **Motion and the identity palette.** Unchanged, and still not tokens — ADR-020 §3.
 - **The Astro landing page.** Outside the app zone's design file entirely.
 - **Phase-2 deferrals** — comments, labels, attachments, public boards, refresh tokens, account deletion.
