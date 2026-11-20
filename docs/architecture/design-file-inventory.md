@@ -28,6 +28,7 @@ Seven documents fix everything here; this one only arranges it.
 | [ADR-022](adr/adr-022-form-control-geometry.md) | Form-control geometry — control height, horizontal padding, the gap between stacked fields, form width |
 | [ADR-023](adr/adr-023-spacing-between-objects.md) | Spacing between objects — the screen's side inset, the column gap, no vertical canvas padding, the section break; the rail height, the two border widths, the initials' type step |
 | [ADR-024](adr/adr-024-control-and-field-internals.md) | Inside one field and one control — the label gap, icon size and gap, the focus ring as a shadow, the input's fill, pressed on a filled button |
+| [ADR-025](adr/adr-025-identity-hues-as-tokens.md) | The identity hues as design-file tokens (`subtle` / `strong`, flipping with Theme); `size.avatar`; the Avatar's ten appearances, including the no-name glyph |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -113,7 +114,7 @@ The product. Two layouts, crossing over at 640px (ADR-019 §2); from 640px up, A
 
 Per-card height is `8 + lines×20 + (24 if meta) + 8` at Fine and `12 + lines×20 + (28 if meta) + 12` at Coarse. The smallest card is 36px at Fine and exactly 44px at Coarse, so cards clear the target floor by construction rather than by special-casing.
 
-**The initials avatar needs a fallback, for the same reason the colour swatch does.** An assigned card always carries an assignee object, but its `name` is filled only if the server's user lookup succeeded — so `{"id": "…", "name": "", "avatar_url": null}` is representable. Initials derived from an empty string produce an empty circle. Draw the fallback (a neutral `--muted` circle, or the Phosphor user glyph) rather than discovering it as a blank on screen. Same species as `background_color: "pink"` in §1.4: a field the API's validation does not actually guarantee.
+**The initials avatar needs a fallback, for the same reason the colour swatch does.** An assigned card always carries an assignee object, but its `name` is filled only if the server's user lookup succeeded — so `{"id": "…", "name": "", "avatar_url": null}` is representable. Initials derived from an empty string produce an empty circle. Draw the fallback (a neutral `--muted` circle, or the Phosphor user glyph) rather than discovering it as a blank on screen. **Settled by [ADR-025](adr/adr-025-identity-hues-as-tokens.md) §4: the glyph, on a muted circle** — an empty muted circle is 1.09:1 against a white card and invisible on a dark one. Same species as `background_color: "pink"` in §1.4: a field the API's validation does not actually guarantee.
 
 The card's `⋯` is **hover-revealed at fine pointer and persistent at coarse** (ADR-019 §6), and it does not go in the meta row — that row is conditional, and putting `⋯` there would force it onto every card.
 
@@ -271,7 +272,7 @@ Per [ADR-020](adr/adr-020-design-tool-penpot.md) §4, every state is a variant. 
 | Card | the five above |
 | Button | rest, hover, pressed, focus-visible, busy, not-satisfied |
 | Input | rest, focus, invalid, inline-editing |
-| Avatar | eight hues × two role assignments, **plus a no-name fallback** — initials from an empty string render an empty circle (§1.5) |
+| Avatar | eight hues, **plus Muted** (initials, for the presence cluster's reconnecting state) **and Unknown** (the no-name fallback — initials from an empty string render an empty circle, §1.5). The two role assignments are not an axis: the hues are tokens that follow the Theme switch ([ADR-025](adr/adr-025-identity-hues-as-tokens.md)) |
 | Column header | rest, drag-over (header **untinted**) |
 | Banner | informational, **and with an action** — the read-only banner carries Join (§2, board 2.7) |
 | Count chip, toast, skeleton block | — |
@@ -283,7 +284,7 @@ Hover, pressed and the border ladder are three consecutive stone steps on the **
 
 **Motion.** Penpot has no duration or easing token type, and the channel's meaning — "a teammate did this" — is a multi-client behaviour no static file can show. It stays code-only: 120ms chrome, 200ms board objects, 260ms containers, 110ms reduced-motion cross-fade.
 
-**The identity palette as tokens.** It is a lookup indexed by `hash(id) % 8` living in a TypeScript constant, in both role assignments — not in the catalogue.
+**Who gets which hue.** In code the palette is a lookup indexed by `hash(id) % 8`, living in a TypeScript constant with both role assignments (ADR-017 §9). The file cannot show that assignment; each drawn avatar simply picks a hue. The colours themselves *are* tokens in the file since [ADR-025](adr/adr-025-identity-hues-as-tokens.md), so they follow the Theme switch.
 
 ---
 
@@ -374,13 +375,14 @@ Read directly from the live file on 2026-11-20, not assumed.
 
 | Thing | State |
 |---|---|
-| The five token sets | **Done** — `base` 27, `theme-light` 35, `theme-dark` 35, `density-fine` 12, `density-coarse` 12. **121 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), and the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set). All three additions were flip-verified on 2026-11-20, and Stage 2 has now tested the catalogue against a real screen |
+| The five token sets | **Done** — `base` 27, `theme-light` 51, `theme-dark` 51, `density-fine` 12, `density-coarse` 12. **153 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set), and the 16 identity tokens from [ADR-025](adr/adr-025-identity-hues-as-tokens.md) (written once per theme set). ADR-025 also renamed `size.card-avatar` to `size.avatar`. Every addition was flip-verified on 2026-11-20, and Stage 2 has tested the catalogue against a real screen |
 | The four themes, in two groups | **Done** — `Theme`: Light, Dark. `Density`: Fine, Coarse. |
-| Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. **2026-11-20:** outline width bound to `border.width`, and the avatar corrected. It had been bound to `size.title-reserve` for width (24 → 32) with a typed 20px height, which made an oval; it is now `size.card-avatar` on both axes (20 → 24). The binding check cannot see sizes, which is why it never caught this |
+| Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. **2026-11-20:** outline width bound to `border.width`, and the avatar corrected. It had been bound to `size.title-reserve` for width (24 → 32) with a typed 20px height, which made an oval; it is now `size.card-avatar` on both axes (20 → 24). The binding check cannot see sizes, which is why it never caught this. **Later on 2026-11-20** the placeholder was replaced by a real Avatar instance in all five variants ([ADR-025](adr/adr-025-identity-hues-as-tokens.md) §5); heights unchanged at 80 / 92 |
 | Input variant container | **Done** 2026-11-20, on page `Components`, board `Input — states`. Four appearances: `Rest` (placeholder), `Focus` (the ring), `Invalid` (destructive edge and a message below), `InlineEditing` (the 20/28 title in the same box, no label). A field is the whole field: label, box and message, so a screen needs nothing loose around it |
 | Button variant container | **Done** 2026-11-20, board `Button — states`. Six appearances: `Rest`, `Hover`, `Pressed` (the same fill as `Hover`, by decision: ADR-024 §3), `FocusVisible`, `Busy` (Phosphor `CircleNotch` at 16 and *Logging in…*), `NotSatisfied`. **Primary only**: other kinds become a second axis when a screen needs one |
-| The other seven variant containers | Not started |
-| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine |
+| Avatar variant container | **Done** 2026-11-20, board `Avatar — states`. One axis, `Hue`, ten appearances: the eight hues (fill `color.identity.<hue>.subtle`, initials `.strong`), `Muted` (initials on `color.muted`), `Unknown` (Phosphor `User` on `color.muted`). Sized by `size.avatar` with an ellipse behind, so no radius to bind. Flips with Theme by itself |
+| The other six variant containers | Not started |
+| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine. **Updated 2026-11-20 with ADR-025:** the catalogue tables were regenerated to 153 rows. That also adds the five ADR-024 tokens, which Stage 2 had left off the board. The identity notes now say the hues are tokens; this section's two side-by-side pairings stay typed in |
 | The 15 whole-screen boards | **2.1 Login done** 2026-11-20, on page `Page 1`, built from Input and Button instances plus its heading and the register line. Drawn as it first appears: empty fields, the email placeholder only, the button `NotSatisfied`. The binding check returns nothing, and all four Theme × Density combinations were looked at. The other fourteen are not started |
 | The ~16 overlays | Not started |
 
@@ -475,6 +477,18 @@ All five are in the file and flip-verified, and Stage 2 then drew clean on them.
 Numbering carries on from Stage 2, because Input and Button are parts 1 and 2. The Card, drawn in Stage 0, is the pattern every row follows.
 
 **Which appearances each one needs is in §4.2, and that table is the authority.** It is not repeated here on purpose: two lists of the same thing drift, and §4.2 is the one already cited by the §Appendix coverage check.
+
+#### What question 4 returned for the Avatar — and what closed it
+
+Asked on 2026-11-20 before drawing. **No number was missing**: size, initials, circle and the muted colours were all in the catalogue. It found a structural problem instead. ADR-017 §3.3 swaps the identity colours' roles between Light and Dark, and ADR-020 §3 kept those colours typed in. A typed-in colour does not follow the Theme switch, so every avatar and rail would need a hand-swapped Dark pairing, and the Light → Dark check could never see them.
+
+The two options were compared side by side with a live mock board. **Settled by [ADR-025](adr/adr-025-identity-hues-as-tokens.md)** (2026-11-20):
+- `color.identity.<hue>.subtle` and `.strong`, 32 entries across the two theme sets; the code keeps its TypeScript constant
+- `size.card-avatar` renamed `size.avatar`, because the presence avatar is the same size
+- `Unknown` is the Phosphor `User` glyph, not an empty circle
+- a `Muted` appearance is added for the presence cluster's reconnecting state
+
+Question 4 has now fired at four stages out of four. This is the first time it found a rule rather than a missing value.
 
 **Stage 4 — the remaining fourteen screens** (§2), in five groups:
 
@@ -571,7 +585,7 @@ Look at those by eye.
 
 | Shape | Reported | Why it stays |
 |---|---|---|
-| Anything named `Hue / …` | `fill` | The 16 identity hex values of ADR-017 §3.3 are deliberately **not** tokens (ADR-020 §3). **Do not "fix" them by creating hue tokens** |
+| Anything named `Hue / …`, **on the Foundations board only** | `fill` | Its identity section shows both pairings side by side, which a token-bound shape cannot: it only shows the active theme. Everywhere else the hues are tokens (`color.identity.<hue>.subtle` / `.strong`, [ADR-025](adr/adr-025-identity-hues-as-tokens.md)), so **a `Hue /` shape anywhere else is a defect** |
 | The Card's `Menu` | `typography(13px)` | The `⋯` glyph size has no token |
 
 **Shapes that exist only to document.** A shape whose name starts `Doc /` has **geometry** — size, padding, gaps — that belongs to this file's documentation rather than to the product. Examples are a swatch's dimensions, the gap between a swatch and its label, and the gap between eight avatars in a row. That geometry is not a token (ADR-023 *Out of scope*). Borrowing a product token for it, such as the card gap or field gap, is the coupling ADR-023 rejected: the documentation would reflow on Fine → Coarse, and a change to the card gap would move it. **Everything else about a `Doc /` shape is bound like any other shape: fill, stroke colour and width, radius, type, opacity and shadow.** That way the Light/Dark flip still tests the documentation. The check skips padding and gaps on `Doc /` shapes and nothing else. It cannot see sizes on any shape.
@@ -600,7 +614,7 @@ A plan, not a record — §7.5 is the record. Tick a stage when it closes, and i
 
 **Stage 3 — the remaining seven parts** (7)
 
-- [ ] Avatar · [ ] Count chip · [ ] Column header · [ ] Banner
+- [x] Avatar *(2026-11-20; question 4 fired and [ADR-025](adr/adr-025-identity-hues-as-tokens.md) closed it)* · [ ] Count chip · [ ] Column header · [ ] Banner
 - [ ] Skeleton block · [ ] Toast · [ ] Presence cluster
 
 **Stage 4 — the remaining fourteen screens** (14)
@@ -680,6 +694,7 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two
 - **Form-control geometry:** [ADR-022](adr/adr-022-form-control-geometry.md) — control height, padding, field gap, form width; extends ADR-017 §9
 - **Spacing between objects:** [ADR-023](adr/adr-023-spacing-between-objects.md) — screen inset, column gap, no vertical canvas padding, section gap, rail height, border widths, initials; extends ADR-017 §9 and ADR-020 §3
 - **Control and field internals:** [ADR-024](adr/adr-024-control-and-field-internals.md) — label gap, icon size and gap, the focus ring as a shadow, the input's fill, pressed on a filled button; extends ADR-017 §9
+- **Identity hues in the design file:** [ADR-025](adr/adr-025-identity-hues-as-tokens.md) — the 16 identity colours as `subtle` / `strong` tokens that follow Theme, `size.avatar`, the Avatar's appearances; supersedes ADR-020 §3's identity exclusion
 - **What this document's own open questions settled into:** [ADR-021](adr/adr-021-design-inventory-corrections.md) — archive, column reorder, overlay presentation, the read-only exit
 - **Routes and data flow:** [frontend-architecture.md](frontend-architecture.md)
 - **Product intent:** [001-PRD.md](../product/001-PRD.md) · **Acceptance per feature:** [001-user-stories.md](../product/001-user-stories.md)
