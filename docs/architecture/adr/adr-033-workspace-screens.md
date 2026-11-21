@@ -1,6 +1,6 @@
 # ADR-033: The Workspace Screens — Tiles, the Active / Archived Switch, an Outline Button, and Empty-State Illustrations
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2's app bar contents and §4's tile counts superseded by [ADR-034](adr-034-side-menu.md), on 2.4 only** (2026-11-21). On 2.4, *CollaboTask* and the user menu move into the sidebar, and the bar holds the show/hide button and the title *All boards*. With the sidebar open, the grid shows 4 tiles across at 1440 and 2 at 1024. 2.3 keeps §2 and §4 as written. Everything else stands as written.
 - **Date:** 2026-11-21
 - **Scope:** Boards 2.3 Workspaces and 2.4 Workspace detail (Stage 4, group b). It settles:
   - the surface both screens sit on, which [ADR-029](adr-029-skeleton-block.md) §4 left open
@@ -79,6 +79,8 @@ The page is the same white (and in Dark, near-black) the forms use. This also fi
 - The product name, *CollaboTask*, sits on the left in `type.title` and links to `/workspaces`.
 - The **user menu** sits on the right: an Avatar in a `size.target-min` box. The menu it opens is Stage 5.
 
+> **On 2.4 the bar changes.** [ADR-034](adr-034-side-menu.md) (2026-11-21) puts a sidebar beside 2.4 and the board. On 2.4, *CollaboTask* moves to the sidebar's top row and the user menu to its bottom. The bar holds the show/hide button (while the sidebar is hidden, or below 1024) and the title *All boards*, in `type.title`. The heading below it is unchanged. On 2.3, which has no sidebar, this section stands as written.
+
 ### 3. The tile
 
 One part serves both screens. A workspace tile is the same part with its rail hidden, because a workspace has no colour.
@@ -111,6 +113,8 @@ The counts read *12 cards · 3 members* on a board tile and *5 members · 4 boar
 - **`size.tile-min-width` 264**, in `base`, measured in Penpot. The action has its own row, so the widest row is the counts. With two-digit counts it is *Member · 88 members · 88 boards*: 51 + 8 + 89 + 8 + 74 = 230, plus 2 × 16 of padding = 262, rounded up to 264.
 - In code the grid is `repeat(auto-fill, minmax(var(--tile-min-width), 1fr))`. That gives 5 tiles across at 1440, 3 at 1024 and 1 on a 390 phone.
 - **A row stretches to its tallest tile**, the grid's default. A row with one Join tile makes all its tiles 128 tall. The user saw that on the round-1 page.
+
+> **On 2.4, with the sidebar open, fewer tiles fit.** [ADR-034](adr-034-side-menu.md) (2026-11-21) takes 240px for the sidebar from 1024 up, so 2.4's grid shows 4 tiles across at 1440, 3 at 1280 and 2 at 1024. With the sidebar hidden, and on 2.3, the counts above stand.
 
 ### 5. The Active / Archived switch
 

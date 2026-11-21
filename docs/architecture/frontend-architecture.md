@@ -76,11 +76,17 @@ routes/
   login.tsx                      → /login
   register.tsx                   → /register
   _authenticated.tsx             ← layout: auth check + WS connect
-    workspaces.tsx               → /workspaces
-    workspaces.$wsId.tsx         → /workspaces/:wsId
-    workspaces.$wsId.boards.$boardId.tsx          → /workspaces/:wsId/boards/:boardId
-    workspaces.$wsId.boards.$boardId.cards.$cardId.tsx  → card detail modal over board
+    _index.tsx                   → /  — redirects to the remembered workspace, else /workspaces
+    workspaces._index.tsx        → /workspaces  (2.3 — no sidebar)
+    workspaces.$wsId.tsx         ← layout: the sidebar + <Outlet/>; remembers this workspace
+      workspaces.$wsId._index.tsx                   → /workspaces/:wsId  (2.4)
+      workspaces.$wsId.boards.$boardId.tsx          → /workspaces/:wsId/boards/:boardId
+      workspaces.$wsId.boards.$boardId.cards.$cardId.tsx  → card detail modal over board
 ```
+
+**The sidebar's layout route** (`workspaces.$wsId.tsx`, [ADR-034](adr/adr-034-side-menu.md)) wraps 2.4 and the board, so the sidebar stays mounted as you move between them. When it opens, it writes the remembered workspace to `localStorage`, keyed by user id. 2.3 is `workspaces._index.tsx`, so it sits outside that layout and has no sidebar.
+
+**The entry route** (`_index.tsx`, `/`) reads the remembered workspace and redirects there, or to `/workspaces` if there is none. Sign-in lands on `/`. `/workspaces` itself never redirects, so *All workspaces* always reaches 2.3. If the remembered workspace's detail is refused (403 or 404), the value is cleared and the app goes to `/workspaces`. After `removed_from_workspace` it is cleared too, if it names that workspace.
 
 The `_authenticated.tsx` layout route:
 1. Runs `clientLoader` on every navigation into the authenticated subtree.
@@ -104,8 +110,12 @@ TanStack Query cache              Zustand
 ['board', boardId]                uiStore.openCardId
 ['kanban', boardId]  ←── patched  uiStore.dragging { cardId, sourceColumnId }
 ['board-members', boardId]        uiStore.toasts
-['invitees', boardId]
+['invitees', boardId]             uiStore.sidebarOpen  ← persisted (localStorage)
 ```
+
+**`['boards', wsId]` has two readers.** 2.4's Active grid shows all of it. The sidebar shows only the boards whose `access_status` is `JOINED`, filtered in a selector, so the request is made once ([ADR-034](adr/adr-034-side-menu.md) §8). It is refetched after you join, leave, create, archive or unarchive a board, and patched when the open board's `BOARD_UPDATED`, `BOARD_ARCHIVED` or `ACCESS_REVOKED` arrives.
+
+**Two per-device values live in browser storage, not in either column:** the last workspace (`localStorage`, keyed by user id) and `uiStore.sidebarOpen`, which only applies from 1024 up. Both are conveniences ([ADR-034](adr/adr-034-side-menu.md) §3, §6). Read them inside `try`/`catch`, and fall back to the defaults when they're missing: the sidebar open, and 2.3.
 
 **Rule:** if it has a REST endpoint you can `GET` → TanStack Query. If it arrives only via WS push with no REST equivalent → Zustand.
 
@@ -236,3 +246,4 @@ No new state primitives needed unless the data has no REST equivalent (presence-
 - [ADR-013](./adr/adr-013-public-zone-framework.md) — why Astro for the public zone (not Next.js)
 - [ADR-008](./adr/adr-008-auth-httponly-cookie.md) — httpOnly cookie auth (why no authenticated SSR; CSRF header requirement)
 - [ADR-009](./adr/adr-009-websocket-realtime-layer.md) — WebSocket backend design (Broadcaster port, hub, presence model)
+- [ADR-034](./adr/adr-034-side-menu.md) — the sidebar on 2.4 and the board (the shared layout route, the `/` redirect to the last workspace, the persisted open state)

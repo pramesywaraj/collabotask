@@ -16,7 +16,7 @@
 
 The **app zone** only — the React + Vite SPA ([ADR-011](adr/adr-011-frontend-framework.md)). The Astro landing page is explicitly outside this file: [ADR-020](adr/adr-020-design-tool-penpot.md) excludes it, and [ADR-017](adr/adr-017-ui-foundations.md) §3 leaves it free to carry more colour than a dense board. It needs its own, later effort.
 
-Seventeen documents fix everything here; this one only arranges it.
+Eighteen documents fix everything here; this one only arranges it.
 
 | Source | Fixes |
 |---|---|
@@ -37,6 +37,7 @@ Seventeen documents fix everything here; this one only arranges it.
 | [ADR-031](adr/adr-031-presence-cluster.md) | The presence cluster — faces overlapping by `spacing.avatar-overlap` −6 / −8 with a 2px `shadow.avatar-ring`, grey faces on `color.avatar-neutral` (because `color.muted` is 1.09:1 on the white app bar), `+N` as a round seat, three faces below 640px and five above with you first, *Reconnecting…* in the seat's place on a phone; State = Live · Reconnecting · FocusVisible |
 | [ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) | Where Login and Register report errors — a `Form message` just above the button for a form-level failure, a taken email on its field; Register's four password rules as a live `Password rule` checklist (`spacing.list-gap` 4, met in `color.done`); a confirm-password field; *Sign in*; every wording on both forms; fifteen behaviour rules |
 | [ADR-033](adr/adr-033-workspace-screens.md) | The workspace screens — both on `color.background`; `size.app-bar` 56; a roomy `Tile` (padding 16, rows 8 apart, a left rail in the hue's `.strong`); the grid's `spacing.tile-gap` 8 / 12 and `size.tile-min-width` 264; the Active / Archived `Segment` (plum text and edge on the current one); an Outline `Kind` on the Button; *Delete workspace* behind an owner-only `⋯`; centred empty states with a plum-tinted `Illustration`, and the rules for drawing the next one; *Owner · Admin · Member*; every wording on both screens |
+| [ADR-034](adr/adr-034-side-menu.md) | The sidebar on 2.4 and the board — a workspace switcher, *All boards* and the boards you've joined; beside the content from 1024 up and sliding over it below (a fifth presentation kind, *navigation*); *CollaboTask* at its top and the user menu at its bottom; the app bar naming the current row; plum text and edge on the current row, a 12px colour square per board, 240 wide, `color.scrim`; 2.3 stays, and the app opens in your last workspace |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -87,12 +88,15 @@ The **empty state here is the first screen a new account ever sees**, so it carr
 
 Both workspace screens sit on `color.background`, the page the forms use ([ADR-033](adr/adr-033-workspace-screens.md) §1).
 
+**No sidebar here** ([ADR-034](adr/adr-034-side-menu.md) §2), so this app bar is unchanged. The app opens in the last workspace you used (ADR-034 §6), so 2.3 is now seen by a new account, from the switcher's *All workspaces* (§1.7), and when the remembered workspace can no longer be opened.
+
 ### 1.4 `/workspaces/:wsId`
 
 One route carries both the boards and the team. **Composition settled by [ADR-021](adr/adr-021-design-inventory-corrections.md): the board grid fills the screen; the team opens over it from a member-count button.** Boards are why you come here almost every time; the team is managed once, at the start. That keeps this as **one** board in the file rather than two, and the team list becomes an overlay (§3) that inherits §3's presentation rule for free.
 
 | On it | Source |
 |---|---|
+| **The sidebar** beside the screen from 1024 up (§1.7). The app bar's title is *All boards* in `type.title`, with the sidebar's show/hide button at its left while the sidebar is hidden or below 1024. *CollaboTask* and the user menu are in the sidebar, not in this bar. With the sidebar open, the grid fits 4 tiles across at 1440, 3 at 1280 and 2 at 1024 | [ADR-034](adr/adr-034-side-menu.md) §5, §11 |
 | Workspace header: name, **description**, my role, and a **"N members" button** that opens the team panel. The name in `type.heading` with the role beside it, the description under it; *5 members* is an Outline button | US-05b; ADR-033 §6 |
 | An **Active / Archived** switch above the board grid. Not a route — the same grid, one filter. Two `Segment` instances: the current one has plum text and a 1px plum edge (plum's *where you are*, not state 18) | US-12c; ADR-021 §1; ADR-033 §5 |
 | Board tiles: title, **identity swatch** from `board.background_color`, my role, joined / can-join, member count, card count. The `Tile` part: a left rail `size.board-rail` wide in the hue's `.strong`; *12 cards · 3 members*; roles *Owner · Member* | ADR-017 §3.3; US-08; ADR-033 §3 |
@@ -117,7 +121,7 @@ The product. Two layouts, crossing over at 640px (ADR-019 §2); from 640px up, A
 
 | Region | Contents | Fine → Coarse |
 |---|---|---|
-| App bar, 56px | Board name 20/28; **presence cluster**; board `⋯`; add-column action | — |
+| App bar, 56px | Board name 20/28; **presence cluster**; board `⋯`; add-column action. The sidebar's show/hide button sits at its left while the sidebar is hidden or below 1024; with the sidebar open from 1024 up, the bar starts at the sidebar's edge (§1.7). **No user menu**: it is at the bottom of the sidebar ([ADR-034](adr/adr-034-side-menu.md) §5) | — |
 | Board accent | A 4px identity rail at the top, from the eight hues. **Not** a canvas colour — the canvas is always neutral `--board-canvas` | — |
 | Canvas | `--board-canvas` `#E7E5E4`, horizontal scroll. 16px side inset (`spacing.screen-x`) and **no top or bottom padding**: the column panels run from under the app bar to the bottom of the screen (ADR-023 §2.3) | column gap 8 → 12 (`spacing.column-gap`) |
 | Column panel | Own `--board-column` fill, 8px radius, 8px padding, 280px wide | 280px → `min(100vw − 72px, 420px)` below 640 |
@@ -173,6 +177,28 @@ A URL-based overlay: the board renders underneath and browser back closes it. A 
 
 **Below 640px this drawer is the thing everything else opens on top of**, which is what shapes §3's presentation rule. The date picker, the assignee picker and the delete confirmation are all reached from inside it, so none of them may become a second full-height sheet: the two pickers **expand in place inside the drawer**, and the confirmation stays a centred dialog at every width (ADR-021 §5).
 
+### 1.7 The sidebar — on §1.4, §1.5 and §1.6
+
+Not a screen: a column beside two of them. Settled by [ADR-034](adr/adr-034-side-menu.md).
+
+| On it | Source |
+|---|---|
+| A top row `size.app-bar` tall: the show/hide button (Phosphor `SidebarSimple` at `size.icon` in a `size.target-min` box), then *CollaboTask* in `type.title`. Its bottom rule continues the app bar's | ADR-034 §10.1, §10.7 |
+| **The workspace switcher**: the workspace name in `type.card-title`, with Phosphor `CaretUpDown` at the right. It opens your workspaces **inside** the sidebar, the current one marked, ending with *All workspaces* (→ 2.3). Picking one goes to its 2.4 | ADR-034 §7 |
+| ***All boards***, with Phosphor `SquaresFour`, → 2.4. Current while you're on 2.4 | ADR-034 §8 |
+| ***Your boards*** (`type.meta`, `color.muted-foreground`, `spacing.section-gap` above it), then **only the boards you've joined**, newest first: a 12px square (`size.swatch`) in the hue's `.strong`, the title, and the filled lock if private | ADR-034 §8, §10.4 |
+| **The user menu** at the bottom: an Avatar at `size.avatar` and your name, under a `color.border` rule. The menu it opens is Stage 5 (§3) | ADR-034 §5 |
+| **The current row**: plum text and a 1px plum edge, as on the Active / Archived switch. The other rows step the edge on hover and pressed, and focus adds `shadow.focus-ring` | ADR-034 §10.3 |
+| Empty (flavour 7, §6.5): *You haven’t joined a board yet.* in `type.body` and `color.muted-foreground`, with no illustration | ADR-034 §8 |
+
+**Where and when.** On 2.4 and the board, with all of the board's states, not on 2.3. From 1024 up it sits beside the content, `size.sidebar-width` (240) wide, on `color.background` with a `border.width` rule on its right. It is open by default, and the choice is remembered on this device. Below 1024 it slides over the content from the left, with the content dimmed by `color.scrim`, and starts closed. That version is an overlay, drawn at Stage 5 (§3). Ctrl + \\ (⌘ + \\) shows and hides it at every width.
+
+**Its values.** Rows are `size.control-height`, `spacing.control-padding-x`, `radius.control` and `type.body`, sitting `spacing.list-gap` apart. The list sits `spacing.sidebar-padding` (8) in from the sides, so at Fine a row's text lines up under the button's glyph.
+
+**The app bar names the current row**: the board's name on a board, *All boards* on 2.4.
+
+**What the board's states do to it.** On 2.7 and 2.8 no row is marked current, because the board isn't one you've joined. On 2.12 the board leaves the list. **Not decided yet:** what the board list shows on 2.4's cold load and load failure, since it shares the grid's request. Question 4 for the 2.4 redraw asks it.
+
 ---
 
 ## 2. Whole-screen boards
@@ -184,18 +210,18 @@ A URL-based overlay: the board renders underneath and browser back closes it. A 
 | 2.1 | Login | §1.1 |
 | 2.2 | Register | §1.2 |
 | 2.3 | Workspaces | §1.3. Drawn 2026-11-21 with three state boards: cold load, empty, load failed ([ADR-033](adr/adr-033-workspace-screens.md) §13) |
-| 2.4 | Workspace detail | §1.4. Drawn 2026-11-21 with five state boards: archived, cold load, empty, archived and empty, load failed (ADR-033 §13) |
-| 2.5 | Board — at rest | §1.5. The reference frame everything else varies from |
+| 2.4 | Workspace detail | §1.4. Drawn 2026-11-21 with five state boards: archived, cold load, empty, archived and empty, load failed (ADR-033 §13). **To be redrawn**, all six, with the sidebar and the *All boards* bar ([ADR-034](adr/adr-034-side-menu.md)) |
+| 2.5 | Board — at rest | §1.5. The reference frame everything else varies from. The sidebar sits beside it, open by default at this width (§1.7) |
 | 2.6 | Card drawer over the board | §1.6, at ≥640 |
-| 2.7 | **Read-only board** (24) — *join to edit* | Mutating controls are **absent**, plus a persistent, non-dismissible banner **that carries the Join action**. On touch the banner is the only remaining signal — a read-only user presses and holds and nothing happens. Routine browsing, not an edge case |
-| 2.8 | **Join-required gate** (25) — *join to look* | A private board an admin hasn't joined: they see it exists, not its contents. One Join action, and joining is recorded as break-glass |
+| 2.7 | **Read-only board** (24) — *join to edit* | Mutating controls are **absent**, plus a persistent, non-dismissible banner **that carries the Join action**. On touch the banner is the only remaining signal — a read-only user presses and holds and nothing happens. Routine browsing, not an edge case. In the sidebar no row is marked current, because the board isn't one you've joined (§1.7) |
+| 2.8 | **Join-required gate** (25) — *join to look* | A private board an admin hasn't joined: they see it exists, not its contents. One Join action, and joining is recorded as break-glass. As on 2.7, no sidebar row is marked current |
 | 2.9 | **Cold load** (19) | Static skeleton blocks at the card geometry, inside real column panels, `color.skeleton` fill, **no shimmer** — shimmer is movement, and movement means a teammate acted. This row first said `--muted` fill, after ADR-018 §7. In Light that is the column's own colour, so the blocks could not be seen ([ADR-029](adr/adr-029-skeleton-block.md)) |
 | 2.10 | **Empty board** (21) | No columns. New boards seed To Do / In Progress / Done, so this is the deleted-them-all case. It carries an illustration (flavour 4), drawn to [ADR-033](adr/adr-033-workspace-screens.md) §9's rules and measured against the canvas |
 | 2.11 | **Load failed** (22) | Message plus a retry control |
 | 2.12 | **Gone** (23) | **Archived while you had it open**, or its workspace deleted while you had it open. *Not* "deleted" — there is no delete-a-board action in Phase 1 and no `BOARD_DELETED` event. *Not* "access lost" either: that is state 26, which navigates you out with a toast rather than rendering a screen |
 | 2.13 | **Session expired** (39) | A 7-day JWT dying mid-session, drawn *before* the hard navigation to `/login`. Without it, expiry looks exactly like a crash |
 | 2.14 | **Drag** | Four states at once, which is why it earns a board: source at 60% opacity (6), overlay with `--shadow-dragged` and `scale(1.02)` (7), a 2px dashed `--drop-placeholder` (8), and the column **body** tinted `--drag-over` with the header left untinted (9). **Draw two placeholders** — see the note below |
-| 2.15 | **Phone board, 390×844** | Density is a variable; layout is a breakpoint. Also the only place ADR-019 §7's "6 cards visible" gets checked by eye — the one number in its table resting on an assumption |
+| 2.15 | **Phone board, 390×844** | Density is a variable; layout is a breakpoint. Also the only place ADR-019 §7's "6 cards visible" gets checked by eye — the one number in its table resting on an assumption. The sidebar's show/hide button takes the bar's 44px "menu" slot (ADR-019 §8, [ADR-034](adr/adr-034-side-menu.md) §5); the sidebar itself slides over, and is a Stage 5 overlay |
 
 **On 2.14, the two things easiest to draw wrong.** The tint covers the column body only: on either tint the header's `--border` rule sits at about 1.19:1 and vanishes, exactly when it is most needed. And the placeholder is `#57534E`, not `--input` — measured against the tint rather than against white, `--input` thins from 4.80:1 to 3.22:1.
 
@@ -245,14 +271,15 @@ Drawn as component variant sets rather than boards, and placed on one or two hol
 | **Board `⋯`** | Board settings, Members, Archive board, Leave board — enumerated in §1.5, and shaped by who is looking | US-10, US-11, US-12b, US-12c |
 | Column `⋯` and inline rename (37) | Rename, **move left, move right**, delete | US-13b, US-13c, US-13d |
 | Card `⋯` | Open, Move, Delete | US-15, US-17 |
-| User menu | Name, email, initials — and logout. **This is the profile surface**; nothing in it is editable, because no endpoint changes any of it | US-02b; ADR-021 |
+| User menu | Name, email, initials — and logout. **This is the profile surface**; nothing in it is editable, because no endpoint changes any of it. Opened from the app bar on 2.3, and from the bottom of the sidebar on 2.4 and the board | US-02b; ADR-021; [ADR-034](adr/adr-034-side-menu.md) §5 |
+| **The sidebar, sliding over** | Below 1024: the sidebar (§1.7) over the content from the left, `color.scrim` over the content behind it, `shadow.overlay` on the panel. For focus it is a modal dialog: Escape closes it, and focus returns to the button | ADR-034 §4, §9, §10.8 |
 | Presence overflow sheet | The full list of who is here, faces with names. The whole cluster opens it, not only the `+N` seat: a sheet below 640px, a dialog or drawer above (§3 below) | ADR-019 §8; [ADR-031](adr/adr-031-presence-cluster.md) §3 |
 | Toast | Carries several states' messages. **Its own design is settled and drawn as a part** ([ADR-030](adr/adr-030-toast.md)): inverted, one appearance, a close button. **Access-revoked has four reasons, and three wordings**: *You were removed from “title”.* · *“title” is now private. Only its members can open it.* · *You were removed from the workspace “name”.* The voluntary case shows nothing. **Still to write here:** the wordings for 4, 27 and 32, and where a toast sits | ADR-018 *Out of scope*; ADR-030 §5 |
 | Date picker, assignee picker | Phosphor Regular 16px throughout. **Not separate layers** — see the rule below | ADR-018 §9 |
 
 **Two batch behaviours that look alike and are not.** Inviting to a *workspace* is per-row: unknown addresses and existing members are reported individually and the valid invites still land. Adding people to a *board* is **all-or-nothing** — one person already on it fails the entire batch with a single error. So the board panel must **not** be drawn with per-row result rows. It doesn't need them: the candidate list already flags who's on the board, which is what prevents the failure in the first place.
 
-### Presentation below 640px — four kinds, one rule each
+### Presentation on narrow screens — five kinds, one rule each
 
 ADR-019 §3 committed only the card modal. [ADR-021](adr/adr-021-design-inventory-corrections.md) §5 settles the rest in one pass, because the deciding fact is structural rather than per-overlay: **several of these open on top of something that is already a full-height sheet.**
 
@@ -262,6 +289,9 @@ ADR-019 §3 committed only the card modal. [ADR-021](adr/adr-021-design-inventor
 | **Menus** | Workspace `⋯`, board `⋯`, column `⋯`, card `⋯`, user menu | **Bottom action sheet** | Anchored popover |
 | **Confirmations** (38) | Delete column, delete card, delete workspace, archive board, leave board | **Centred dialog — unchanged at every width** | Centred dialog |
 | **Inline pickers** | Due date, assignee | **Expand in place inside the card drawer** | Expand in place, or an anchored popover |
+| **Navigation** | The sidebar (§1.7) | **Slides over the content from the left**, content dimmed — and this kind switches at **1024**, not 640 | Beside the content **from 1024 up**; slides over it from 640 to 1023 |
+
+**The fifth kind, added 2026-11-21 by [ADR-034](adr/adr-034-side-menu.md) §4.** Its breakpoint is 1024 because beside the content the sidebar would leave a tablet in portrait one column. It never stacks on another layer: it opens only from the app bar's button or its shortcut, and its switcher opens inside it.
 
 The last two rows are the rule's whole point. Delete is reached from inside the card drawer; so is the date picker. Promoting either to a second sheet puts two full-height layers on a phone, which is the state in which nobody can see what they're about to delete.
 
@@ -299,6 +329,8 @@ Per [ADR-020](adr/adr-020-design-tool-penpot.md) §4, every state is a variant. 
 | Tile | `State`: **Rest**, **Hover**, **Pressed**, **FocusVisible**. Padding `spacing.tile-padding`, rows `spacing.tile-row-gap` apart: title (and a hidden lock), counts (role and two Count chips), and an action row (a hidden Outline button). A left rail in the hue's `.strong`, `size.board-rail` wide; hidden on a workspace tile. Hover and pressed step the edge ([ADR-033](adr/adr-033-workspace-screens.md) §3) |
 | Segment | `State`: **Current**, **Other**, **Hover**, **Pressed**, **FocusVisible**. The Active / Archived switch's two options. Current is plum text and a 1px plum edge; the others are muted text that steps the edge ladder (ADR-033 §5) |
 | Illustration | `Subject`: **NoWorkspaces**, **NoBoards**, **NothingArchived**. 128 × 128 (`size.illustration`), a 2px `color.illustration-ink` line, `color.illustration-tint` and `color.background` fills, drawn as paths. A new drawing is a new `Subject`, following ADR-033 §9's rules |
+| Sidebar row | ***Planned, not drawn*** ([ADR-034](adr/adr-034-side-menu.md)). `State`: **Rest**, **Hover**, **Pressed**, **FocusVisible**, **Current**. `size.control-height`, `spacing.control-padding-x`, `radius.control`, `type.body`. A 16px slot holding the board's 12px square (`size.swatch`), a Phosphor glyph, or nothing, then the title and an optional lock. Current is plum text and a 1px plum edge; the others step the edge ladder (ADR-034 §10.3) |
+| Sidebar | ***Planned, not drawn***. The whole column: top row, switcher, *All boards*, *Your boards*, the rows and the user menu, `size.sidebar-width` wide, `spacing.sidebar-padding` inside, on `color.background` with a rule on its right. Any axes it needs are settled at question 4 |
 | Password rule | `State`: **Unmet**, **Met**, **Missed** — Phosphor `Circle` / `Check` / `X` at `size.icon`, the rule in `type.meta`, both in `color.muted-foreground` / `color.done` / `color.destructive-text`. Rows sit `spacing.list-gap` apart, under the field’s box at `spacing.field-inner-gap`. The glyph’s shape carries the state, because emerald and rose read alike to a deuteranope ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §4) |
 
 Hover, pressed and the border ladder are three consecutive stone steps on the **edge**, never a fill: shadcn hovers to `--accent`, which is `--board-column`'s own value, so a card hovering to accent dissolves into the panel behind it.
@@ -318,9 +350,9 @@ Hover, pressed and the border ladder are three consecutive stone steps on the **
 | | Count |
 |---|---|
 | Whole-screen boards | **15** (§2) |
-| Overlay variant sets | ~**17** (§3) — the workspace `⋯` added 2026-11-21 |
+| Overlay variant sets | ~**18** (§3) — the workspace `⋯` added 2026-11-21, and the sidebar sliding over ([ADR-034](adr/adr-034-side-menu.md)) the same day |
 | Foundations board | **1** |
-| Component variant containers | ~**15** (§4.2) — ten through Stage 3, plus `Form message` and `Password rule` from 2.2, and `Tile`, `Segment` and `Illustration` from 2.3 and 2.4 |
+| Component variant containers | ~**15** (§4.2) — ten through Stage 3, plus `Form message` and `Password rule` from 2.2, and `Tile`, `Segment` and `Illustration` from 2.3 and 2.4, plus `Sidebar row` and `Sidebar`, planned for the 2.4 redraw |
 
 **The board count did not move, and that was the point of §6.1.** Putting the team behind a button rather than in tabs keeps the workspace screen as one board; the Active/Archived switch is a filter on the same grid rather than a route; and 2.7 and 2.8 collapse into one component. The one addition is on the overlay side — the workspace team panel, which inherits §3's presentation rule for free.
 
@@ -366,8 +398,11 @@ See the table in §3. The deciding fact is structural rather than per-overlay: t
 | 4 | No columns on a board | Board 2.10 |
 | 5 | No cards in a column | In-column surface |
 | 6 | Everyone in this workspace is already on this board | The add-people panel (§3) |
+| 7 | **No joined boards in this workspace** | The sidebar's board list (§1.7) — new, from [ADR-034](adr/adr-034-side-menu.md) §8 |
 
 > **2026-11-21: flavours 1 to 4 carry an illustration** above their sentence, centred in the place of what is missing. Flavours 5 and 6 keep one line: a 128 drawing does not fit a 280 column or a panel list. The drawing rules are in [ADR-033](adr/adr-033-workspace-screens.md) §9.
+
+> **2026-11-21: a seventh.** The sidebar lists only the boards you've joined, so someone who has joined none sees *You haven’t joined a board yet.* It keeps one line, with no illustration, like flavours 5 and 6: *All boards* just above it is the way forward ([ADR-034](adr/adr-034-side-menu.md) §8).
 
 **One was struck: "empty team".** §1.4 used to list it, and it can never happen — you are always a member of the workspace you are looking at, so that list always contains at least you.
 
@@ -643,8 +678,8 @@ Question 4 has now fired at ten stages out of ten, and **Stage 3 is closed.**
 | Group | Boards | Why here |
 |---|---|---|
 | a | 2.2 Register ✅ | Login's twin plus a name field — nearly free now, and it adds the field-invalid state. *Drawn 2026-11-21. It turned out not to be free: it settled where errors go and brought the password rules, two parts and a token ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md))* |
-| b | 2.3 Workspaces ✅, 2.4 Workspace detail ✅ | Need Avatar and Count chip. *Drawn 2026-11-21, with eight state boards. They needed three parts, a Button kind and fifteen tokens, and brought the empty-state illustrations ([ADR-033](adr/adr-033-workspace-screens.md))* |
-| c | **2.5 Board — at rest** | §2 calls it *"the reference frame everything else varies from"*. The hinge of the whole stage |
+| b | 2.3 Workspaces ✅, 2.4 Workspace detail ✅ | Need Avatar and Count chip. *Drawn 2026-11-21, with eight state boards. They needed three parts, a Button kind and fifteen tokens, and brought the empty-state illustrations ([ADR-033](adr/adr-033-workspace-screens.md)). **To be redrawn before group c**, all six boards, with the sidebar ([ADR-034](adr/adr-034-side-menu.md))* |
+| c | **2.5 Board — at rest**, with the sidebar beside it | §2 calls it *"the reference frame everything else varies from"*. The hinge of the whole stage |
 | d | 2.6 drawer, 2.7 + 2.8 (**one component, two settings**), 2.9 cold load, 2.10 empty, 2.11 load failed, 2.12 gone, 2.13 session expired | Each is a variation on 2.5, and cheap once 2.5 exists |
 | e | 2.14 Drag, then 2.15 Phone | 2.14 needs 2.5 plus **both** placeholders. 2.15 is a different layout rather than a switch, so it is drawn by hand and goes last |
 
@@ -691,6 +726,16 @@ Asked on 2026-11-21 before drawing, in two rounds, after checking what the two l
 - *Owner · Admin · Member*, every wording, and the behaviour rules
 
 Question 4 has now fired at twelve stages out of twelve.
+
+#### What question 4 returned for the sidebar — and what closed it
+
+Asked on 2026-11-21, before anything was drawn, while the sidebar itself was being grilled. A side menu had never been discussed, and 2.5 waited on it. Eleven structural questions went first, in text. Then eight visual choices went on a rendered page, each option in Light and Dark with the file's values: where the sidebar's top sits, its surface, the current row's mark, the board colour's mark, its width, 2.4's bar title, the button's icon and the dimming. **The user took all eight recommendations.**
+
+**Settled by [ADR-034](adr/adr-034-side-menu.md)** (2026-11-21). It returned four values with no token: `size.sidebar-width` 240, `spacing.sidebar-padding` 8, `size.swatch` 12, and `color.scrim` (`#0C0A09` at 32% in Light, black at 60% in Dark). **They are not in Penpot yet.** First check that a colour token accepts transparency (ADR-034 §13).
+
+**Still open, for the 2.4 redraw:** what the sidebar's board list shows on 2.4's cold load and load failure, since it shares the grid's request. Ask it before drawing.
+
+Question 4 has now fired at thirteen stages out of thirteen.
 
 **Stage 5 — the ~16 overlays** (§3).
 

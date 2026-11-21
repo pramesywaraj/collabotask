@@ -1,6 +1,6 @@
 # ADR-019: Responsive Scope and Touch Interaction
 
-- **Status:** Accepted — **§8's `+N` overflow chip and the arithmetic built on it superseded by [ADR-031](adr-031-presence-cluster.md)** (2026-11-20): `+N` is a round seat in the stack, so the phone's cluster is 72–75px wide, not 96. §8's cap of three faces below 640px and its 8px overlap at Coarse stand; from 640px up the cap is five. Everything else stands as written.
+- **Status:** Accepted — **§8's `+N` overflow chip and the arithmetic built on it superseded by [ADR-031](adr-031-presence-cluster.md)** (2026-11-20): `+N` is a round seat in the stack, so the phone's cluster is 72–75px wide, not 96. §8's cap of three faces below 640px and its 8px overlap at Coarse stand; from 640px up the cap is five. **§2's 1024 and 1440 rows superseded by [ADR-034](adr-034-side-menu.md) while the sidebar is open** (2026-11-21): a 240px sidebar sits beside the content from 1024 up, so 1024 shows 2 columns + 176px and 1440 shows 4 + 16. Every row below 1024 stands, because there the sidebar slides over the content and takes no width. **§8's 44px "menu" slot is named by the same ADR**: it is the sidebar's show/hide button. Everything else stands as written.
 - **Date:** 2026-11-17
 - **Scope:** The responsive and input scope of the **app zone** (React + Vite SPA — [ADR-011](adr-011-frontend-framework.md)): how many board layouts exist and where they change over, how a drag begins and how far it reaches on a touchscreen, and the coarse-pointer density scale. **Supersedes [ADR-017](adr-017-ui-foundations.md) §8 only.** Everything else in ADR-017 stands — the token vocabulary and values, §1's fine-pointer density, §2's contained-column structure, the type scale, elevation, and the colour modes. This ADR *narrows* §8 rather than replacing the design behind it. The public zone (Astro landing — [ADR-013](adr-013-public-zone-framework.md)) is **not** covered: a landing page is responsive by default and needs no decision record. The numbering skips 018, which [ADR-017](adr-017-ui-foundations.md) already reserves by filename for the state vocabulary; that ADR was written the following day (2026-11-18) and picks up all four constraints in §*What ADR-018 inherits* below.
 
@@ -51,6 +51,8 @@ ADR-017's board is fixed 280px columns scrolling horizontally. That design **deg
 | 834px *(iPad 11″, portrait)* | 802 | 2 + 234px |
 | 1024px | 992 | 3 + 136px |
 | 1440px | 1408 | 5 |
+
+> **With the sidebar open, the 1024 and 1440 rows change.** [ADR-034](adr-034-side-menu.md) (2026-11-21) puts a 240px sidebar beside the content from 1024 up, on 2.4 and the board. While it is open, 1024 shows 2 columns + 176px and 1440 shows 4 + 16. Those peeks are measured after the gap before the next column; on that measure this table's own 1024 row would read 128. The rows from 640 to 834 are unchanged: below 1024 the sidebar slides over the content and takes no width. ADR-034 §11 has the full table, including 1194 and 1280.
 
 Nothing breaks at any of those widths. **A tablet needs touch targets, not a new layout** — and targets come from the pointer axis. So the board has two layouts, not three, and ADR-017 §1–§2 apply unchanged from 640px up.
 
@@ -166,6 +168,8 @@ title                           = 159px  ≈ 18–20 characters
 The cap is set by that arithmetic. Five avatars leaves the title ~15 characters, which truncates real board names.
 
 > **The chip became a seat, and the sum shrank.** **[ADR-031](adr-031-presence-cluster.md)** (2026-11-20) draws `+N` as a round seat at a face's size that overlaps the last face like another face, with no gap before it. It adds only its visible 16–19px, so three faces and the seat are 72–75px and the title gets about 180px. While reconnecting, the 90px *Reconnecting…* label takes the seat's place below 640px. The whole cluster, not the seat, is the one target (ADR-018 §6), `size.target-min` tall. From 640px up it shows at most five faces, with you first.
+
+> **The 44px "menu" is the sidebar's button.** [ADR-034](adr-034-side-menu.md) (2026-11-21) adds a sidebar on 2.4 and the board, and its show/hide button takes this slot. On a phone the board's bar is the button, the title, presence and `⋯`, so the title keeps the ~180px above. The user menu is not in this bar. It sits at the bottom of the sidebar, because a 44px avatar here would cut the title to about 128px.
 
 ### 9. Build order — structural now, touch input as one pass
 

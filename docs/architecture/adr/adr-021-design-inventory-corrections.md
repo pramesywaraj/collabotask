@@ -1,6 +1,6 @@
 # ADR-021: Four Corrections from Walking the Design Inventory
 
-- **Status:** Accepted
+- **Status:** Accepted — **§5 extended by [ADR-034](adr-034-side-menu.md)** (2026-11-21): a fifth presentation kind, *navigation*, for the sidebar on 2.4 and the board. Everything else stands as written.
 - **Date:** 2026-11-19
 - **Scope:** Four gaps found by walking [design-file-inventory.md](../design-file-inventory.md) against the running API rather than against the other ADRs. **Supersedes nothing.** It *corrects one factual finding* in [ADR-018](adr-018-state-vocabulary.md)'s *Corrections to ADR-017* table, *extends* [ADR-019](adr-019-responsive-touch-scope.md) §6 from cards to columns, *closes* a question [ADR-019](adr-019-responsive-touch-scope.md) §3 left open, and *completes* ADR-018 §10's treatment of one state. ADR-017's tokens, ADR-018's channel ledger and ADR-020's Penpot structure are untouched. Unlike ADR-017/018/019/020 this ADR is **not** frontend-only: §1 requires one backend change, and the *Downstream edits* section records it.
 
@@ -109,6 +109,8 @@ ADR-019 §3's card-modal commitment stands and generalises into the first row.
 **Confirmations and pickers are the rule's whole point.** Both are routinely reached from inside something that is already a full-height sheet — Delete from the card drawer, the date picker from the card drawer. Promoting either to a second sheet stacks two full-height layers, which is the state in which a person cannot see what they are about to delete. A centred dialog over a sheet reads correctly; a sheet over a sheet does not. The confirmation's proportions carry the same argument from the other side: a two-line question occupying 844px overstates itself next to the form that created the thing.
 
 **Menus become a bottom sheet rather than a popover** for the reason ADR-019 §6 already gives the `⋯` its persistent treatment: the trigger is a 13px mark in a 44px box, and an anchored popover hanging off it near a screen edge is the one presentation that reliably lands under a thumb in the wrong place.
+
+> **A fifth kind, *navigation*.** [ADR-034](adr-034-side-menu.md) (2026-11-21) adds a sidebar on 2.4 and the board. Below 1024 it slides over the content from the left, with the content dimmed. From 1024 up it sits beside the content. Its breakpoint is 1024, not 640, because beside the content it would leave a tablet in portrait one column. It never stacks on another layer: it opens only from the app bar's button or its shortcut, and its workspace switcher opens inside it, the rule the inline pickers above follow.
 
 ### 6. The read-only banner carries **Join**.
 
