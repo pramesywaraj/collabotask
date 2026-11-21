@@ -114,6 +114,7 @@ Zero new parts. Rejected by §4's contrast figures.
 ## Out of scope (deferred, recorded)
 
 - **The board tile's identity swatch** (inventory §1.4). Which role it takes, `subtle` or `strong`, is decided when boards 2.3 and 2.4 are drawn.
+  > *2026-11-21:* `strong`. [ADR-033](adr-033-workspace-screens.md) §3 draws it as a left rail, `size.board-rail` wide. Every `subtle` hue fails 3:1 against the tile in both themes (1.11–1.21 Light, 1.58–2.94 Dark).
 - **The rail itself.** Drawn with board 2.5; it binds `strong`.
 - **The presence cluster's own geometry**: the 8px overlap ADR-019 §8's arithmetic uses, any separating ring between overlapping avatars, and the `+N` chip. Part 9 asks its own question 4.
 

@@ -59,6 +59,8 @@ The catalogue goes from 157 to **158**: `base` 29 → 30, the theme and density 
 - **The name is general on purpose.** The banner (a message and Join) and the board tile (two chips side by side) look likely to need the same gap. Each still asks its own question 4: the token is offered to them, not imposed on them.
 
 > **The banner took it.** Its message and Join are neighbours in one row, and neither is an icon with its own label, so `spacing.inline-gap` is the gap between them. See **[ADR-028](adr-028-banner.md)** §2 (2026-11-20). The board tile has yet to ask.
+>
+> **The board tile took it too.** Its role and its two Count chips share one row, `spacing.inline-gap` apart. See **[ADR-033](adr-033-workspace-screens.md)** §3 (2026-11-21).
 
 ### 3. The `⋯` is Phosphor `DotsThree`, not a typed character
 

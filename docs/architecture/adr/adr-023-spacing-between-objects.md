@@ -142,6 +142,7 @@ Rejected for ADR-022's reasons, unchanged: later ADRs cite §9's contents by ref
 ## Out of scope (deferred, recorded)
 
 - **The gap between tiles on boards 2.3 and 2.4.** Not fixed anywhere. `spacing.column-gap` is the natural candidate (tiles, like columns, are side-by-side targets), but that is a choice for when those boards are drawn, not a derivation available now.
+  > *2026-11-21:* closed by [ADR-033](adr-033-workspace-screens.md) §4: its own token, `spacing.tile-gap` (8 / 12). The values match `spacing.column-gap`, but that gap is fixed by the phone strip's peek, and a tile grid has none.
 - **The focus ring's 2px offset** (ADR-018, inventory §1.1). Fixed by ADR-018 but not a stroke width; Penpot strokes have an alignment but no offset property, so how it binds is a Stage 2 question. Expected to surface there as Stage 2's question 4.
 - **Count chip and overlay interior geometry.** Stage 3 and Stage 5 will ask their own question 4. Neither is needed to draw the foundations board.
 - **Sizes used only by the foundations board** (swatch size and similar). Not product values, so not tokens. How the binding check treats them is a rule for inventory §7.5, which is that document's own working plan and freely revisable.

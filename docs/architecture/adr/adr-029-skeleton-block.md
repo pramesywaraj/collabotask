@@ -83,6 +83,8 @@ Measured against every surface in the catalogue:
 
 **A skeleton block sits on a column panel or on the page background. It never sits directly on the canvas, and never inside a card-coloured surface.** The inventory's other two cold loads, `/workspaces` (§1.3) and workspace detail (§1.4), are drawn at Stage 4 with blocks at tile geometry, and what their page sits on is not yet decided. If it turns out to be the canvas, this section has to be revisited before those boards are drawn. The rule is not a cost of this ADR: `color.muted` fails on the same two surfaces (the column in Light, the card in Dark) and is weaker on the page background (1.09 in Light).
 
+> **The workspace screens sit on the page background**, so their blocks sit directly on it: 1.26 in Light, 1.30 in Dark. [ADR-033](adr-033-workspace-screens.md) (2026-11-21) settles that, and gives tile-shaped blocks a second height, `size.tile-skeleton-height` (84 / 88), bound on the instances. The part keeps one height and no axis. No block sits inside a tile.
+
 ### 5. The part: one appearance, no axis
 
 - **One component, `Skeleton block`, with no variant axis**, as inventory §4.2 says. It is static. A design file cannot draw motion, so the file cannot get "no shimmer" wrong. The code can (§6).
@@ -151,6 +153,7 @@ Looks less mechanical. Rejected by §2: it invents data, and it needs either an 
 
 - **Board 2.9's composition**: how many columns and blocks, what a column's header shows while loading (empty, or a bar where the title goes), and the space between a header and the first block. Stage 4, group d.
 - **The cold loads of `/workspaces` and workspace detail** (inventory §1.3, §1.4): blocks at tile geometry, under §4's rule. Stage 4, group b.
+  > *2026-11-21:* drawn. See [ADR-033](adr-033-workspace-screens.md) §10.
 - **How a loading region is announced to assistive technology.** Code, settled at scaffold.
 
 ## Downstream edits this ADR requires

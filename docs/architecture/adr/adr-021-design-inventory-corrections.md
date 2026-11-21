@@ -67,6 +67,8 @@ Only the predicate changes. The visibility rules, the counts and the ordering ar
 
 **The interface.** An **Active / Archived** switch above the board grid on the workspace screen. **Not a separate route** — the archived list is the same grid with a different filter, so it inherits the tile, the empty state and the loading state already being drawn. An archived tile's only action is **Unarchive**; opening one is still a 404 by `BoardAccessChecker`, and that is left alone.
 
+> **The switch's look, the archived tile and the empty states are settled in [ADR-033](adr-033-workspace-screens.md)** (2026-11-21). The switch is two `Segment` instances; the current one has plum text and a 1px plum edge. An archived tile keeps its role and counts, has no hover, and shows an Outline *Unarchive* only to the board owner or a workspace admin. The archived list's empty state carries the open-box illustration.
+
 **Archiving the board you are looking at navigates you out.** The actor returns to the workspace with a confirmation message carrying **Undo**. Undo costs nothing — it is the same endpoint with `is_archived: false` — and it is the cheapest way to teach that the Archived filter exists. Everyone *else* viewing the board gets the gone state (23), which is what the `BOARD_ARCHIVED` broadcast already delivers.
 
 ### 2. The archive icon decision is **not** reopened.

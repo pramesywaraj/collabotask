@@ -16,7 +16,7 @@
 
 The **app zone** only — the React + Vite SPA ([ADR-011](adr/adr-011-frontend-framework.md)). The Astro landing page is explicitly outside this file: [ADR-020](adr/adr-020-design-tool-penpot.md) excludes it, and [ADR-017](adr/adr-017-ui-foundations.md) §3 leaves it free to carry more colour than a dense board. It needs its own, later effort.
 
-Sixteen documents fix everything here; this one only arranges it.
+Seventeen documents fix everything here; this one only arranges it.
 
 | Source | Fixes |
 |---|---|
@@ -36,6 +36,7 @@ Sixteen documents fix everything here; this one only arranges it.
 | [ADR-030](adr/adr-030-toast.md) | The toast — inverted (`color.toast` / `color.toast-foreground`, because `color.popover` is 1.00:1 over a card in Light and a column in Dark), no edge, `spacing.toast-padding` 12, `size.toast-width` 358, a close button shown at rest; the three access-revoked wordings; `/workspaces` after `removed_from_workspace`; one appearance, no axis |
 | [ADR-031](adr/adr-031-presence-cluster.md) | The presence cluster — faces overlapping by `spacing.avatar-overlap` −6 / −8 with a 2px `shadow.avatar-ring`, grey faces on `color.avatar-neutral` (because `color.muted` is 1.09:1 on the white app bar), `+N` as a round seat, three faces below 640px and five above with you first, *Reconnecting…* in the seat's place on a phone; State = Live · Reconnecting · FocusVisible |
 | [ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) | Where Login and Register report errors — a `Form message` just above the button for a form-level failure, a taken email on its field; Register's four password rules as a live `Password rule` checklist (`spacing.list-gap` 4, met in `color.done`); a confirm-password field; *Sign in*; every wording on both forms; fifteen behaviour rules |
+| [ADR-033](adr/adr-033-workspace-screens.md) | The workspace screens — both on `color.background`; `size.app-bar` 56; a roomy `Tile` (padding 16, rows 8 apart, a left rail in the hue's `.strong`); the grid's `spacing.tile-gap` 8 / 12 and `size.tile-min-width` 264; the Active / Archived `Segment` (plum text and edge on the current one); an Outline `Kind` on the Button; *Delete workspace* behind an owner-only `⋯`; centred empty states with a plum-tinted `Illustration`, and the rules for drawing the next one; *Owner · Admin · Member*; every wording on both screens |
 
 Screen boundaries come from the route tree in [frontend-architecture.md](frontend-architecture.md) §*Route tree*; screen *contents* come from [001-user-stories.md](../product/001-user-stories.md).
 
@@ -75,14 +76,16 @@ Board 2.2 is drawn at the moment the email comes back taken, with everything els
 
 | On it | Source |
 |---|---|
-| App bar, 56px — product mark, user menu | ADR-017 §1 derivation |
-| Workspace tiles: name, **my role**, member count, active board count | US-05 |
-| "Create workspace" primary action | US-03 |
-| Variants: cold load (19 — static skeleton, no shimmer; its blocks never sit directly on the canvas, [ADR-029](adr/adr-029-skeleton-block.md) §4), empty (21, flavour 1), load failed (22) | ADR-018 §7 |
+| App bar, `size.app-bar` 56 — *CollaboTask* on the left in `type.title`, linking here; the user menu (an Avatar in a `size.target-min` box) on the right. A bottom rule, `spacing.screen-x` at the sides | ADR-017 §1 derivation; ADR-033 §2 |
+| Workspace tiles: name, **my role**, member count, active board count — the `Tile` part with its rail hidden, a workspace having no colour. Roles read *Owner · Admin · Member* (Owner from `owner_id`); counts *5 members · 4 boards*. No faces: the list returns no names | US-05; ADR-033 §3, §11 |
+| "Create workspace" primary action — the screen's one Primary button, and the empty state's one button too | US-03; ADR-033 §8 |
+| Variants: cold load (19 — static skeleton, no shimmer; blocks at `size.tile-skeleton-height` in the tile grid, directly on the page, never inside a tile, [ADR-029](adr/adr-029-skeleton-block.md) §4), empty (21, flavour 1 — the sprout illustration and the sentence, centred in the grid's place), load failed (22 — a sentence and an Outline *Try again*) | ADR-018 §7; ADR-033 §8, §10 |
 
 **Creating a workspace puts you inside it.** The panel closes and the app navigates to the new workspace — it does not return you to a list with one more tile on it. Same rule one level down (§1.4), and together they are the whole of the product's onboarding: PRD §4.1's "about a minute" is a consequence of these two navigations, not of a welcome tour. There is no welcome tour (ADR-021 *Downstream edits*; PRD §4.1).
 
-The **empty state here is the first screen a new account ever sees**, so it carries the weight a welcome screen otherwise would: one sentence and one button.
+The **empty state here is the first screen a new account ever sees**, so it carries the weight a welcome screen otherwise would: one sentence and one button. *2026-11-21:* and an illustration above the sentence, by the user's request ([ADR-033](adr/adr-033-workspace-screens.md) §8). The button is still the heading's *Create workspace*.
+
+Both workspace screens sit on `color.background`, the page the forms use ([ADR-033](adr/adr-033-workspace-screens.md) §1).
 
 ### 1.4 `/workspaces/:wsId`
 
@@ -90,13 +93,13 @@ One route carries both the boards and the team. **Composition settled by [ADR-02
 
 | On it | Source |
 |---|---|
-| Workspace header: name, **description**, my role, and a **"N members" button** that opens the team panel | US-05b |
-| An **Active / Archived** switch above the board grid. Not a route — the same grid, one filter | US-12c; ADR-021 §1 |
-| Board tiles: title, **identity swatch** from `board.background_color`, my role, joined / can-join, member count, card count | ADR-017 §3.3; US-08 |
+| Workspace header: name, **description**, my role, and a **"N members" button** that opens the team panel. The name in `type.heading` with the role beside it, the description under it; *5 members* is an Outline button | US-05b; ADR-033 §6 |
+| An **Active / Archived** switch above the board grid. Not a route — the same grid, one filter. Two `Segment` instances: the current one has plum text and a 1px plum edge (plum's *where you are*, not state 18) | US-12c; ADR-021 §1; ADR-033 §5 |
+| Board tiles: title, **identity swatch** from `board.background_color`, my role, joined / can-join, member count, card count. The `Tile` part: a left rail `size.board-rail` wide in the hue's `.strong`; *12 cards · 3 members*; roles *Owner · Member* | ADR-017 §3.3; US-08; ADR-033 §3 |
 | A **filled** Phosphor lock on private boards — the icon channel's only Phase-1 meaning, and the only place fill is permitted | ADR-018 §9 |
-| A Join affordance on a board I may join but haven't | US-09 |
-| Create board; delete workspace behind a destructive confirmation (38) | US-07, US-06d |
-| Variants: cold load (19; its blocks never sit directly on the canvas, [ADR-029](adr/adr-029-skeleton-block.md) §4), empty boards (21, flavour 2), **empty archived list (21, flavour 3)**, load failed (22), and the non-member case which is refused rather than rendered | ADR-018 §7, §10 |
+| A Join affordance on a board I may join but haven't — an Outline *Join* in the tile's action row, with no role shown | US-09; ADR-033 §6, §11 |
+| Create board; delete workspace behind a destructive confirmation (38). *Create board* is Primary; *Delete workspace* sits in a `⋯` at the end of the heading row, which only the owner sees | US-07, US-06d; ADR-033 §7 |
+| Variants: cold load (19; blocks in the tile grid on the page, [ADR-029](adr/adr-029-skeleton-block.md) §4; the header waits for its data, the switch and *Create board* draw at once), empty boards (21, flavour 2 — the empty-board illustration), **empty archived list (21, flavour 3 — the open-box illustration)**, load failed (22), and the non-member case which is refused rather than rendered | ADR-018 §7, §10; ADR-033 §8, §10 |
 
 **Archived boards.** Under *Active* they are absent — not greyed, not iconned (US-08). Under *Archived* every tile is archived, so the archive icon would mark nothing the filter has not already said: **ADR-018 §9's single-meaning icon channel is untouched by this filter** (ADR-021 §2). An archived tile's only action is **Unarchive**; it cannot be opened, and that is deliberate — an archived board can be found, never browsed.
 
@@ -180,14 +183,14 @@ A URL-based overlay: the board renders underneath and browser back closes it. A 
 |---|---|---|
 | 2.1 | Login | §1.1 |
 | 2.2 | Register | §1.2 |
-| 2.3 | Workspaces | §1.3 |
-| 2.4 | Workspace detail | §1.4 |
+| 2.3 | Workspaces | §1.3. Drawn 2026-11-21 with three state boards: cold load, empty, load failed ([ADR-033](adr/adr-033-workspace-screens.md) §13) |
+| 2.4 | Workspace detail | §1.4. Drawn 2026-11-21 with five state boards: archived, cold load, empty, archived and empty, load failed (ADR-033 §13) |
 | 2.5 | Board — at rest | §1.5. The reference frame everything else varies from |
 | 2.6 | Card drawer over the board | §1.6, at ≥640 |
 | 2.7 | **Read-only board** (24) — *join to edit* | Mutating controls are **absent**, plus a persistent, non-dismissible banner **that carries the Join action**. On touch the banner is the only remaining signal — a read-only user presses and holds and nothing happens. Routine browsing, not an edge case |
 | 2.8 | **Join-required gate** (25) — *join to look* | A private board an admin hasn't joined: they see it exists, not its contents. One Join action, and joining is recorded as break-glass |
 | 2.9 | **Cold load** (19) | Static skeleton blocks at the card geometry, inside real column panels, `color.skeleton` fill, **no shimmer** — shimmer is movement, and movement means a teammate acted. This row first said `--muted` fill, after ADR-018 §7. In Light that is the column's own colour, so the blocks could not be seen ([ADR-029](adr/adr-029-skeleton-block.md)) |
-| 2.10 | **Empty board** (21) | No columns. New boards seed To Do / In Progress / Done, so this is the deleted-them-all case |
+| 2.10 | **Empty board** (21) | No columns. New boards seed To Do / In Progress / Done, so this is the deleted-them-all case. It carries an illustration (flavour 4), drawn to [ADR-033](adr/adr-033-workspace-screens.md) §9's rules and measured against the canvas |
 | 2.11 | **Load failed** (22) | Message plus a retry control |
 | 2.12 | **Gone** (23) | **Archived while you had it open**, or its workspace deleted while you had it open. *Not* "deleted" — there is no delete-a-board action in Phase 1 and no `BOARD_DELETED` event. *Not* "access lost" either: that is state 26, which navigates you out with a toast rather than rendering a screen |
 | 2.13 | **Session expired** (39) | A 7-day JWT dying mid-session, drawn *before* the hard navigation to `/login`. Without it, expiry looks exactly like a crash |
@@ -238,6 +241,7 @@ Drawn as component variant sets rather than boards, and placed on one or two hol
 | Transfer ownership | Target must **already** be a board member; a non-member is refused rather than auto-added | US-12e |
 | **Move card to…** | A **column** plus a **neighbour** — top of column, after «card», bottom of column — because position is a float, not an index. Three entry points: card drawer, card `⋯`, and `M` on a focused card | ADR-019 §6 |
 | Destructive confirmation (38) | Rose confirm. Its unsatisfied state is drawn in `--muted` tokens, **never** in transparency | ADR-018 §5 |
+| **Workspace `⋯`** | *Delete workspace*, leading to confirmation 38. **The owner's only**: absent for everyone else. Opened from the `⋯` at the end of §1.4's heading row | US-06d; ADR-033 §7 |
 | **Board `⋯`** | Board settings, Members, Archive board, Leave board — enumerated in §1.5, and shaped by who is looking | US-10, US-11, US-12b, US-12c |
 | Column `⋯` and inline rename (37) | Rename, **move left, move right**, delete | US-13b, US-13c, US-13d |
 | Card `⋯` | Open, Move, Delete | US-15, US-17 |
@@ -255,7 +259,7 @@ ADR-019 §3 committed only the card modal. [ADR-021](adr/adr-021-design-inventor
 | Kind | Members | Below 640px | 640px and up |
 |---|---|---|---|
 | **Forms and lists** | Card drawer, create workspace, create board, board settings, board members, add people, transfer ownership, Move card to…, the workspace team panel, presence overflow | **Full-height sheet** | Centred dialog or drawer |
-| **Menus** | Board `⋯`, column `⋯`, card `⋯`, user menu | **Bottom action sheet** | Anchored popover |
+| **Menus** | Workspace `⋯`, board `⋯`, column `⋯`, card `⋯`, user menu | **Bottom action sheet** | Anchored popover |
 | **Confirmations** (38) | Delete column, delete card, delete workspace, archive board, leave board | **Centred dialog — unchanged at every width** | Centred dialog |
 | **Inline pickers** | Due date, assignee | **Expand in place inside the card drawer** | Expand in place, or an anchored popover |
 
@@ -282,7 +286,7 @@ Per [ADR-020](adr/adr-020-design-tool-penpot.md) §4, every state is a variant. 
 | Component | Axis |
 |---|---|
 | Card | the five above |
-| Button | rest, hover, pressed, focus-visible, busy, not-satisfied |
+| Button | `State`: rest, hover, pressed, focus-visible, busy, not-satisfied. **`Kind`: Primary, Outline** (2026-11-21). Outline is `color.background` with a `color.border` edge that steps the ladder on hover and pressed, for *N members*, *Join*, *Unarchive* and *Try again*. Its Busy is Primary's Busy look, and it has no not-satisfied ([ADR-033](adr/adr-033-workspace-screens.md) §6) |
 | Input | rest, focus, invalid, inline-editing |
 | Avatar | eight hues, **plus Muted** (initials, for the presence cluster's reconnecting state) **and Unknown** (the no-name fallback — initials from an empty string render an empty circle, §1.5). The two role assignments are not an axis: the hues are tokens that follow the Theme switch ([ADR-025](adr/adr-025-identity-hues-as-tokens.md)). Muted and Unknown sit on `color.avatar-neutral`, because `color.muted` is 1.09:1 on the white app bar ([ADR-031](adr/adr-031-presence-cluster.md)) |
 | Column header | — . **One appearance.** Drag-over leaves the header **untinted** (§2.14), so it changes nothing on the part. The part's board shows the header twice instead, above an untinted body and above a `color.drag-over` one, so the rule can be seen against the tint ([ADR-027](adr/adr-027-column-header.md) §5) |
@@ -292,6 +296,9 @@ Per [ADR-020](adr/adr-020-design-tool-penpot.md) §4, every state is a variant. 
 | Toast | — . **One appearance**: an inverted box (`color.toast`, text and close glyph `color.toast-foreground`) with no edge, `size.toast-width` wide, `spacing.toast-padding` inside, a message that wraps and a Phosphor `X` close shown at rest. Every Phase-1 toast says one thing and offers nothing but closing, so there are no kinds and no action button ([ADR-030](adr/adr-030-toast.md) §3) |
 | Presence cluster | `State`: **Live**, **Reconnecting**, **FocusVisible**. Reconnecting turns the faces to the Avatar's Muted look on `color.avatar-neutral`, with a "Reconnecting…" label beside them, spending no hue. The whole cluster is one target, `size.target-min` tall; `+N` is a round seat in the stack. No hover or pressed look, since the cluster has no edge to step ([ADR-031](adr/adr-031-presence-cluster.md) §6) |
 | Form message | — . **One appearance**: one line of `type.body` in `color.destructive-text`, filling the form’s width, inside the fields stack just above the button. A form-level failure only — a field’s own error stays on the field. Its board shows Login straight after a 401 ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §1) |
+| Tile | `State`: **Rest**, **Hover**, **Pressed**, **FocusVisible**. Padding `spacing.tile-padding`, rows `spacing.tile-row-gap` apart: title (and a hidden lock), counts (role and two Count chips), and an action row (a hidden Outline button). A left rail in the hue's `.strong`, `size.board-rail` wide; hidden on a workspace tile. Hover and pressed step the edge ([ADR-033](adr/adr-033-workspace-screens.md) §3) |
+| Segment | `State`: **Current**, **Other**, **Hover**, **Pressed**, **FocusVisible**. The Active / Archived switch's two options. Current is plum text and a 1px plum edge; the others are muted text that steps the edge ladder (ADR-033 §5) |
+| Illustration | `Subject`: **NoWorkspaces**, **NoBoards**, **NothingArchived**. 128 × 128 (`size.illustration`), a 2px `color.illustration-ink` line, `color.illustration-tint` and `color.background` fills, drawn as paths. A new drawing is a new `Subject`, following ADR-033 §9's rules |
 | Password rule | `State`: **Unmet**, **Met**, **Missed** — Phosphor `Circle` / `Check` / `X` at `size.icon`, the rule in `type.meta`, both in `color.muted-foreground` / `color.done` / `color.destructive-text`. Rows sit `spacing.list-gap` apart, under the field’s box at `spacing.field-inner-gap`. The glyph’s shape carries the state, because emerald and rose read alike to a deuteranope ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §4) |
 
 Hover, pressed and the border ladder are three consecutive stone steps on the **edge**, never a fill: shadcn hovers to `--accent`, which is `--board-column`'s own value, so a card hovering to accent dissolves into the panel behind it.
@@ -311,9 +318,9 @@ Hover, pressed and the border ladder are three consecutive stone steps on the **
 | | Count |
 |---|---|
 | Whole-screen boards | **15** (§2) |
-| Overlay variant sets | ~**16** (§3) |
+| Overlay variant sets | ~**17** (§3) — the workspace `⋯` added 2026-11-21 |
 | Foundations board | **1** |
-| Component variant containers | ~**12** (§4.2) — ten through Stage 3, plus `Form message` and `Password rule` from 2.2 |
+| Component variant containers | ~**15** (§4.2) — ten through Stage 3, plus `Form message` and `Password rule` from 2.2, and `Tile`, `Segment` and `Illustration` from 2.3 and 2.4 |
 
 **The board count did not move, and that was the point of §6.1.** Putting the team behind a button rather than in tabs keeps the workspace screen as one board; the Active/Archived switch is a filter on the same grid rather than a route; and 2.7 and 2.8 collapse into one component. The one addition is on the overlay side — the workspace team panel, which inherits §3's presentation rule for free.
 
@@ -360,6 +367,8 @@ See the table in §3. The deciding fact is structural rather than per-overlay: t
 | 5 | No cards in a column | In-column surface |
 | 6 | Everyone in this workspace is already on this board | The add-people panel (§3) |
 
+> **2026-11-21: flavours 1 to 4 carry an illustration** above their sentence, centred in the place of what is missing. Flavours 5 and 6 keep one line: a 128 drawing does not fit a 280 column or a panel list. The drawing rules are in [ADR-033](adr/adr-033-workspace-screens.md) §9.
+
 **One was struck: "empty team".** §1.4 used to list it, and it can never happen — you are always a member of the workspace you are looking at, so that list always contains at least you.
 
 **Six is why ADR-018's count is now wrong**, and harmlessly so: it said *"empty (five flavours)"* and deferred the copy as not a vocabulary decision. The copy is still not a vocabulary decision; there is just one more line of it to write.
@@ -393,11 +402,11 @@ Read directly from the live file on 2026-11-20, not assumed.
 
 | Thing | State |
 |---|---|
-| The five token sets | **Done** — `base` 35, `theme-light` 57, `theme-dark` 57, `density-fine` 15, `density-coarse` 15. **179 tokens** since 2026-11-21, when [ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) added `spacing.list-gap` 4 to `base`. Before that, **178 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set), the 16 identity tokens from [ADR-025](adr/adr-025-identity-hues-as-tokens.md) (written once per theme set), the three count-chip tokens from [ADR-026](adr/adr-026-count-chip.md) (`color.chip` written once per theme set), `spacing.inline-gap` from [ADR-027](adr/adr-027-column-header.md), `spacing.banner-padding-y` from [ADR-028](adr/adr-028-banner.md), the four skeleton entries from [ADR-029](adr/adr-029-skeleton-block.md) (`color.skeleton` once per theme set, `size.skeleton-height` once per density set), and the six toast entries from [ADR-030](adr/adr-030-toast.md) (`color.toast` and `color.toast-foreground` once per theme set, `spacing.toast-padding` and `size.toast-width` in `base`), and the nine presence entries from [ADR-031](adr/adr-031-presence-cluster.md) (`spacing.avatar-overlap` and `spacing.seat-padding-x` once per density set, `shadow.avatar-ring` and `color.avatar-neutral` once per theme set, `radius.full` in `base`). ADR-025 also renamed `size.card-avatar` to `size.avatar`. Every addition was flip-verified on 2026-11-20, and Stage 2 has tested the catalogue against a real screen |
+| The five token sets | **Done** — `base` 42, `theme-light` 59, `theme-dark` 59, `density-fine` 17, `density-coarse` 17. **194 tokens** since 2026-11-21, when [ADR-033](adr/adr-033-workspace-screens.md) added fifteen entries: `size.app-bar`, `size.tile-min-width`, `spacing.tile-padding`, `spacing.tile-row-gap`, `size.illustration`, `spacing.illustration-gap` and `border.width-illustration` in `base`; `color.illustration-ink` and `color.illustration-tint` once per theme set; `spacing.tile-gap` and `size.tile-skeleton-height` once per density set. Before that, **179**, since [ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) added `spacing.list-gap` 4 to `base`. Before that, **178 tokens**: 103 derived from ADR-017 §9 in full, plus the four form-control values from [ADR-022](adr/adr-022-form-control-geometry.md), the six spacing and border values from [ADR-023](adr/adr-023-spacing-between-objects.md) (the column gap written once per density set), the four from [ADR-024](adr/adr-024-control-and-field-internals.md) (the focus ring written once per theme set), the 16 identity tokens from [ADR-025](adr/adr-025-identity-hues-as-tokens.md) (written once per theme set), the three count-chip tokens from [ADR-026](adr/adr-026-count-chip.md) (`color.chip` written once per theme set), `spacing.inline-gap` from [ADR-027](adr/adr-027-column-header.md), `spacing.banner-padding-y` from [ADR-028](adr/adr-028-banner.md), the four skeleton entries from [ADR-029](adr/adr-029-skeleton-block.md) (`color.skeleton` once per theme set, `size.skeleton-height` once per density set), and the six toast entries from [ADR-030](adr/adr-030-toast.md) (`color.toast` and `color.toast-foreground` once per theme set, `spacing.toast-padding` and `size.toast-width` in `base`), and the nine presence entries from [ADR-031](adr/adr-031-presence-cluster.md) (`spacing.avatar-overlap` and `spacing.seat-padding-x` once per density set, `shadow.avatar-ring` and `color.avatar-neutral` once per theme set, `radius.full` in `base`). ADR-025 also renamed `size.card-avatar` to `size.avatar`. Every addition was flip-verified on 2026-11-20, and Stage 2 has tested the catalogue against a real screen |
 | The four themes, in two groups | **Done** — `Theme`: Light, Dark. `Density`: Fine, Coarse. |
 | Card variant container | **Done**, on page `Components` — all five appearances, with its fill, outline, four corners and four paddings all bound. **2026-11-20:** outline width bound to `border.width`, and the avatar corrected. It had been bound to `size.title-reserve` for width (24 → 32) with a typed 20px height, which made an oval; it is now `size.card-avatar` on both axes (20 → 24). The binding check cannot see sizes, which is why it never caught this. **Later on 2026-11-20** the placeholder was replaced by a real Avatar instance in all five variants ([ADR-025](adr/adr-025-identity-hues-as-tokens.md) §5); heights unchanged at 80 / 92 |
 | Input variant container | **Done** 2026-11-20, on page `Components`, board `Input — states`. Four appearances: `Rest` (placeholder), `Focus` (the ring), `Invalid` (destructive edge and a message below), `InlineEditing` (the 20/28 title in the same box, no label). A field is the whole field: label, box and message, so a screen needs nothing loose around it |
-| Button variant container | **Done** 2026-11-20, board `Button — states`. Six appearances: `Rest`, `Hover`, `Pressed` (the same fill as `Hover`, by decision: ADR-024 §3), `FocusVisible`, `Busy` (Phosphor `CircleNotch` at 16 and *Signing in…*), `NotSatisfied`. The sample label reads *Sign in* since 2026-11-21 ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §7). **Primary only**: other kinds become a second axis when a screen needs one |
+| Button variant container | **Done** 2026-11-20, board `Button — states`. Six appearances: `Rest`, `Hover`, `Pressed` (the same fill as `Hover`, by decision: ADR-024 §3), `FocusVisible`, `Busy` (Phosphor `CircleNotch` at 16 and *Signing in…*), `NotSatisfied`. The sample label reads *Sign in* since 2026-11-21 ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §7). **Primary only**: other kinds become a second axis when a screen needs one. **2026-11-21:** that axis exists. `Kind` = Primary · Outline; five Outline variants (Rest, Hover, Pressed, FocusVisible, Busy) sit on a second row, labelled *Join* and *Joining…* ([ADR-033](adr/adr-033-workspace-screens.md) §6) |
 | Avatar variant container | **Done** 2026-11-20, board `Avatar — states`. One axis, `Hue`, ten appearances: the eight hues (fill `color.identity.<hue>.subtle`, initials `.strong`), `Muted` (initials on `color.muted`), `Unknown` (Phosphor `User` on `color.muted`). Sized by `size.avatar` with an ellipse behind, so no radius to bind. Flips with Theme by itself. **Later on 2026-11-20** the Muted and Unknown circles were rebound to `color.avatar-neutral` ([ADR-031](adr/adr-031-presence-cluster.md)), and every instance followed |
 | Count chip | **Done** 2026-11-20, board `Count chip — states`. **One component, no axis**: fill `color.chip`, height and minimum width `size.chip-height`, side padding `spacing.chip-padding-x`, corners `radius.badge`, text `type.meta` in `color.muted-foreground`; its width follows the text. Shown with `3`, `12` and `128` on a column-coloured surface and `12 cards` and `3 members` on a tile-coloured one. **Penpot does not draw the minimum width** on a board that follows its content, so a `1` chip draws 16 wide here and 20 in the app ([ADR-026](adr/adr-026-count-chip.md) *Operational note*) |
 | Column header | **Done** 2026-11-20, board `Column header — states`. **One component, no axis**: height `size.column-header`, fill `color.board-column`, a bottom-only rule (`color.border`, `border.width` on `strokeWidthBottom`), side padding `spacing.card-padding-x`, gap `spacing.inline-gap`. Inside: `Lead` (title in `type.body` and `color.foreground`, then a `Count chip` instance) and `Menu` (`size.target-min`, centring Phosphor `DotsThree` at `size.icon` in `color.muted-foreground`). Shown as `In Progress` / `12` on two bound column panels, one above an untinted body and one above a `color.drag-over` body. **No export shows the rule**: Penpot's exporter drops a stroke whose sides differ, so check it on the canvas ([ADR-027](adr/adr-027-column-header.md) *Operational note*) |
@@ -406,12 +415,15 @@ Read directly from the live file on 2026-11-20, not assumed.
 | Toast | **Done** 2026-11-20, board `Toast — states`. **One component, no axis**: a flex row, fill `color.toast`, no edge, four corners `radius.surface`, `shadow.overlay`, padding `spacing.toast-padding` on all sides, gap `spacing.inline-gap`, width `size.toast-width`, height following the content (48 for one line and 64 for two at Fine, 68 at Coarse). Inside: `Message` (`type.body` in `color.toast-foreground`, fills the row and wraps) and `Close` (`size.target-min`, centring Phosphor `X` at `size.icon` in `color.toast-foreground`). The main holds the longest wording, *“Q3 Product Launch Plan” is now private. Only its members can open it.*, floating over three Card instances in a bound column on a 390 `Doc / Canvas`. One instance, with the shortest wording, sits on a `Doc / Page` bound to `color.background` ([ADR-030](adr/adr-030-toast.md)) |
 | Presence cluster | **Done** 2026-11-20, board `Presence cluster — states`. One axis, `State`: `Live`, `Reconnecting`, `FocusVisible`. The box is a flex row: height `size.target-min`, gap `spacing.inline-gap`, fill `color.background`, four corners `radius.control`, and `shadow.focus-ring` on FocusVisible. Inside, `Faces` holds five Avatar instances (AR sage, MK periwinkle, JT ochre, SL mauve, DN teal; Muted in Reconnecting), each with `shadow.avatar-ring`, overlapping by `spacing.avatar-overlap` on their left margins. The `Seat` (`+3`) overlaps the same way: `size.avatar` tall and as its minimum width, `spacing.seat-padding-x` at the sides, `color.avatar-neutral`, `radius.full`, the ring. Reconnecting adds `Label` (*Reconnecting…*, `type.meta` in `color.muted-foreground`). The board shows the variant container, two 375 app-bar strips (Live with three faces and `+5`, and Reconnecting with the seat hidden) and two 1024 strips (five faces, live and reconnecting), each on a `Doc / Canvas`. The strips' bottom rule is per-side, so no export shows it ([ADR-031](adr/adr-031-presence-cluster.md)) |
 | Form message | **Done** 2026-11-21, board `Form message — states`. **One component, no axis**: a flex column, width `size.form-width` (filling the form), holding one `Message` in `type.body` and `color.destructive-text`. The main sits inside `Doc / Page, Login after a 401`, between Login's filled Email and Password and a `Rest` Sign in button: Login straight after a wrong email or password ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §1) |
+| Tile | **Done** 2026-11-21, board `Tile — states`. One axis, `State`: `Rest`, `Hover`, `Pressed`, `FocusVisible`. A flex column, padding `spacing.tile-padding`, row gap `spacing.tile-row-gap`, width and minimum width `size.tile-min-width`, fill `color.card`, a `color.border` edge, `radius.surface`, clipped. Inside: `Title row` (`Title` in `type.card-title`, a hidden filled `Lock` at `size.icon`, `spacing.icon-gap`), `Meta row` (`size.meta-row` tall, `spacing.inline-gap`: `Role` in `type.meta`, two Count chip instances *12 cards* and *3 members*), a hidden `Action row` holding an Outline Button, and an absolute `Rail` (`size.board-rail` wide, periwinkle `.strong`, pinned top and bottom so it follows the tile's height) ([ADR-033](adr/adr-033-workspace-screens.md) §3) |
+| Segment | **Done** 2026-11-21, board `Segment — states`. One axis, `State`: `Current`, `Other`, `Hover`, `Pressed`, `FocusVisible`. A flex row: `size.control-height`, `spacing.control-padding-x`, `radius.control`, `color.background`; Current has a `color.primary` edge and label, the others a `color.muted-foreground` label and an edge only on Hover and Pressed (ADR-033 §5) |
+| Illustration | **Done** 2026-11-21, board `Illustration — states`. One axis, `Subject`: `NoWorkspaces` (a sprout in a pot), `NoBoards` (an empty board), `NothingArchived` (an open, empty box). Each is a 128 board (`size.illustration`) of paths: every stroke `color.illustration-ink` at `border.width-illustration`, fills `color.illustration-tint` or `color.background` (ADR-033 §8, §9) |
 | Password rule | **Done** 2026-11-21, board `Password rule — states`. One axis, `State`: `Unmet`, `Met`, `Missed`. A flex row aligned to the top, width `size.form-width`, gap `spacing.icon-gap`: a 16 `Icon` board (`size.icon`) holding Phosphor `Circle` / `Check` / `X`, and the rule's `Text` in `type.meta`. Glyph and text share `color.muted-foreground` / `color.done` / `color.destructive-text`. Below the variant container, two `Doc / Page` demos of the whole field: a `Password field` (Input + a `Password rules` list, rows `spacing.list-gap` apart) while typing `abcde1!`, and after pressing, where the field is `Invalid` with its `Message` hidden ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §4) |
-| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine. **Updated 2026-11-20 with ADR-025:** the catalogue tables were regenerated to 153 rows. That also adds the five ADR-024 tokens, which Stage 2 had left off the board. The identity notes now say the hues are tokens; this section's two side-by-side pairings stay typed in. **Updated again 2026-11-20 with ADR-026:** three rows added, so the catalogue read 157. **And with ADR-027:** one row added to the `base` table, so it reads 158. **And with ADR-028:** one more `base` row, so it reads 159. **And with ADR-029:** a `color.skeleton` row in the theme table (swatch bound) and a `size.skeleton-height` row in the density table, so it reads 163, with the theme table titled 53 each and the density table 13 each. **And with ADR-030:** two `base` rows and two theme rows (both swatches rebound), so it reads 169, with `base` titled 33 and the theme table 55 each. **And with ADR-031:** a `radius.full` row in `base`, a `shadow.avatar-ring` and a `color.avatar-neutral` row in the theme table (both swatches rebound), and two density rows, so it reads 178, with `base` titled 34, the theme table 57 each and the density table 15 each. Its radius ladder still shows ADR-017's three steps; `radius.full` is in the table only. Its two loose column headers in the elevation ladder (a title only) predate the Column header part and have not yet been replaced by instances. **And with ADR-032** (2026-11-21): a `spacing.list-gap` row in `base`, so it reads 179, with `base` titled 35 |
-| The 15 whole-screen boards | **2.1 Login done** 2026-11-20, on page `Page 1`, built from Input and Button instances plus its heading and the register line. Drawn as it first appears: empty fields, the email placeholder only, the button `NotSatisfied`. The binding check returns nothing, and all four Theme × Density combinations were looked at. Re-worded 2026-11-21: *Sign in*, and *Don’t have an account yet? Create one*. **2.2 Register done** 2026-11-21, on `Page 1`, made from a copy of 2.1. It is drawn at the moment the email comes back taken: Name, Email on `Invalid` with the 409 wording, a `Password field` with the four rules all `Met`, Confirm password, the button at `Rest`, *Already have an account? Sign in*. The binding check returns nothing, and Light + Fine, Dark + Fine, Dark + Coarse and Light + Coarse were looked at ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §9). The other thirteen are not started |
-| The ~16 overlays | Not started |
+| Foundations board | **Done** 2026-11-20, on page `Foundations`. Six sections, specimen first: the 14/16 specimen, type, the elevation ladder (real Card instances on a bound canvas and columns), radius, the identity hues in both assignments, and the catalogue as three tables generated from the sets' stored values. The binding check reports only the 48 `Hue /` shapes and the five Card `⋯` glyphs, both expected. It was switched to Dark and to Coarse and looked at, then restored to Light + Fine. **Updated 2026-11-20 with ADR-025:** the catalogue tables were regenerated to 153 rows. That also adds the five ADR-024 tokens, which Stage 2 had left off the board. The identity notes now say the hues are tokens; this section's two side-by-side pairings stay typed in. **Updated again 2026-11-20 with ADR-026:** three rows added, so the catalogue read 157. **And with ADR-027:** one row added to the `base` table, so it reads 158. **And with ADR-028:** one more `base` row, so it reads 159. **And with ADR-029:** a `color.skeleton` row in the theme table (swatch bound) and a `size.skeleton-height` row in the density table, so it reads 163, with the theme table titled 53 each and the density table 13 each. **And with ADR-030:** two `base` rows and two theme rows (both swatches rebound), so it reads 169, with `base` titled 33 and the theme table 55 each. **And with ADR-031:** a `radius.full` row in `base`, a `shadow.avatar-ring` and a `color.avatar-neutral` row in the theme table (both swatches rebound), and two density rows, so it reads 178, with `base` titled 34, the theme table 57 each and the density table 15 each. Its radius ladder still shows ADR-017's three steps; `radius.full` is in the table only. Its two loose column headers in the elevation ladder (a title only) predate the Column header part and have not yet been replaced by instances. **And with ADR-032** (2026-11-21): a `spacing.list-gap` row in `base`, so it reads 179, with `base` titled 35. **And with ADR-033** (2026-11-21): seven `base` rows, two theme rows (both swatches rebound to their own tokens) and two density rows, so it reads 194, with `base` titled 42, the theme table 59 each and the density table 17 each; the *as of* date reads 2026-11-21 |
+| The 15 whole-screen boards | **2.1 Login done** 2026-11-20, on page `Page 1`, built from Input and Button instances plus its heading and the register line. Drawn as it first appears: empty fields, the email placeholder only, the button `NotSatisfied`. The binding check returns nothing, and all four Theme × Density combinations were looked at. Re-worded 2026-11-21: *Sign in*, and *Don’t have an account yet? Create one*. **2.2 Register done** 2026-11-21, on `Page 1`, made from a copy of 2.1. It is drawn at the moment the email comes back taken: Name, Email on `Invalid` with the 409 wording, a `Password field` with the four rules all `Met`, Confirm password, the button at `Rest`, *Already have an account? Sign in*. The binding check returns nothing, and Light + Fine, Dark + Fine, Dark + Coarse and Light + Coarse were looked at ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §9). **2.3 Workspaces and 2.4 Workspace detail done** 2026-11-21, on `Page 1` at x 3280 and x 4920, each with its state boards below it: 2.3 with cold load, empty and load failed; 2.4 with archived, cold load, empty, archived and empty, and load failed. Ten boards in all. The binding check returns nothing on any of them; Dark + Fine and Light + Coarse were looked at ([ADR-033](adr/adr-033-workspace-screens.md) §13). The other eleven are not started |
+| The ~17 overlays | Not started. Only their triggers are drawn: the user menu, *N members*, the two Create buttons and the workspace `⋯` |
 
-The foundation is laid, twelve parts stand on it (Stage 3's ten, and two that 2.2 needed), and two screens have been built from them end to end. Stage 3 is closed and Stage 4 has begun. Everything below picks up from there.
+The foundation is laid, fifteen parts stand on it (Stage 3's ten, two that 2.2 needed, and three that 2.3 and 2.4 needed), and four screens have been built from them end to end. Stage 3 is closed and Stage 4 has begun. Everything below picks up from there.
 
 ### 7.3 The order
 
@@ -631,7 +643,7 @@ Question 4 has now fired at ten stages out of ten, and **Stage 3 is closed.**
 | Group | Boards | Why here |
 |---|---|---|
 | a | 2.2 Register ✅ | Login's twin plus a name field — nearly free now, and it adds the field-invalid state. *Drawn 2026-11-21. It turned out not to be free: it settled where errors go and brought the password rules, two parts and a token ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md))* |
-| b | 2.3 Workspaces, 2.4 Workspace detail | Need Avatar and Count chip |
+| b | 2.3 Workspaces ✅, 2.4 Workspace detail ✅ | Need Avatar and Count chip. *Drawn 2026-11-21, with eight state boards. They needed three parts, a Button kind and fifteen tokens, and brought the empty-state illustrations ([ADR-033](adr/adr-033-workspace-screens.md))* |
 | c | **2.5 Board — at rest** | §2 calls it *"the reference frame everything else varies from"*. The hinge of the whole stage |
 | d | 2.6 drawer, 2.7 + 2.8 (**one component, two settings**), 2.9 cold load, 2.10 empty, 2.11 load failed, 2.12 gone, 2.13 session expired | Each is a variation on 2.5, and cheap once 2.5 exists |
 | e | 2.14 Drag, then 2.15 Phone | 2.14 needs 2.5 plus **both** placeholders. 2.15 is a different layout rather than a switch, so it is drawn by hand and goes last |
@@ -660,6 +672,25 @@ Both rounds were rendered side by side in Light and Dark with the file's values,
 - the hint slot became unnecessary: the checklist is the hint
 
 **Upstream, not drawn:** US-01 and SRS UC-01 carry the rules. The server's half is SRS §9's second open backend item.
+
+#### What question 4 returned for 2.3 and 2.4 — and what closed it
+
+Asked on 2026-11-21 before drawing, in two rounds, after checking what the two list endpoints actually return: roles, counts, `access_status`, `visibility` and `background_color`, and no names, so no faces on tiles.
+
+**Round 1 fired.** Nothing fixed the app bar's height, the tile's geometry or minimum width, the gap between tiles, or the swatch's shape and role. Six choices with no missing value came with them: how the switch marks the current list (state 18 is closed), a second Button kind, where *Delete workspace* lives, the empty states, *Owner* or *Admin*, and every wording. Nine choices went on a rendered page. The user took seven recommendations, chose the **roomy tile** and the **left rail**, and asked for **an illustration on the empty states**.
+
+**Round 2** came from that note: the illustration had no colour, line, size or spacing. The user chose a **plum tint** (against the grey recommended), **whole-screen empty states only**, **centred** (against left-aligned), and **128**, and asked for the style to be written down.
+
+**Settled by [ADR-033](adr/adr-033-workspace-screens.md)** (2026-11-21):
+- both screens on `color.background`; `size.app-bar` 56, derived from ADR-017 §1 and ADR-019 §7
+- the `Tile`: `spacing.tile-padding` 16, `spacing.tile-row-gap` 8, 84 / 88 tall (128 / 140 with an action), a left rail in the hue's `.strong`
+- `spacing.tile-gap` 8 / 12 and `size.tile-min-width` 264, measured from the widest count row
+- the `Segment` switch (plum's *where you are*), the Button's Outline `Kind`, and an owner-only workspace `⋯`
+- `size.tile-skeleton-height` 84 / 88 for the cold loads, blocks on the page and never inside a tile
+- the `Illustration` part: `color.illustration-ink`, `color.illustration-tint`, `border.width-illustration` 2, `size.illustration` 128, `spacing.illustration-gap` 16, and §9's ten rules for the next drawing
+- *Owner · Admin · Member*, every wording, and the behaviour rules
+
+Question 4 has now fired at twelve stages out of twelve.
 
 **Stage 5 — the ~16 overlays** (§3).
 
@@ -793,7 +824,7 @@ A plan, not a record — §7.5 is the record. Tick a stage when it closes, and i
 **Stage 4 — the remaining fourteen screens** (14)
 
 - [x] 2.2 Register *(2026-11-21; question 4 fired in round 2, and [ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) closed it. Two parts added, `Form message` and `Password rule`; binding check clean on 2.1, 2.2 and both part boards; four Theme × Density combinations looked at)*
-- [ ] 2.3 Workspaces · [ ] 2.4 Workspace detail
+- [x] 2.3 Workspaces · [x] 2.4 Workspace detail *(2026-11-21; question 4 fired in two rounds, and [ADR-033](adr/adr-033-workspace-screens.md) closed it. Three parts added, `Tile`, `Segment` and `Illustration`, and `Kind` on the Button; ten boards; binding check clean on all ten and the four part boards; Dark + Fine and Light + Coarse looked at)*
 - [ ] **2.5 Board — at rest**
 - [ ] 2.6 Card drawer · [ ] 2.7 + 2.8 Read-only / join gate · [ ] 2.9 Cold load · [ ] 2.10 Empty board
 - [ ] 2.11 Load failed · [ ] 2.12 Gone · [ ] 2.13 Session expired
@@ -804,7 +835,7 @@ A plan, not a record — §7.5 is the record. Tick a stage when it closes, and i
 - [ ] Workspace team panel · [ ] Create workspace · [ ] Invite people · [ ] Create board
 - [ ] Board settings · [ ] Board members · [ ] Add people · [ ] Transfer ownership
 - [ ] Move card to… · [ ] Destructive confirmation · [ ] Board `⋯` · [ ] Column `⋯` + inline rename
-- [ ] Card `⋯` · [ ] User menu · [ ] Presence overflow · [ ] Toast content · [ ] Date + assignee pickers
+- [ ] Card `⋯` · [ ] Workspace `⋯` · [ ] User menu · [ ] Presence overflow · [ ] Toast content · [ ] Date + assignee pickers
 
 **Stage 6 — final check**
 
@@ -835,11 +866,11 @@ A completeness check against [ADR-018](adr/adr-018-state-vocabulary.md) §1. Two
 | 13 | Hover-equivalent at coarse | The persistent `⋯` (§1.5) |
 | 14 | Focus-visible | Every focusable component variant |
 | 16, 17 | Not satisfied, busy | Button variants (§4.2). Not satisfied can still be pressed, and runs the checks; busy reads *Signing in…* / *Creating account…* ([ADR-032](adr/adr-032-auth-form-errors-and-password-rules.md) §7–§8) |
-| 18 | Selected | **Does not exist in Phase 1** — which is what released 2px border weight for the placeholder |
-| 19 | Cold load | Board 2.9 |
+| 18 | Selected | **Does not exist in Phase 1** — which is what released 2px border weight for the placeholder. The Active / Archived switch's current option is plum's *where you are*, not this state ([ADR-033](adr/adr-033-workspace-screens.md) §5) |
+| 19 | Cold load | Board 2.9, and the cold-load boards of 2.3 and 2.4 ([ADR-033](adr/adr-033-workspace-screens.md) §10) |
 | 20 | Background refresh | **Nothing** — what's on screen is correct |
-| 21 | Empty, **six** flavours | Boards 2.3, 2.4 (Active **and** Archived), 2.10, the in-column surface, and the add-people panel (§6.5) |
-| 22, 23 | Load failed, gone | Boards 2.11, 2.12 |
+| 21 | Empty, **six** flavours | Boards 2.3, 2.4 (Active **and** Archived), 2.10, the in-column surface, and the add-people panel (§6.5). Flavours 1 to 4 carry an illustration ([ADR-033](adr/adr-033-workspace-screens.md) §8) |
+| 22, 23 | Load failed, gone | Boards 2.11, 2.12; 22 also on the load-failed boards of 2.3 and 2.4 ([ADR-033](adr/adr-033-workspace-screens.md) §10) |
 | 24, 25 | Read-only, join gate | Boards 2.7, 2.8 — **one component, two settings**, and 2.7's banner carries Join |
 | 26 | Access revoked | **Navigates you off the board**, plus a toast naming the reason. Nothing reverts — this is not 27. Four reasons: three wordings, and the voluntary case shows nothing. After `removed_from_workspace` it goes to `/workspaces`, not the workspace ([ADR-030](adr/adr-030-toast.md) §5–6) |
 | 27 | Action forbidden | Toast; the optimistic change reverts via the in-flight dim |

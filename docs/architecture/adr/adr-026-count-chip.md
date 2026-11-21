@@ -115,6 +115,7 @@ Rejected by §4.
 ## Out of scope (deferred, recorded)
 
 - **The board tile's composition and wording** (inventory §1.4). Settled with boards 2.3 and 2.4. This ADR only shows that the chip can hold the words.
+  > *2026-11-21:* settled in [ADR-033](adr-033-workspace-screens.md) §3 and §12. A board tile reads *12 cards · 3 members* and a workspace tile *5 members · 4 boards*, with singulars, after the role, `spacing.inline-gap` apart.
 - **The `+N` overflow chip.** Part 9, the presence cluster.
 
   > **Settled as a seat.** **[ADR-031](adr-031-presence-cluster.md)** §3 (2026-11-20): `size.avatar` tall, `radius.full`, `spacing.seat-padding-x` 2 / 4, filled `color.avatar-neutral`.

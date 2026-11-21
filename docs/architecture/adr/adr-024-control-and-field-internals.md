@@ -147,6 +147,7 @@ Rejected in §5.
 ## Out of scope (deferred, recorded)
 
 - **Button kinds other than primary.** Login has one button and it is primary, so the Button has one axis, `State`. Secondary, ghost and destructive become a second axis when a screen needs one; §3 already says which pressed rule each takes.
+  > *2026-11-21:* the second axis exists. [ADR-033](adr-033-workspace-screens.md) §6 adds `Kind` = Primary · Outline. Outline takes the edge ladder, as §3 says, for *N members*, *Join*, *Unarchive* and *Try again*.
 - **Whether the inline title editor also shows the ring.** State 37 is drawn as *"the `--input` boundary doing the editing job"*, without the ring. Browsers match `:focus-visible` on any focus of a text input, so in code it would show both. Board 2.6 settles which.
 - **Where a wrong password is reported on Login.** A failed sign-in is not about one field, and neither inventory §1.1 nor the two parts give it a home. Board 2.1 is drawn at first arrival and does not need it yet; a later pass on 2.1 or Stage 4's Register does.
   > *Settled 2026-11-21 by [ADR-032](adr-032-auth-form-errors-and-password-rules.md) §1:* a `Form message` part, one line of `type.body` in `color.destructive-text` inside the fields stack, just above the button. Its board shows Login straight after a 401.
