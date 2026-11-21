@@ -228,6 +228,14 @@ Error shape:
 - **Response 201:** `{ "user": { "id", "email", "name", "avatar_url" } }` + **`Set-Cookie: __Host-token=<jwt>; …`** (auto-login; **no `token` in body** — ADR-008 hard cutover). *Auto-login is provisional: email verification (Phase 2+) supersedes it.*
 - **Flow:** validate email format (client + server) → normalize email (lowercase + trim) → check email not taken (case-insensitive; the normalized email is both checked and stored) → bcrypt hash → insert user → issue JWT (7d) → **set the auth cookie** → redirect to workspace list.
 - **Errors:** Email exists → 409 `CONFLICT`; invalid body → 400 `VALIDATION_ERROR`; missing CSRF header → 403 `FORBIDDEN`.
+- **Password rules** *(added 2026-11-21 by [ADR-032](../architecture/adr/adr-032-auth-form-errors-and-password-rules.md) — **not yet built**: the server checks `min=8` only)*. Client and server apply the same five checks, and a miss on the server is 400 `VALIDATION_ERROR`:
+  - **length** — at least 8 characters, counted as Unicode code points, not bytes;
+  - **uppercase** — at least one uppercase letter (Go `unicode.IsUpper`, JS `/\p{Lu}/u`);
+  - **lowercase** — at least one lowercase letter (`unicode.IsLower`, `/\p{Ll}/u`);
+  - **number** — at least one decimal digit (`unicode.IsDigit`, `/\p{Nd}/u`);
+  - **symbol** — at least one character that is not a letter, not a digit and not whitespace (`!unicode.IsLetter && !unicode.IsDigit && !unicode.IsSpace`). Spaces are allowed but do not count as a symbol.
+  - **Upper bound — open.** `bcrypt.GenerateFromPassword` refuses more than 72 bytes, and today that surfaces as a **500**. The backend item settles the limit and returns 400 instead.
+  - Rules apply at registration only. UC-02 checks presence, never composition. The register form's *confirm password* field is client-only; the request body is unchanged.
 ```sql
 SELECT id FROM users WHERE email = $1;
 INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3)
@@ -398,7 +406,7 @@ COMMIT;
 --   wm.role='ADMIN' OR b.visibility='WORKSPACE' OR bm.user_id IS NOT NULL )
 -- card_count via LEFT JOIN columns → cards, COUNT(DISTINCT c.id)
 ```
-> **Added 2026-11-19 by [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md).** `archived=true` is the **only** path on which an archived board is ever returned — UC-05b's detail, UC-12's kanban and every other read still 404 them via `BoardAccessChecker` (`board.IsArchived → ErrBoardNotFound`), and that is deliberate: an archived board can be *found* and unarchived, never *browsed*. Before this parameter existed, UC-12c's unarchive endpoint was fully functional with no list an archived board appeared in — i.e. nothing to call it on. **This is the one Phase-1 backend item still open.**
+> **Added 2026-11-19 by [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md).** `archived=true` is the **only** path on which an archived board is ever returned — UC-05b's detail, UC-12's kanban and every other read still 404 them via `BoardAccessChecker` (`board.IsArchived → ErrBoardNotFound`), and that is deliberate: an archived board can be *found* and unarchived, never *browsed*. Before this parameter existed, UC-12c's unarchive endpoint was fully functional with no list an archived board appeared in — i.e. nothing to call it on. **This is the one Phase-1 backend item still open.** *(2026-11-21: one of two — UC-01's password rules, ADR-032, are the other.)*
 
 #### UC-09: Admin Joins Board (self-service / break-glass)
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/join` · Auth
@@ -735,6 +743,8 @@ The §5.2 Broadcast rule and UC-20 govern how a client reconciles **mutation** f
 **🔵 Deferred (integrity pass) — composite-FK assignee invariant (ADR-010 candidate):** the "assignee ∈ board members" rule is enforced at the **application layer** today (write-time `IsUserExists` check + explicit `RemoveWithParticipationCascade`). A stronger design enforces it in the **schema**: add `board_id` to `cards` (backfill, NOT NULL), then `cards(board_id, assigned_to) → board_members(board_id, user_id) ON DELETE SET NULL (assigned_to)` (PG16). That would make assignee-validity a DB guarantee on every write path (closing the TOCTOU race) and make the unassign-cascade automatic on *every* membership-loss path — subsuming both the workspace and board app-layer cascades. **Deferred out of Phase 1:** it's a schema/architecture change beyond "data-correction only", reopens shipped cascade code, still needs the explicit `RETURNING` list for the step-④ broadcast, and wants SQL-level tests the project has deferred to the post-Phase-1 integrity pass. Headline candidate for that pass; write up as `adr-010` **when adopted** (candidate, not a decision). *(Renumbered 008→010: ADR-008 is now **auth httpOnly-cookie** and ADR-009 is the **WebSocket realtime layer** — both Phase-1 build steps that landed ahead of this deferred candidate.)* See [[post-phase1-integration-tests]].
 
 **✅ RESOLVED (P2) — Two sources of truth for board ownership:** ~~owner is implied by both `boards.created_by` and a `board_members(BOARD_OWNER)` row~~ — `board_members.role` is now the **sole** ownership authority (ADR-006). `created_by` is a historical-creator trace only; the `canAdministerBoard()` proxy check and the `leave_board` creator guard have been replaced with role-based checks as part of UC-12e.
+
+**🟡 P1 — Password rules not enforced on the server (ADR-032, 2026-11-21):** `RegisterRequest.Password` is `required,min=8`. UC-01 now requires length + uppercase + lowercase + number + symbol, checked identically in the browser and the server (a browser-only rule protects nothing — the API is public). Same pass: return 400, not 500, for a password bcrypt cannot hash (over 72 bytes). Login is unchanged.
 
 **🔵 P2 — Transaction boundaries:** ensure create-board and create-workspace wrap their multi-insert in a single transaction (avoid orphaned rows on partial failure).
 

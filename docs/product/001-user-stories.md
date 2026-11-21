@@ -25,7 +25,7 @@ These hold for **all** stories unless a story says otherwise — not repeated ea
 ```
 Scenario: Successful registration
   Given no account exists for "a@x.com"
-  When I register with a valid email, name, and password (at least 8 characters)
+  When I register with a valid email, name, and a password that meets the password rules
   Then my account is created and I'm logged in (I receive my profile and a session token)
   And my password is never stored in readable form or returned to me
 
@@ -40,9 +40,19 @@ Scenario: Email already taken (different casing)
   Then I get a 409 CONFLICT (email matching is case-insensitive)
 
 Scenario: Invalid input
-  When I register with a malformed email OR a password shorter than 8 characters
+  When I register with a malformed email OR a password that misses any of the password rules
   Then I get a 400 VALIDATION_ERROR and no account is created
+
+Scenario: Password rules are shown before I submit
+  Given I am on the register form
+  Then I see the password rules as a checklist under the password field
+  And each rule ticks as soon as my password meets it
+
+Scenario: Password typed twice
+  When the password and its confirmation differ
+  Then the form tells me they don't match and nothing is sent
 ```
+> **Password rules** (added 2026-11-21, [ADR-032](../architecture/adr/adr-032-auth-form-errors-and-password-rules.md)): at least 8 characters, an uppercase and a lowercase letter, a number, and a symbol. They apply when an account is created, not at sign-in, so a password set earlier keeps working. They are a deliberate product choice against NIST SP 800-63B-4, which forbids composition rules; ADR-032 records why and what NIST asks for instead. The confirmation field is checked in the browser only — the API still takes one `password`. Exact character definitions: spec UC-01.
 
 ### US-02 — Login (UC-02) · P1
 **As** a returning user, **I want** to log in, **so that** I can get back into my workspaces.

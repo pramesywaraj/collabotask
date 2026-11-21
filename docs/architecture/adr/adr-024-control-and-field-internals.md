@@ -1,6 +1,6 @@
 # ADR-024: Control and Field Internals
 
-- **Status:** Accepted
+- **Status:** Accepted — **its open question settled by [ADR-032](adr-032-auth-form-errors-and-password-rules.md)** (2026-11-21): a wrong password on Login is reported by a `Form message` just above the button, in `type.body` and `color.destructive-text`. **§5's Register password-minimum note superseded by the same ADR**: Register shows four password rules as a live checklist instead (`type.meta` rows, glyph and text in `color.muted-foreground` / `color.done` / `color.destructive-text`). §5's other rows stand.
 - **Date:** 2026-11-20
 - **Scope:** The inside of one field and one control in the app zone: the gap between a field's label, box and message; the size of an icon inside a control and its gap from the label; how the focus ring's 2px offset is drawn; what fills an input's box; and what *pressed* looks like on a filled button. **Extends [ADR-017](adr-017-ui-foundations.md) §9; supersedes nothing.** It closes the focus-ring item [ADR-023](adr-023-spacing-between-objects.md) *Out of scope* deferred to this stage, and gives [ADR-018](adr-018-state-vocabulary.md) §6's *pressed* (15) a value for a filled button, where §6 gives values only for an edge. No code is written here.
 
@@ -106,6 +106,8 @@ No new value. Recorded because each is a choice a later screen will copy.
 | The invalid box edge | `color.destructive` at `border.width` | ADR-018's ledger, state 36 |
 | Inline title editing (37) | `type.title` in a `size.control-height` box | A 28px line fits: 36 − 28 leaves 4 above and below at Fine, 44 − 28 leaves 8 at Coarse, so ADR-022 §3's "height and a centred line, no vertical padding token" holds |
 
+> **The error-message row's last sentence is superseded.** Register no longer has a single password-minimum note. [ADR-032](adr-032-auth-form-errors-and-password-rules.md) (2026-11-21) §4 shows four password rules as a checklist: Phosphor `Circle` / `Check` / `X` at `size.icon`, with the rule in `type.meta` in `color.muted-foreground` / `color.done` / `color.destructive-text`, rows `spacing.list-gap` apart. A **form-level** message, which this table never covered, is `type.body` in `color.destructive-text` (ADR-032 §1).
+
 **No space is reserved for an error message.** It appears below the box, and the form grows by 24px at Fine (8 gap + a 16px line). Reserving the slot would leave 24px of permanent space under every field for an error most people never see. It would also need a typed height in Penpot, since a hidden child takes no room in a flex layout. The cost: the button moves down when an error appears.
 
 ---
@@ -147,6 +149,7 @@ Rejected in §5.
 - **Button kinds other than primary.** Login has one button and it is primary, so the Button has one axis, `State`. Secondary, ghost and destructive become a second axis when a screen needs one; §3 already says which pressed rule each takes.
 - **Whether the inline title editor also shows the ring.** State 37 is drawn as *"the `--input` boundary doing the editing job"*, without the ring. Browsers match `:focus-visible` on any focus of a text input, so in code it would show both. Board 2.6 settles which.
 - **Where a wrong password is reported on Login.** A failed sign-in is not about one field, and neither inventory §1.1 nor the two parts give it a home. Board 2.1 is drawn at first arrival and does not need it yet; a later pass on 2.1 or Stage 4's Register does.
+  > *Settled 2026-11-21 by [ADR-032](adr-032-auth-form-errors-and-password-rules.md) §1:* a `Form message` part, one line of `type.body` in `color.destructive-text` inside the fields stack, just above the button. Its board shows Login straight after a 401.
 - **The spinner's motion.** Motion stays code-only ([ADR-020](adr-020-design-tool-penpot.md) §3; inventory §4.3). The file draws Phosphor's `CircleNotch` at rest.
 - **The Astro landing page** and **Phase-2 deferrals.** Untouched.
 
