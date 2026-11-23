@@ -7,7 +7,7 @@
   - *Your boards* sits `spacing.list-gap` above its rows
   - the user row's avatar takes the slot's place
 
-  The parts and 2.4's six boards are drawn. Everything else stands as written.
+  The parts and 2.4's six boards are drawn. **§5's user menu drawn by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): your face, name and email, then *Sign out*, 224 wide, opening upward from the user row with its left edge on the row's. Below 640 it is a bottom sheet whose head is you. §10.8's `color.scrim` dims behind every dialog and sheet. Everything else stands as written.
 - **Date:** 2026-11-21
 - **Scope:** A side menu (the **sidebar**) in the app zone. It settles:
   - what the sidebar holds, and which screens show it

@@ -1,6 +1,6 @@
 # ADR-030: The Toast
 
-- **Status:** Accepted
+- **Status:** Accepted — **§3's *no action button* superseded for one toast by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): after you archive the board you're on, the toast offers *Undo*, as US-12c and ADR-021 §1 promise. §3's *Phase 1 has no undo* was written without US-12c in view. The Toast part gains that look in Stage 5's group e, with where a toast sits and the wordings for states 4, 27 and 32. Every other toast is unchanged.
 - **Date:** 2026-11-20
 - **Scope:** The toast's surface and geometry: four new tokens in six entries, and five values reused by rule. Also its one appearance, its close button, the three access-revoked wordings, where losing a workspace lands you, and the Toast part's build. **Extends [ADR-017](adr-017-ui-foundations.md) §9**: the code gains `--toast`, `--toast-foreground` and `--toast-width`. **Supersedes [ADR-018](adr-018-state-vocabulary.md) §10's row 26 for one of its three reasons only**: after `removed_from_workspace` the app goes to `/workspaces`, not to the workspace. It settles the toast's own design and the access-revoked wordings, which ADR-018 and [ADR-021](adr-021-design-inventory-corrections.md) left out of scope. The other toasts' wordings and the toast's placement stay deferred. It also **corrects** [ADR-022](adr-022-form-control-geometry.md)'s *Out of scope* claim that a toast needs no size token.
 

@@ -80,7 +80,7 @@ Scenario: Authenticated
   When I request my profile while logged in
   Then I get my id, email, name, and avatar
 ```
-> **Where it appears:** the user menu in the app bar — name, email, initials, and Log out. There is no profile *page* in Phase 1 and nothing here is editable, because no endpoint changes any of it; editing arrives with avatar uploads in Phase 2 ([ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md), PRD §5.1).
+> **Where it appears:** the user menu, at the bottom of the sidebar on a workspace and a board, and in the app bar on the workspaces list — name, email, initials, and Sign out (*Sign out* pairs with *Sign in*; [ADR-040](../architecture/adr/adr-040-menus-and-the-confirmation.md) §11). There is no profile *page* in Phase 1 and nothing here is editable, because no endpoint changes any of it; editing arrives with avatar uploads in Phase 2 ([ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md), PRD §5.1).
 
 ---
 

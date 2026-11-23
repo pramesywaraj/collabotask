@@ -176,6 +176,13 @@ client.interceptors.response.use(
 
 The WS event reaches the originating client too (SRS §5.2 broadcast rule includes sender). If the server adjusted the position (e.g. rebalanced fractional positions), this corrects the optimistic state silently.
 
+**Confirmed actions that take you somewhere else are not optimistic** ([ADR-040](adr/adr-040-menus-and-the-confirmation.md) §13). Deleting a card or a column follows the flow above: the confirmation closes at once and the object is in flight. *Delete workspace*, *Archive board* and *Leave board* wait instead. The confirm button goes Busy until the response arrives, and then:
+- **after *Delete workspace*:** navigate to `/workspaces`, with no toast. If the remembered workspace names this one, clear it first
+- **after *Archive board*:** navigate to `/workspaces/:wsId`, with a toast that offers *Undo*. *Undo* is the same request with `is_archived: false` (US-12c; ADR-040 §5)
+- **after *Leave board*:** navigate to `/workspaces/:wsId`, with no toast, since leaving by choice shows nothing (ADR-030)
+
+On a failure the dialog stays open with its button back at rest, and the error is reported as any other mutation's.
+
 ---
 
 ## WS event routing
