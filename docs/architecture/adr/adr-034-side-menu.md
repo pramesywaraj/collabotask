@@ -1,6 +1,13 @@
 # ADR-034: The Side Menu — a Workspace Sidebar Beside 2.4 and the Board
 
-- **Status:** Accepted — **§10.10 completed after acceptance** (2026-11-21): from 1024 up, the board glides with the sidebar when you hide or show it, which narrows [ADR-018](adr-018-state-vocabulary.md) §8's rule 3 for that one case (the note under §10.10). **§9 gains one rule after acceptance** (2026-11-21): the shortcut does nothing while a card or a column is being dragged (the note under §9). Everything else stands as written.
+- **Status:** Accepted — **§10.10 completed after acceptance** (2026-11-21): from 1024 up, the board glides with the sidebar when you hide or show it, which narrows [ADR-018](adr-018-state-vocabulary.md) §8's rule 3 for that one case (the note under §10.10). **§9 gains one rule after acceptance** (2026-11-21): the shortcut does nothing while a card or a column is being dragged (the note under §9). **Its one open question, and question 4 for its parts, settled by [ADR-035](adr-035-sidebar-loading-failure-and-switcher-mark.md)** (2026-11-21):
+  - on a cold load the switcher and the board rows are row-sized blocks
+  - on a load failure, *Your boards didn’t load.* in rose, then a *Try again* refresh row
+  - the open switcher's workspace rows keep the empty slot, and a still plum dot (`size.dot` 8) marks the selected one
+  - *Your boards* sits `spacing.list-gap` above its rows
+  - the user row's avatar takes the slot's place
+
+  The parts and 2.4's six boards are drawn. Everything else stands as written.
 - **Date:** 2026-11-21
 - **Scope:** A side menu (the **sidebar**) in the app zone. It settles:
   - what the sidebar holds, and which screens show it
@@ -397,4 +404,9 @@ Done before 2.5 is drawn.
 
 ## Operational note
 
-Nothing drawn yet. The Penpot transparency check (§13) and anything found while drawing go here.
+**The transparency check (2026-11-21): a Penpot colour token takes transparency.** Three throwaway tokens went into `theme-light`, each bound to a rectangle's fill:
+- `rgba(12, 10, 9, 0.32)`: accepted. The fill reads `#0c0a09` with its own opacity at 0.32. The layer's opacity stays unset, so §7.5's binding check sees a bound fill and reports nothing.
+- `#0C0A0952`, an 8-digit hex: accepted, but `52` is 82 ÷ 255, so the opacity comes out at 0.3216.
+- `rgb(12 10 9 / 0.32)`, the form §13 writes: **refused** as an invalid token value.
+
+The token's resolved value leaves the alpha out (it reports `#0c0a09`), so check the fill, not the token. **`color.scrim` is stored as `rgba(12, 10, 9, 0.32)` in `theme-light` and `rgba(0, 0, 0, 0.6)` in `theme-dark`.** A shape bound to it read `#000000` at 0.6 after the switch to Dark. The code keeps §13's form, since the refusal comes from Penpot's parser, not from CSS. The probes were removed, and the five entries are in the file (194 → 199).

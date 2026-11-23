@@ -1,6 +1,6 @@
 # ADR-027: The Column Header
 
-- **Status:** Accepted
+- **Status:** Accepted — **the *Operational note* is corrected by [ADR-036](adr-036-one-sided-rules-as-inset-shadows.md)** (2026-11-22): the rule was missing from the canvas too, not only from exports, because Penpot draws no per-side stroke width. The header's rule is now drawn as `shadow.rule-bottom` and shows in exports. Every decision here stands.
 - **Date:** 2026-11-20
 - **Scope:** The inside of the column header: how far its contents sit from its edges, and the gap between its title, count and `⋯`. That is one new token and one reuse bound by a rule. Also the `⋯`'s glyph, tap area and visibility, and the Column header part's build. **Extends [ADR-017](adr-017-ui-foundations.md) §9 and supersedes nothing.** ADR-017 §2 fixed the header's outside: it shares the panel's fill, and its bottom rule is load-bearing. [ADR-019](adr-019-responsive-touch-scope.md) §7 fixed its height. Neither said what is inside it. The code gains no CSS variable.
 
