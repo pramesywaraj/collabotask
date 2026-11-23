@@ -246,3 +246,21 @@ Values, all computed: drag-over `#D6D3D1` at **1.37:1** against the panel (the d
 **Two channels have no Phase-1 render site, both recorded rather than fixed:** the archive icon (archived boards are filtered out of the list and 404 on every access path, so Unarchive is unreachable too) and `--done`/emerald (cards have no status field; a column titled "Done" is free text).
 
 Figma covers both densities without doubling: the state values turn out to be **density-independent** — every one is a colour, an opacity, a stroke weight or a duration — so a second two-mode collection carries only ADR-019 §7's seven numbers, states are component variants rather than frames, and the frame budget is the fine set plus exactly one 390×844 phone board, since layout is a breakpoint and cannot be produced by flipping a mode.
+
+---
+
+## Design file, Stages 1 to 4 ✅ drawn 2026-11-23
+
+[ADR-020](architecture/adr/adr-020-design-tool-penpot.md) (the tool) · [ADR-021](architecture/adr/adr-021-design-inventory-corrections.md) to [ADR-039](architecture/adr/adr-039-drag-and-phone-board.md) · [design-file-inventory.md](architecture/design-file-inventory.md) §7 is the record · Penpot `Collabotask App`, which is **not in git**
+
+The design file holds the foundations board, **19 parts** and **all fifteen whole-screen boards**, each built from the parts, with the extra boards some states need (2.3 and 2.4's states, 2.12's two wordings, 2.14 as a card drag and a column drag, 2.15's drag board). **210 tokens** in five sets and two theme groups, so every board flips Light ↔ Dark and Fine ↔ Coarse by switching a theme, never by redrawing.
+
+**Question 4 was asked before every stage: "which values here have no token, and which choices were never made?"** It fired at seventeen stages out of seventeen, and each answer became an ADR before anything was drawn. With the inventory's corrections (ADR-021) and the side menu (ADR-034), that is nineteen ADRs, ADR-021 to ADR-039, most decided by the user on a rendered page with every option shown in both themes.
+
+Things drawing found that reading would not have:
+- **The skeleton was invisible** in Light: `--muted` is the column's own colour (ADR-029).
+- **No one-sided rule had ever drawn.** Penpot saves per-side stroke widths and draws none of them, so 54 rules became inset shadows (ADR-036).
+- **Late dates were told apart by colour alone**, failing WCAG 1.4.1, so they now carry words (ADR-037).
+- **The phone's card count**, the one assumed number in ADR-019 §7, was checked by eye: 5 whole cards and 44px of the sixth (ADR-039).
+
+Every board passes the binding check (inventory §7.5), which finds typed-in values that should be tokens, apart from the card `⋯` glyph, whose size has no token. Next is Stage 5, the ~18 overlays.
