@@ -1,6 +1,6 @@
 # ADR-037: The Board at Rest — the Header Gap, the Rail, the App Bar, Add Card, Late Dates and the Empty Column
 
-- **Status:** Accepted
+- **Status:** Accepted — **§2's *"the columns' tops touch it"* reworded by [ADR-038](adr-038-board-states-group-d.md)** (2026-11-23): the columns' tops touch whatever is above them, which on 2.7 is the read-only banner. Everything else stands as written.
 - **Date:** 2026-11-23
 - **Scope:** Question 4 for board 2.5, *Board — at rest*, the reference frame for the rest of Stage 4. It settles:
   - the space between a column's header and its first card

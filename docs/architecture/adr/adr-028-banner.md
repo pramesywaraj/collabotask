@@ -1,6 +1,6 @@
 # ADR-028: The Banner
 
-- **Status:** Accepted — **the bottom rule is redrawn by [ADR-036](adr-036-one-sided-rules-as-inset-shadows.md)** (2026-11-22). It was built as a per-side stroke, which Penpot never draws, so in Dark the file's banner had no lower edge. It is now `shadow.rule-bottom`. Every decision here stands.
+- **Status:** Accepted — **the bottom rule is redrawn by [ADR-036](adr-036-one-sided-rules-as-inset-shadows.md)** (2026-11-22). It was built as a per-side stroke, which Penpot never draws, so in Dark the file's banner had no lower edge. It is now `shadow.rule-bottom`. **Placed on 2.7 by [ADR-038](adr-038-board-states-group-d.md)** (2026-11-23): under the board's rail, with the columns' tops touching its bottom rule. Every decision here stands.
 - **Date:** 2026-11-20
 - **Scope:** The read-only banner's surface and geometry: one new token, and five reuses each bound by a rule. Also its one appearance, its wording, and the Banner part's build. **Extends [ADR-017](adr-017-ui-foundations.md) §9 and supersedes nothing.** [ADR-018](adr-018-state-vocabulary.md) §10 and [ADR-019](adr-019-responsive-touch-scope.md) (*What ADR-018 inherits*, item 3) fixed that the banner is persistent and cannot be dismissed. [ADR-021](adr-021-design-inventory-corrections.md) §6 fixed that it carries Join. None of them said what it is drawn on or how big it is. It also **corrects** [`design-file-inventory.md`](../design-file-inventory.md) §4.2, which listed an appearance nobody can see. The code gains no CSS variable.
 

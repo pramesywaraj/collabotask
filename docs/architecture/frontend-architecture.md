@@ -61,7 +61,7 @@ src/
     hooks/               ← useDebounce, useClickOutside
   routes/                ← React Router v7 file-based route modules
   lib/
-    api.ts               ← axios instance (base URL, credentials, CSRF interceptor, 401 redirect)
+    api.ts               ← axios instance (base URL, credentials, CSRF interceptor, 401 → session-ended flag)
     queryClient.ts       ← TanStack Query client (stale times, retry config)
     wsStore.ts           ← Zustand: WS connection + room management + presence
     uiStore.ts           ← Zustand: modals, drag state, toasts
@@ -86,7 +86,7 @@ routes/
 
 **The sidebar's layout route** (`workspaces.$wsId.tsx`, [ADR-034](adr/adr-034-side-menu.md)) wraps 2.4 and the board, so the sidebar stays mounted as you move between them. When it opens, it writes the remembered workspace to `localStorage`, keyed by user id. 2.3 is `workspaces._index.tsx`, so it sits outside that layout and has no sidebar.
 
-**The entry route** (`_index.tsx`, `/`) reads the remembered workspace and redirects there, or to `/workspaces` if there is none. Sign-in lands on `/`. `/workspaces` itself never redirects, so *All workspaces* always reaches 2.3. If the remembered workspace's detail is refused (403 or 404), the value is cleared and the app goes to `/workspaces`. After `removed_from_workspace` it is cleared too, if it names that workspace.
+**The entry route** (`_index.tsx`, `/`) reads the remembered workspace and redirects there, or to `/workspaces` if there is none. Sign-in lands on `/`, unless it carries a `next` path from 2.13 (*axios instance*, below). `/workspaces` itself never redirects, so *All workspaces* always reaches 2.3. If the remembered workspace's detail is refused (403 or 404), the value is cleared and the app goes to `/workspaces`. After `removed_from_workspace` it is cleared too, if it names that workspace.
 
 The `_authenticated.tsx` layout route:
 1. Runs `clientLoader` on every navigation into the authenticated subtree.
@@ -111,6 +111,7 @@ TanStack Query cache              Zustand
 ['kanban', boardId]  ←── patched  uiStore.dragging { cardId, sourceColumnId }
 ['board-members', boardId]        uiStore.toasts
 ['invitees', boardId]             uiStore.sidebarOpen  ← persisted (localStorage)
+                                  uiStore.sessionEnded ← set by the 401 handler (2.13)
 ```
 
 **`['boards', wsId]` has two readers.** 2.4's Active grid shows all of it. The sidebar shows only the boards whose `access_status` is `JOINED`, filtered in a selector, so the request is made once ([ADR-034](adr/adr-034-side-menu.md) §8). It is refetched after you join, leave, create, archive or unarchive a board, and patched when the open board's `BOARD_UPDATED`, `BOARD_ARCHIVED` or `ACCESS_REVOKED` arrives.
@@ -142,17 +143,24 @@ client.interceptors.request.use(config => {
 // Global 401 handler — mid-session expiry only.
 // Profile calls are excluded: _authenticated.tsx clientLoader owns first-load 401s
 // so they go through React Router's redirect, not a hard navigation.
+// It does not navigate: it raises a flag, and the authenticated layout shows 2.13 (ADR-038 §13).
 client.interceptors.response.use(
   res => res,
   err => {
     const isProfileCall = err.config?.url?.includes('/user/profile')
     if (err.response?.status === 401 && !isProfileCall) {
-      window.location.href = '/login'
+      useUiStore.getState().setSessionEnded(true)
     }
     return Promise.reject(err)
   }
 )
 ```
+
+**Session expired, 2.13 ([ADR-038](adr/adr-038-board-states-group-d.md) §13).** Replaced 2026-11-23: the handler used to assign `window.location.href = '/login'`, which looked like a crash and lost the page you were on.
+- While `uiStore.sessionEnded` is set, `_authenticated.tsx` renders the 2.13 page in place of its outlet and closes the WebSocket. Nothing moves until the person presses *Sign in*.
+- *Sign in* goes to `/login?next=<path>`, where `<path>` is the current `location.pathname + location.search`, URL-encoded.
+- After a successful sign-in, Login navigates to `next` **only if it is a same-site path**: a string that starts with `/` and not with `//` or `/\`. Anything else is ignored, and sign-in lands on `/` as before. This check stops an open redirect.
+- First-load 401s are unchanged: the `clientLoader` still throws `redirect('/login')`.
 
 ---
 
