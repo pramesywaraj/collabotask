@@ -1,6 +1,6 @@
 # ADR-036: One-Sided Rules Are Drawn as Inset Shadows
 
-- **Status:** Accepted
+- **Status:** Accepted — *Out of scope*'s **rule on a shape that needs another shadow met for the first time by [ADR-037](adr-037-board-at-rest.md)** (2026-11-23): the `Add card` row binds `shadow.focus-ring`, so the top rule it shows while stuck to a long column's bottom sits on a `Footer` wrapper, as suggested here. Everything here stands as written.
 - **Date:** 2026-11-22
 - **Scope:** How the design file draws a line along one edge of a shape: the sidebar's right edge, the bottom line of the app bar, the column header, the banner and the sidebar's top row, and the line above the sidebar's user row. That is **three tokens, six entries** (200 → 206). **The design file only: the code is unchanged.** It **replaces the drawing method** in three earlier operational notes, and changes no decision in any of them:
   - [ADR-023](adr-023-spacing-between-objects.md)'s first two paragraphs (per-side stroke widths, and the order to build them in)

@@ -1,6 +1,6 @@
 # ADR-033: The Workspace Screens — Tiles, the Active / Archived Switch, an Outline Button, and Empty-State Illustrations
 
-- **Status:** Accepted — **§2's app bar contents and §4's tile counts superseded by [ADR-034](adr-034-side-menu.md), on 2.4 only** (2026-11-21). On 2.4, *CollaboTask* and the user menu move into the sidebar, and the bar holds the show/hide button and the title *All boards*. With the sidebar open, the grid shows 4 tiles across at 1440 and 2 at 1024. 2.3 keeps §2 and §4 as written. Everything else stands as written.
+- **Status:** Accepted — **§2's app bar contents and §4's tile counts superseded by [ADR-034](adr-034-side-menu.md), on 2.4 only** (2026-11-21). On 2.4, *CollaboTask* and the user menu move into the sidebar, and the bar holds the show/hide button and the title *All boards*. With the sidebar open, the grid shows 4 tiles across at 1440 and 2 at 1024. 2.3 keeps §2 and §4 as written. **§8's empty flavour 5 given its wording by [ADR-037](adr-037-board-at-rest.md)** (2026-11-23): *No cards yet.*, one line with no illustration, as §8 says. Everything else stands as written.
 - **Date:** 2026-11-21
 - **Scope:** Boards 2.3 Workspaces and 2.4 Workspace detail (Stage 4, group b). It settles:
   - the surface both screens sit on, which [ADR-029](adr-029-skeleton-block.md) §4 left open
