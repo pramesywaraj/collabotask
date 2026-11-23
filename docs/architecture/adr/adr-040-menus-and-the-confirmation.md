@@ -1,6 +1,6 @@
 # ADR-040: The Menus and the Confirmation — Stage 5, Group a
 
-- **Status:** Accepted
+- **Status:** Accepted — **The card ⋯'s *Move card to…* extended by [ADR-041](adr-041-the-card-drawers-pickers.md)** (2026-11-23): picking it turns the menu into the Move picker in the same place, the popover from 640 up and the bottom sheet below. The same ADR lays §2's surface in the card drawer's flow, without its shadow, as the inline picker. Everything else stands as written.
 - **Date:** 2026-11-23
 - **Scope:** Question 4 for Stage 5's group a: the workspace ⋯, the board ⋯ (with *Add column* first below 640), the column ⋯ and its inline rename, the card ⋯, the user menu, and the destructive confirmation (state 38) they open. It settles:
   - the menu as a popover from 640 up and as a bottom action sheet below 640, once, for every later group

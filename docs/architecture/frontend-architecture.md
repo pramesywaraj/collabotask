@@ -183,6 +183,10 @@ The WS event reaches the originating client too (SRS §5.2 broadcast rule includ
 
 On a failure the dialog stays open with its button back at rest, and the error is reported as any other mutation's.
 
+**A card's due date is a day, not a moment** ([ADR-041](adr/adr-041-the-card-drawers-pickers.md) §12; SRS §3.6). Send the picked day as `` `${day}T00:00:00Z` `` and read it back as `due_date.slice(0, 10)`. Never pass it through `new Date()` for display, or a teammate in another time zone sees a different day. The date wording function (ADR-037 §5, ADR-038 §6) compares that day with the viewer's local today, written as `YYYY-MM-DD`. Clearing sends `due_date: null`.
+
+**Move card to… is one component in three places** (ADR-041 §1–§3; ADR-019 §6). In the card drawer it expands in place under *Column*. From the card ⋯, picking *Move card to…* closes the `DropdownMenu` and opens a `Popover` on the same trigger from 640 up, or replaces the bottom `Sheet`'s content below 640. `M` on a focused card opens the `Popover` at the card. It asks for a column, then a place, and picking the place sends the move, with the target position computed exactly as a drop computes it (UC-15). After a move from the board, focus follows the card to its new place and a polite live region says where it went (*Moved to Done, at the bottom.*). From the drawer, the drawer stays open.
+
 ---
 
 ## WS event routing

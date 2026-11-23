@@ -213,6 +213,7 @@ Error shape:
 }
 ```
 - All timestamps are **UTC, ISO-8601** (e.g. `2024-01-30T11:30:00Z`).
+- **One exception in meaning, not in format: a card's `due_date` is a calendar day, not a moment.** Clients send the day at midnight UTC (`2026-11-24T00:00:00Z`) and read it back by its date part (`2026-11-24`), never through the reader's local clock, so every teammate sees the same day whatever their time zone. The server stores and returns it unchanged. Decided by ADR-041 §12 (2026-11-23).
 
 ---
 
@@ -519,7 +520,7 @@ COMMIT;
 
 #### UC-14: Create Card
 - **API:** `POST /…/columns/:column_id/cards` · Auth
-- **Request:** `{ "title", "description"?, "assigned_to"?, "due_date"? }` — title required, max 500. `assigned_to` **must be a board member** (assignment = participation, §2.8; see §9 #7).
+- **Request:** `{ "title", "description"?, "assigned_to"?, "due_date"? }` — title required, max 500. `assigned_to` **must be a board member** (assignment = participation, §2.8; see §9 #7). `due_date` is a calendar day, sent as `YYYY-MM-DDT00:00:00Z` (§3.6).
 - **WS:** `CARD_CREATED`.
 
 #### UC-15: Move Card (Drag & Drop)
@@ -535,7 +536,7 @@ WHERE id=$card RETURNING *;
 - **WS:** `CARD_MOVED`.
 
 #### UC-16: Update Card
-- **API:** `PATCH /…/cards/:card_id` · `{ "title"?, "description"?, "assigned_to"?, "due_date"? }` (assigned_to nullable to unassign; if set, **must be a board member** — §2.8, else 400 `ErrAssigneeNotBoardMember`). **WS:** `CARD_UPDATED`.
+- **API:** `PATCH /…/cards/:card_id` · `{ "title"?, "description"?, "assigned_to"?, "due_date"? }` (assigned_to nullable to unassign; if set, **must be a board member** — §2.8, else 400 `ErrAssigneeNotBoardMember`; due_date nullable to clear, and when set a calendar day sent as `YYYY-MM-DDT00:00:00Z`). **WS:** `CARD_UPDATED`.
 - **Assignee validation (Decision B):** the board-membership gate fires **only on a newly-set assignee** (`assigned_to` present and non-null). An *unchanged* existing assignee is never re-validated — it is re-resolved display-only for the response — so a stale assignee (one who since left the board) never blocks an unrelated edit (e.g. a title fix). Honesty of existing assignments is maintained by the unassign cascade (UC-10/UC-12d), not the write-time check.
 
 #### UC-17: Delete Card
