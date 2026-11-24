@@ -411,7 +411,9 @@ Scenario: I archive the board I'm currently looking at
   When I archive it
   Then I'm returned to the workspace with a confirmation that offers Undo
   And Undo unarchives it and puts the board back in the normal list
+  And Undo takes me back to the board
   And anyone else who had it open is told the board is no longer available
+  And if I undo while they're still on that screen, they're taken back to the board too
 
 Scenario: Finding an archived board again
   Given a board in this workspace is archived
@@ -421,6 +423,8 @@ Scenario: Finding an archived board again
   And trying to open an archived board still fails (404) — archived boards are not browsable
 ```
 > Where Unarchive is reached from is settled by [ADR-021](../architecture/adr/adr-021-design-inventory-corrections.md). The unarchive endpoint, its activity record and its broadcast already existed; what was missing was a list an archived board appears in.
+>
+> The two Undo lines were added 2026-11-24 by [ADR-044](../architecture/adr/adr-044-the-sidebar-sliding-over-and-the-toast.md) §10–§11. Undo is the unarchive request itself, so nothing new is built on the server. The teammates' return is best effort: someone whose connection dropped in between can't rejoin an archived board's room, so they stay on the "no longer available" screen.
 
 ### US-12d — Remove Someone from a Board (UC-12d) · P1
 **As** a board owner or workspace admin, **I want** to remove a member from a board, **so that** I can manage who's involved.

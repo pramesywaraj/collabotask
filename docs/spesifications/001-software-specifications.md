@@ -482,6 +482,7 @@ WHERE b.id=$board AND (
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/archive` · Auth · **can_administer_board**
 - **Request:** `{ "is_archived": true|false }`
 - **WS:** `BOARD_ARCHIVED` / `BOARD_UNARCHIVED`.
+- **Archiving evicts no one.** It is not among UC-19b's three evictions, so the board's room stays connected and `BOARD_UNARCHIVED` reaches anyone still on the board's page. A `JOIN_BOARD` for an archived board is refused, since `CheckViewAccess` 404s it, so a connection that drops while the board is archived cannot rejoin until it is unarchived. A repeat of either value is a no-op 200 that writes no activity. *(Recorded 2026-11-24 by [ADR-044](../architecture/adr/adr-044-the-sidebar-sliding-over-and-the-toast.md) §10–§11: the archive toast's Undo is this request with `false`, and the client relies on the open room to bring teammates back from the "gone" screen. No code change.)*
 
 #### UC-12d: Remove Board Member
 - **API:** `DELETE /api/v1/workspace/:workspace_id/board/:board_id/member` · Auth · **can_administer_board**

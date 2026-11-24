@@ -7,7 +7,7 @@
   - *Your boards* sits `spacing.list-gap` above its rows
   - the user row's avatar takes the slot's place
 
-  The parts and 2.4's six boards are drawn. **§5's user menu drawn by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): your face, name and email, then *Sign out*, 224 wide, opening upward from the user row with its left edge on the row's. Below 640 it is a bottom sheet whose head is you. §10.8's `color.scrim` dims behind every dialog and sheet. Everything else stands as written.
+  The parts and 2.4's six boards are drawn. **§5's user menu drawn by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): your face, name and email, then *Sign out*, 224 wide, opening upward from the user row with its left edge on the row's. Below 640 it is a bottom sheet whose head is you. §10.8's `color.scrim` dims behind every dialog and sheet. **§4's slide-over drawn, and its *never stacks on another layer* clarified, by [ADR-044](adr-044-the-sidebar-sliding-over-and-the-toast.md)** (2026-11-24): it is drawn on the phone, closed and with the switcher open, and focus opens on the current row. Nothing opens the panel from inside another layer, which stays true, but one layer opens over it: below 640 the user menu is the bottom sheet over a second dimming. *Out of scope*'s *Drawing the slide-over panel* is done. Everything else stands as written.
 - **Date:** 2026-11-21
 - **Scope:** A side menu (the **sidebar**) in the app zone. It settles:
   - what the sidebar holds, and which screens show it

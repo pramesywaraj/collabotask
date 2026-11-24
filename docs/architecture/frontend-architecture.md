@@ -178,7 +178,7 @@ The WS event reaches the originating client too (SRS §5.2 broadcast rule includ
 
 **Confirmed actions that take you somewhere else are not optimistic** ([ADR-040](adr/adr-040-menus-and-the-confirmation.md) §13). Deleting a card or a column follows the flow above: the confirmation closes at once and the object is in flight. *Delete workspace*, *Archive board* and *Leave board* wait instead. The confirm button goes Busy until the response arrives, and then:
 - **after *Delete workspace*:** navigate to `/workspaces`, with no toast. If the remembered workspace names this one, clear it first
-- **after *Archive board*:** navigate to `/workspaces/:wsId`, with a toast that offers *Undo*. *Undo* is the same request with `is_archived: false` (US-12c; ADR-040 §5)
+- **after *Archive board*:** navigate to `/workspaces/:wsId`, with a toast that offers *Undo*. *Undo* is the same request with `is_archived: false` (US-12c; ADR-040 §5). It shows *Undoing…*, then invalidates `['boards', wsId]` and navigates back to the board; a 200 with no change counts as done ([ADR-044](adr/adr-044-the-sidebar-sliding-over-and-the-toast.md) §10)
 - **after *Leave board*:** navigate to `/workspaces/:wsId`, with no toast, since leaving by choice shows nothing (ADR-030)
 
 On a failure the dialog stays open with its button back at rest, and the error is reported as any other mutation's.
@@ -200,6 +200,11 @@ On a failure the dialog stays open with its button back at rest, and the error i
 
 **Adding a column** ([ADR-042](adr/adr-042-the-forms.md) §14; UC-13). *Add column* appends a client-only draft column, scrolls the board to it, and focuses its header field. Enter, or blur with a name, calls UC-13, and the server's column replaces the draft. Escape, or blur when empty, drops it. No dialog is involved.
 
+**Toasts** ([ADR-044](adr/adr-044-the-sidebar-sliding-over-and-the-toast.md)). One shadcn Sonner `Toaster`, re-pointed as ADR-030 §8 says: `position="bottom-right"`, both offsets `var(--screen-x)`, `gap={8}`, `visibleToasts={3}`, `expand`, `duration={Infinity}`, ADR-030's close button. Up to three stack, newest at the bottom; a fourth removes the oldest; one `id` per wording, so a repeat shows once; changing page dismisses them all, then the navigation's own toast shows. A toast never takes focus. Forms and lists never toast: their failures are the `Form message`.
+- **A refused board change** goes through one helper: restore the snapshot, `failureToast(verb, name, error)` (*Couldn’t move “X”.* and one of five reasons, ADR-044 §16), and after a 403 or 404 invalidate `['kanban', boardId]`, `['board', boardId]`, `['board-members', boardId]` and the workspace's detail, so the page renders 2.7, 2.8 or 2.12 if that is what is now true. The reason comes from the error: no response or `ECONNABORTED`; 404 or 409; 403 with `BOARD_JOIN_REQUIRED`; other 403; anything else.
+- **The open card deleted** (`CARD_DELETED` for it, or `COLUMN_DELETED` for its column): close the drawer, toast *“X” was deleted.*
+- **The slide-over below 1024** is the `Sidebar` sheet (ADR-034 §14): `onOpenAutoFocus` focuses the row with `aria-current`. Below 640 the user menu is a bottom `Sheet` opened inside it, a second overlay over the first.
+
 **Lists of people** ([ADR-043](adr/adr-043-the-lists.md)). The team list and a board's members list use `FormFrame` with *Close* in place of the form's buttons. A list's scroll region stops at eight rows: `max-h-[calc(8*var(--control-height)+7*var(--list-gap))] overflow-y-auto`, and a filter (names and emails) appears above eight people. One `PersonRow` renders an Avatar, the name and *(you)* over `` `${role} · ${email}` ``, and a slot for a ⋯ (`DropdownMenu`) or an *Add* button. Every list sorts you first, then by name with `localeCompare`.
 - **The team** is UC-05b's member list, refetched each time the list opens. Workspace roles have no WebSocket event, so a role change or removal refetches it. Role changes apply on the server's answer (the row shows *Saving…*); removing, leaving, making an owner and demoting yourself go through the confirmation first.
 - **A board's members** are UC-12's roster. For the board's owner and workspace admins, UC-11b's candidates add a second group: `is_board_member` false, less you. *Add* posts `{ user_ids: [id] }`, one person per press, and a 409 counts as done. `MEMBER_ADDED`, `MEMBER_REMOVED` and `OWNERSHIP_TRANSFERRED` patch `['board-members', boardId]`, so the list and the assignee picker stay live.
@@ -218,6 +223,9 @@ BOARD_UPDATED / BOARD_ARCHIVED / BOARD_UNARCHIVED
 MEMBER_ADDED / MEMBER_REMOVED / OWNERSHIP_TRANSFERRED
   → queryClient.setQueryData(['kanban' | 'board' | 'board-members', boardId], applyEvent)
      (MEMBER_REMOVED also arrives when someone leaves the board, UC-10 — ADR-043 §14, backend item 5)
+     (BOARD_ARCHIVED renders 2.12 and keeps the room joined; BOARD_UNARCHIVED for that board
+      refetches it, shows the board again and toasts “X” was unarchived. — ADR-044 §11. Best effort:
+      a socket that reconnects meanwhile is refused the archived room.)
 
 USER_JOINED / USER_LEFT / ACTIVE_USERS
   → wsStore.presence update (Zustand only — no REST equivalent)

@@ -264,3 +264,21 @@ Things drawing found that reading would not have:
 - **The phone's card count**, the one assumed number in ADR-019 §7, was checked by eye: 5 whole cards and 44px of the sixth (ADR-039).
 
 Every board passes the binding check (inventory §7.5), which finds typed-in values that should be tokens, apart from the card `⋯` glyph, whose size has no token. Next is Stage 5, the ~18 overlays.
+
+---
+
+## Design file, Stage 5 ✅ drawn 2026-11-24
+
+[ADR-040](architecture/adr/adr-040-menus-and-the-confirmation.md) to [ADR-044](architecture/adr/adr-044-the-sidebar-sliding-over-and-the-toast.md) · [design-file-inventory.md](architecture/design-file-inventory.md) §7 is the record · Penpot `Collabotask App`, which is **not in git**
+
+Every overlay is drawn, in five groups, each settling its kind of container once: the menus and the confirmation (ADR-040), the card drawer's pickers (ADR-041), the forms (ADR-042), the lists (ADR-043), and the sidebar sliding over and the toast (ADR-044). A new page, `Overlays`, holds **47 screens**, each with one overlay open over a copy of a whole-screen board. **222 tokens** and **34 parts**: twelve token entries and fifteen parts came with Stage 5.
+
+**Question 4 was asked before every group**, and each answer became an ADR before anything was drawn. Most choices were made by the user on a rendered page, with every option drawn in both themes; across the five groups the user took most recommendations and overrode a handful, each recorded in its ADR with its cost.
+
+Things drawing and the backend code found that reading the design docs would not have:
+- **A phone could have stacked a full-height sheet on a full-height sheet** (*Move card to…* from the drawer). Every picker now opens in place (ADR-041).
+- **Nothing refused removing the workspace owner**, and **leaving a board told open lists nothing**. Two backend items, the SRS edited first (ADR-043).
+- **Archiving evicts no one**, so the archive toast's *Undo* can bring teammates back from the "gone" screen, best effort (ADR-044).
+- **A workspace role change has no live message**, so a demoted admin learns of it from a 403; the board now reloads after a refused change (ADR-044).
+
+Every board passes the binding check (inventory §7.5) apart from the card `⋯` glyph and the calendar's today, whose sizes have no token. Next is Stage 6, the final check.
