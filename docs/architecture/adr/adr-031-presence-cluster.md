@@ -1,6 +1,6 @@
 # ADR-031: The Presence Cluster
 
-- **Status:** Accepted — *Out of scope*'s **app bar settled by [ADR-037](adr-037-board-at-rest.md)** (2026-11-23): the board's name on the left, then the cluster, *Add column* and the board ⋯ on the right, `spacing.inline-gap` apart. Everything here stands as written.
+- **Status:** Accepted — *Out of scope*'s **app bar settled by [ADR-037](adr-037-board-at-rest.md)** (2026-11-23): the board's name on the left, then the cluster, *Add column* and the board ⋯ on the right, `spacing.inline-gap` apart. *Out of scope*'s **overflow list settled by [ADR-043](adr-043-the-lists.md)** (2026-11-24): a popover under the cluster from 640 up and a bottom sheet below, headed *8 here now*; you first, then the cluster's order, so its first five rows are the five faces; a face and a name per row, no ring and no overlap. Everything here stands as written.
 - **Date:** 2026-11-20
 - **Scope:** The presence cluster in the board's app bar. It covers five new tokens in nine entries, the round seat that holds `+N`, which faces the cluster shows and in what order, where *Reconnecting…* goes, the part's three appearances, and its build. It **extends [ADR-017](adr-017-ui-foundations.md) §9**: the code gains `--avatar-neutral`, `--avatar-overlap` and `--seat-padding-x`. It **supersedes three things and nothing else in them**:
   - [ADR-018](adr-018-state-vocabulary.md) §10's *"flat `--muted` fill"* for the reconnecting faces, which become `--avatar-neutral`.

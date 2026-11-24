@@ -200,6 +200,11 @@ On a failure the dialog stays open with its button back at rest, and the error i
 
 **Adding a column** ([ADR-042](adr/adr-042-the-forms.md) §14; UC-13). *Add column* appends a client-only draft column, scrolls the board to it, and focuses its header field. Enter, or blur with a name, calls UC-13, and the server's column replaces the draft. Escape, or blur when empty, drops it. No dialog is involved.
 
+**Lists of people** ([ADR-043](adr/adr-043-the-lists.md)). The team list and a board's members list use `FormFrame` with *Close* in place of the form's buttons. A list's scroll region stops at eight rows: `max-h-[calc(8*var(--control-height)+7*var(--list-gap))] overflow-y-auto`, and a filter (names and emails) appears above eight people. One `PersonRow` renders an Avatar, the name and *(you)* over `` `${role} · ${email}` ``, and a slot for a ⋯ (`DropdownMenu`) or an *Add* button. Every list sorts you first, then by name with `localeCompare`.
+- **The team** is UC-05b's member list, refetched each time the list opens. Workspace roles have no WebSocket event, so a role change or removal refetches it. Role changes apply on the server's answer (the row shows *Saving…*); removing, leaving, making an owner and demoting yourself go through the confirmation first.
+- **A board's members** are UC-12's roster. For the board's owner and workspace admins, UC-11b's candidates add a second group: `is_board_member` false, less you. *Add* posts `{ user_ids: [id] }`, one person per press, and a 409 counts as done. `MEMBER_ADDED`, `MEMBER_REMOVED` and `OWNERSHIP_TRANSFERRED` patch `['board-members', boardId]`, so the list and the assignee picker stay live.
+- **Who's here** is shadcn's `Popover` from 640 up (`align="end"`, `sideOffset={4}`, `w-[var(--menu-width)]`) and a bottom `Sheet` below 640. It renders `wsStore.presence` for the board: you first, then the cluster's order. It shows no email, since presence frames carry none.
+
 ---
 
 ## WS event routing
@@ -212,6 +217,7 @@ COLUMN_CREATED / COLUMN_UPDATED / COLUMN_MOVED / COLUMN_DELETED
 BOARD_UPDATED / BOARD_ARCHIVED / BOARD_UNARCHIVED
 MEMBER_ADDED / MEMBER_REMOVED / OWNERSHIP_TRANSFERRED
   → queryClient.setQueryData(['kanban' | 'board' | 'board-members', boardId], applyEvent)
+     (MEMBER_REMOVED also arrives when someone leaves the board, UC-10 — ADR-043 §14, backend item 5)
 
 USER_JOINED / USER_LEFT / ACTIVE_USERS
   → wsStore.presence update (Zustand only — no REST equivalent)
@@ -280,3 +286,4 @@ No new state primitives needed unless the data has no REST equivalent (presence-
 - [ADR-009](./adr/adr-009-websocket-realtime-layer.md) — WebSocket backend design (Broadcaster port, hub, presence model)
 - [ADR-034](./adr/adr-034-side-menu.md) — the sidebar on 2.4 and the board (the shared layout route, the `/` redirect to the last workspace, the persisted open state)
 - [ADR-042](./adr/adr-042-the-forms.md) — the forms (one `FormFrame`, trimming and validation, the stored board colour, the invite batch, the draft column)
+- [ADR-043](./adr/adr-043-the-lists.md) — the lists (the eight-row cap, `PersonRow`, adding one person at a time, the roster patches, the presence popover)

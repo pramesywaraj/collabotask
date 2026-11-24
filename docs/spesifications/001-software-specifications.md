@@ -323,7 +323,11 @@ ORDER BY w.created_at DESC;
 
 #### UC-06: Remove Member from Workspace
 - **API:** `DELETE /api/v1/workspace/:workspace_id/member/remove/:user_id` · Auth · **Workspace ADMIN**
-- **Flow (1 transaction):** verify requester admin; cannot remove self here → remove from `workspace_members` → cascade-remove from all `board_members` in this workspace → **clear the user's card assignments on every board in this workspace** (assignment = participation, §2.8), capturing affected card ids.
+- **Guards:** requester is not a workspace admin → **403** `FORBIDDEN`. Target is the requester → **400** (`ErrCannotRemoveYourself`; leave instead, UC-06c). **Target is the workspace owner → 403 `FORBIDDEN` (`ErrCannotRemoveOwner`)**, as demoting the owner already is (UC-06b): a workspace must always have an owner who is in it (§2.6), and only the owner can delete it (UC-06d). Target is not a member → **404**.
+
+> **Added 2026-11-24 by [ADR-043](../architecture/adr/adr-043-the-lists.md) §8.** The owner guard is **not built yet**: `RemoveMember` refuses only yourself, so today an admin can remove the owner, after which nobody can delete the workspace. It is one of the open Phase-1 backend items. The team list never offers it either way.
+
+- **Flow (1 transaction):** verify requester admin; cannot remove self or the owner here → remove from `workspace_members` → cascade-remove from all `board_members` in this workspace → **clear the user's card assignments on every board in this workspace** (assignment = participation, §2.8), capturing affected card ids.
 - **Note:** if the removed user was a `BOARD_OWNER`, the board becomes owner-less-but-safe (§2.6).
 - **WS:** after commit, `MEMBER_REMOVED` per affected board, plus `CARD_UPDATED` (`assigned_to: null`) per cleared card to that board's live room.
 ```sql
@@ -434,7 +438,9 @@ ON CONFLICT (board_id, user_id) DO NOTHING RETURNING *;
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/leave` · Auth · board member
 - **Guard:** a `BOARD_OWNER` cannot leave without transferring first (board would lose its owner title intentionally → instead require transfer). Admin leaving just drops involvement; their **governance** authority remains.
 - **Flow (1 transaction):** delete the `board_members` row → **clear the user's card assignments on this board** (§2.8 — applies to admins too: they lose participation, keep governance), capturing affected card ids.
-- **WS:** after commit, `USER_LEFT` + `CARD_UPDATED` (`assigned_to: null`) per cleared card.
+- **WS:** after commit, the leaver is evicted silently (`USER_LEFT` on their 1→0 edge, no `ACCESS_REVOKED`), then **`MEMBER_REMOVED`** to the room, then `CARD_UPDATED` (`assigned_to: null`) per cleared card — the same evict-first order as UC-12d, without the revocation frame.
+
+> **Changed 2026-11-24 by [ADR-043](../architecture/adr/adr-043-the-lists.md) §14.** `USER_LEFT` only says a connection closed, so on its own it cannot tell an open members list or assignee picker that the person is no longer on the board; assigning them would then fail with 400 (`ErrAssigneeNotBoardMember`). Leaving a workspace (UC-06c) already sends `MEMBER_REMOVED`. **Not built yet**: `LeaveBoard` sends only the silent eviction and the cleared cards. One of the open Phase-1 backend items.
 
 #### UC-11: Invite Member(s) to Board
 - **API:** `POST /api/v1/workspace/:workspace_id/board/:board_id/invite` · Auth · **can_administer_board** (BOARD_OWNER OR workspace ADMIN)
@@ -571,7 +577,7 @@ WHERE id=$card RETURNING *;
   - `EvictUser(board, X)` — removed from / leaves a board (UC-10, UC-12d).
   - `EvictExcept(board, members+admins)` — board flips **WORKSPACE→PRIVATE** (UC-12b): evict everyone not a member/admin. (`PRIVATE→WORKSPACE` needs no eviction — access only widens.)
   - `EvictUserFromRooms(X, workspace's boards)` — removed from / leaves the workspace (UC-06, UC-06c); also closes the **workspace-visible-watcher leak** (X watching a WORKSPACE board without membership → not in `AffectedBoardIDs`).
-- **Involuntary** loss (removal, flip) sends the evicted connection a new **`ACCESS_REVOKED{board_id, reason}`** event (§5.2) — its single "leave this board view" signal. **Voluntary** leaves (UC-10, UC-06c) evict **silently** (`USER_LEFT` covers the room). Cascades use **evict-first ordering** (evict → `MEMBER_REMOVED` → per-card `CARD_UPDATED`) so room broadcasts exclude the departing user.
+- **Involuntary** loss (removal, flip) sends the evicted connection a new **`ACCESS_REVOKED{board_id, reason}`** event (§5.2) — its single "leave this board view" signal. **Voluntary** leaves (UC-10, UC-06c) evict **silently**: no `ACCESS_REVOKED`, and `USER_LEFT` covers presence. Both still send `MEMBER_REMOVED`, so rosters update (UC-10's since 2026-11-24, ADR-043 §14; not built yet). Cascades use **evict-first ordering** (evict → `MEMBER_REMOVED` → per-card `CARD_UPDATED`) so room broadcasts exclude the departing user.
 
 #### UC-20: Optimistic UI
 - Client applies the change immediately, sends to server; on success other clients update, on rejection the originating client reverts and shows an error. Broadcasts **include the sender** (§5.2) — a REST mutation carries no WS connection identity to exclude, and the sender's other tabs must update; clients dedupe against their authoritative REST response.
@@ -645,7 +651,7 @@ All messages share the envelope `{ "type": "<TYPE>", "payload": { … } }`. Time
 | `ACTIVE_USERS` | `{ board_id, users:[{id,name,avatar_url}] }` | sent to joiner (UC-19) |
 | `ACCESS_REVOKED` | `{ board_id, reason }` — `reason ∈ { "removed_from_board", "board_made_private", "removed_from_workspace" }` (closed set; source of truth `common.EvictReason`). A **silent/voluntary** eviction sends **no** frame, so `reason` is never empty on the wire. | sent to an **involuntarily** evicted connection (UC-19b) — board removal (UC-12d), workspace removal (UC-06), or WORKSPACE→PRIVATE flip (UC-12b). Voluntary leaves evict silently. |
 | `MEMBER_ADDED` | `{ board_id, user{id,email,name,avatar_url,joined_at}, role }` | UC-11 |
-| `MEMBER_REMOVED` | `{ board_id, user_id }` | UC-12d; workspace cascade (UC-06/06c) |
+| `MEMBER_REMOVED` | `{ board_id, user_id }` | UC-12d; UC-10 (ADR-043, not built yet); workspace cascade (UC-06/06c) |
 | `OWNERSHIP_TRANSFERRED` | `{ board_id, from_user_id, to_user_id }` (`from_user_id` may be `null` — orphan-safe transfer) | UC-12e |
 | `BOARD_UPDATED` | `{ board_id, fields:{…} }` | UC-12b |
 | `BOARD_ARCHIVED` / `BOARD_UNARCHIVED` | `{ board_id }` | UC-12c |
