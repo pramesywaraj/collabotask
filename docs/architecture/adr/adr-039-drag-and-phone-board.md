@@ -1,6 +1,6 @@
 # ADR-039: Drag and the Phone Board — the Short Column, Add Card During a Drag, the Lifted Card, and Add Column Below 640
 
-- **Status:** Accepted — **§7's board ⋯ menu drawn by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): below 640 it is a bottom sheet headed by the board's name, with *Add column* first (board *2.15 + board ⋯*). Everything else stands as written.
+- **Status:** Accepted — **§7's board ⋯ menu drawn by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): below 640 it is a bottom sheet headed by the board's name, with *Add column* first (board *2.15 + board ⋯*). **The board ⋯'s *Add column* below 640 given its result by [ADR-042](adr-042-the-forms.md)** (2026-11-24): it scrolls the board to its end, where a new column appears with its header a field, as the bar's *Add column* does from 640 up. There is no create-column form (board *2.15 + adding a column*). Everything else stands as written.
 - **Date:** 2026-11-23
 - **Scope:** Question 4 for Stage 4's group e: board 2.14, *Drag*, and board 2.15, *Phone board*, each drawn as a difference from 2.5 ([ADR-037](adr-037-board-at-rest.md)). It settles:
   - how far down a short column takes a dragged card, which ADR-037 left to 2.14

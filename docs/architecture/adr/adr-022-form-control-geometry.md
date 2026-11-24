@@ -1,6 +1,6 @@
 # ADR-022: Form-Control Geometry
 
-- **Status:** Accepted
+- **Status:** Accepted — **§3's *no `spacing.control-padding-y`* narrowed by [ADR-042](adr-042-the-forms.md)** (2026-11-24): a field that grows with its text has no height to centre in, so the token exists, 8 at Fine and 12 at Coarse, as (`size.control-height` − 20) ÷ 2. A control of fixed height still centres its one line and doesn't use it. The visibility choice rows use it too. Everything else stands as written.
 - **Date:** 2026-11-20
 - **Scope:** The size of form controls in the app zone — control height, horizontal padding, the gap between stacked fields, and the width of a form container. **Extends [ADR-017](adr-017-ui-foundations.md) §9; supersedes nothing.** §9 was *silent* on control geometry, not wrong about it. Every value ADR-017 fixes is carried unchanged, and nothing in ADR-018, ADR-019, ADR-020 or ADR-021 moves. No code is written here.
 
@@ -64,6 +64,8 @@ Both heights clear their floor the way ADR-017 says cards do — by construction
 ### 3. Vertical padding is not a token
 
 **There is deliberately no `spacing.control-padding-y`.** A control with a fixed height and a centred single line does not need one — the vertical space is a consequence of the height, not an independent value. In Penpot it is a flex layout with `alignItems: "center"`; in code it is the `h-9` / `items-center` pattern shadcn already uses for Button and Input.
+
+> **Narrowed by [ADR-042](adr-042-the-forms.md)** (2026-11-24). This holds for a control of fixed height. A field of several lines grows with its text, so it has no height to centre in: its text sits `spacing.control-padding-y` from the top and bottom, 8 at Fine and 12 at Coarse, so its first line lands where a one-line field's does.
 
 Adding the token would create a second way to express the same measurement, and the two would eventually disagree. Same reasoning as ADR-017 §2's refusal of a `--column-header` colour: a value that is not separable should not be named.
 

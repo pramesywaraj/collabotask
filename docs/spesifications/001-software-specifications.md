@@ -268,7 +268,7 @@ SELECT id, email, password_hash, name, avatar_url FROM users WHERE email = $1;
 
 #### UC-03: Create Workspace
 - **API:** `POST /api/v1/workspace` · Auth
-- **Request:** `{ "name", "description"? }` — name: not empty, max 255.
+- **Request:** `{ "name", "description"? }` — name: 2 to 255 characters (`min=2,max=255`); description: optional, **at most 1,000 characters**, as a board's *(recorded 2026-11-24 by [ADR-042](../architecture/adr/adr-042-the-forms.md); already built: the request binding has no maximum, but `CreateWorkspaceInput` validates `max=1000` in the usecase, so a longer one is 400 `VALIDATION_ERROR`)*.
 - **Response 201:** workspace object `{ id, name, description, owner_id, role, member_count, board_count, created_at, updated_at }`
 - **Flow (1 transaction):** insert workspace (owner=user) → insert `workspace_members(role=ADMIN)`.
 ```sql
@@ -379,6 +379,14 @@ UPDATE workspace_members SET role=$3 WHERE workspace_id=$1 AND user_id=$2 RETURN
 > values are the eight identity hues in ADR-017 §3.3. The API validates length only (`min=4,max=8`),
 > so out-of-palette values are accepted — clients map any unrecognised value, including the legacy
 > default, to a palette entry derived from the board id. No backend change is required.
+>
+> **What the app stores** *(added 2026-11-24 by [ADR-042](../architecture/adr/adr-042-the-forms.md))*: each hue's **deep value** from ADR-017 §3.3, as a 7-character hex string —
+> terracotta `#744539`, ochre `#746239`, olive `#627439`, sage `#39744F`, teal `#397472`, steel `#395974`,
+> periwinkle `#394174`, mauve `#74395F`. It names the hue; it is not drawn as is, because a hue's deep and
+> pale values swap with the theme. A stored value is read by **exact match, ignoring case**; anything else,
+> including the legacy `#0079BF`, maps from the board id as above. Create a board always sends one of the
+> eight (the first hue no active board in the workspace uses), so the server's legacy default only applies
+> to boards made by a direct API call. No backend change.
 
 #### UC-07: Create Board
 - **API:** `POST /api/v1/workspace/:workspace_id/board` · Auth · **any workspace member**

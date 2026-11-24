@@ -1,6 +1,6 @@
 # ADR-041: The Card Drawer's Pickers — Stage 5, Group b
 
-- **Status:** Accepted
+- **Status:** Accepted — **§7's mark spent once more by [ADR-042](adr-042-the-forms.md)** (2026-11-24): the chosen colour in Create a board takes the 1px plum edge, and the chosen visibility row takes plum text, a plum edge and a plum dot. §15's drawer at 390 is also the frame for every form below 640. Everything else stands as written.
 - **Date:** 2026-11-23
 - **Scope:** Question 4 for Stage 5's group b: the three pickers the card drawer opens, *Due date*, *Assignee* and *Move card to…*, and the case [ADR-038](adr-038-board-states-group-d.md) left open, the phone's sheet over a sheet. It settles:
   - where *Move card to…* opens from the drawer and from the board, and how it asks for a place

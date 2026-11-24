@@ -187,6 +187,19 @@ On a failure the dialog stays open with its button back at rest, and the error i
 
 **Move card to… is one component in three places** (ADR-041 §1–§3; ADR-019 §6). In the card drawer it expands in place under *Column*. From the card ⋯, picking *Move card to…* closes the `DropdownMenu` and opens a `Popover` on the same trigger from 640 up, or replaces the bottom `Sheet`'s content below 640. `M` on a focused card opens the `Popover` at the card. It asks for a column, then a place, and picking the place sends the move, with the target position computed exactly as a drop computes it (UC-15). After a move from the board, focus follows the card to its new place and a polite live region says where it went (*Moved to Done, at the bottom.*). From the drawer, the drawer stays open.
 
+**Forms** ([ADR-042](adr/adr-042-the-forms.md)). One `FormFrame` component renders a shadcn `Dialog` from 640 up (448 wide, no close button, `onInteractOutside` prevented, so pressing outside does nothing) and a full-height `Sheet` below, with *Close* in its head and one full-width button. Escape, *Cancel* and *Close* close it without asking. Every form follows the same rules:
+- **Trim every value before checking it and before sending it.** The server doesn't trim names or titles, so two spaces would pass a 2-character minimum.
+- **A minimum length is checked as you type; a missing value on submit.** The Primary button's *not satisfied* look comes from the same check. Fields stop at 255 characters (names, titles) and 1,000 (descriptions), so a too-long error never shows.
+- **A server failure is the `Form message`**, the last line above the buttons, and every value is kept. 403 after a role change has its own wording.
+- **Creating puts you inside what you made**: after *Create workspace*, `/workspaces/:newId`; after *Create board*, the new board.
+- **Board settings sends only what changed** (UC-12b's PATCH). Nothing changed closes the form with no request.
+
+**A board's colour** ([ADR-042](adr/adr-042-the-forms.md) §9; SRS §4.3). `background_color` stores the hue's deep value (`#744539` … `#74395F`). `hueFromBoard(board)` reads it by case-insensitive exact match and otherwise falls back to the hue derived from the board id. Create a board starts on `firstFreeHue(boards)`, the first hue in ADR-017 §3.3's order that no active board in the workspace uses (terracotta when all are used), computed from the board list the page already holds.
+
+**Inviting people** ([ADR-042](adr/adr-042-the-forms.md) §12–§13; UC-04). One malformed address makes the server fail the whole batch with a 400, so the address field splits input on commas, semicolons, spaces and new lines, lower-cases and trims each address, drops repeats, and checks each one as it becomes a chip. *Invite* is not satisfied while any chip is invalid or none exist. The 200 answer has a row per address. Added and already-a-member addresses leave the field, while addresses with no account stay as chips. A polite live region announces *2 of 4 added to Product Team.*
+
+**Adding a column** ([ADR-042](adr/adr-042-the-forms.md) §14; UC-13). *Add column* appends a client-only draft column, scrolls the board to it, and focuses its header field. Enter, or blur with a name, calls UC-13, and the server's column replaces the draft. Escape, or blur when empty, drops it. No dialog is involved.
+
 ---
 
 ## WS event routing
@@ -266,3 +279,4 @@ No new state primitives needed unless the data has no REST equivalent (presence-
 - [ADR-008](./adr/adr-008-auth-httponly-cookie.md) — httpOnly cookie auth (why no authenticated SSR; CSRF header requirement)
 - [ADR-009](./adr/adr-009-websocket-realtime-layer.md) — WebSocket backend design (Broadcaster port, hub, presence model)
 - [ADR-034](./adr/adr-034-side-menu.md) — the sidebar on 2.4 and the board (the shared layout route, the `/` redirect to the last workspace, the persisted open state)
+- [ADR-042](./adr/adr-042-the-forms.md) — the forms (one `FormFrame`, trimming and validation, the stored board colour, the invite batch, the draft column)

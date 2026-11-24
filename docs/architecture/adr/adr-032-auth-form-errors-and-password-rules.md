@@ -1,6 +1,6 @@
 # ADR-032: Where Login and Register Report Errors, and Register's Password Rules
 
-- **Status:** Accepted
+- **Status:** Accepted — **§8's rule 1 narrowed by [ADR-042](adr-042-the-forms.md)** (2026-11-24), for minimum lengths only: in the forms, a name or title shorter than its minimum shows its error while you type, which was the user's call. An empty field still waits for the press. Login and Register don't change, since their only minimum is the password, whose checklist already ticks as you type. **The Emerald ledger row widened by the same ADR**: an invite's *Added* uses the checklist's emerald check, and *no account* its rose ×. Everything else stands as written.
 - **Date:** 2026-11-21
 - **Scope:** Board 2.2 Register, and a second pass on 2.1 Login. It settles where every error on the two forms is reported, which [ADR-024](adr-024-control-and-field-internals.md) *Out of scope* left open for Login. It also records:
   - the two forms' wordings, including **Sign in** in place of *Log in*
@@ -150,6 +150,7 @@ They follow ADR-030's voice: say what happened and what to do, with no apology.
 The drawing depends on these rules, so they are recorded here, not left to the code.
 
 1. **Errors appear when the button is pressed**, not while you type and not when you leave a field. (The checklist's ticks are not errors; see 9.)
+   > *Narrowed by [ADR-042](adr-042-the-forms.md) (2026-11-24) for minimum lengths: in the other forms, a name or title shorter than its minimum shows its error as you type. An empty field still waits for the press.*
 2. The not-satisfied button can still be pressed, and pressing it runs the same checks. ADR-018 §5 already says nothing is disabled.
 3. On a failed press, **focus moves to the first field with an error**, top to bottom: name, email, password, confirm. After a 409 it moves to the email field.
 4. A field's error goes away as soon as its value passes. The taken-email error goes away when the email changes.
