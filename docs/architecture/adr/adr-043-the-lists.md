@@ -1,6 +1,6 @@
 # ADR-043: The Lists — Stage 5, Group d
 
-- **Status:** Accepted
+- **Status:** Accepted — **§9's flavour 6 drawn 2026-11-24**, after Stage 5's closing check found it in no screen and no part: §20's list had left it out. Both Members looks of the `List` part hold a hidden `Empty` line after *Not on the board yet*: *Everyone in Product Team is already on this board.* in `type.body` and `color.muted-foreground`, inset by `spacing.control-padding-x`. A copy on `List — states` shows it in place of the second group. No token and no part added; every decision here stands.
 - **Date:** 2026-11-24
 - **Scope:** Question 4 for Stage 5's group d: the workspace team list, board members, adding people to a board, handing a board over, and the presence list the cluster opens. It settles:
   - the list's frame, once, for every list: group c's 448 dialog from 640 up and the full-height sheet below, and how tall a list gets before it scrolls
