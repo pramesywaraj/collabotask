@@ -282,3 +282,5 @@ Things drawing and the backend code found that reading the design docs would not
 - **A workspace role change has no live message**, so a demoted admin learns of it from a 403; the board now reloads after a refused change (ADR-044).
 
 Every board passes the binding check (inventory §7.5) apart from the card `⋯` glyph and the calendar's today, whose sizes have no token. Next is Stage 6, the final check.
+
+**Regrouped 2026-11-25, before Stage 6** ([ADR-045](architecture/adr/adr-045-design-file-pages-by-area.md)): a screen on `Page 1` and what opens over it on `Overlays` were drawn far apart, so a developer couldn't tell which flow to build. The 73 boards now sit on three pages by area, **Account**, **Workspaces** and **Board**, one row per screen: at rest, its states, what opens over it, its phone versions last. 31 boards moved by copy and paste, each checked against its original before the original was deleted.
