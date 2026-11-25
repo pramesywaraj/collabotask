@@ -12,7 +12,7 @@ The frontend architecture is settled and documented (`docs/architecture/frontend
 
 Build order (spec §9.1): ① P0 fixes ✅ → ② positioning ✅ → ③ REST features ✅ → ③.5 cookie auth ✅ → ④ WebSocket ✅ → ⑤ integrity pass ✅ — **all closed.**
 
-Step ⑤ closed 2026-10-26 on branch `test/deferred-sql-tests` — **not yet merged.** The deferred repository-layer SQL tests are written (31 integration tests), the suite has been run end to end, and the Transactor carry-over items are all discharged. `-race` is clean after fixing a pre-existing shared-fixture race in `set_archived_test.go` (unit tree re-verified 8/8 on 2026-10-27; `tests/integration` verified 5/5 on 2026-10-26).
+Step ⑤ closed 2026-10-26 on branch `test/deferred-sql-tests`, **merged to `main` 2026-11-02 (PR #15).** The deferred repository-layer SQL tests are written (31 integration tests), the suite has been run end to end, and the Transactor carry-over items are all discharged. `-race` is clean after fixing a pre-existing shared-fixture race in `set_archived_test.go` (unit tree re-verified 8/8 on 2026-10-27; `tests/integration` verified 5/5 on 2026-10-26).
 
 **One open backend item:** five files fail `gofmt` — own branch, no rush, nothing enforces formatting. See `docs/handoff/handoff-integrity-pass-findings.md` › #3.
 
