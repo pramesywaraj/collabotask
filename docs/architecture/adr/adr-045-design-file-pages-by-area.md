@@ -1,6 +1,6 @@
 # ADR-045: The Design File's Pages, by Area of the App
 
-- **Status:** Accepted
+- **Status:** Accepted — **§1's page list, §5's page and §7's `Board` table superseded by [ADR-048](adr-048-board-page-split-in-four.md)** (2026-11-27): `Board` held 64% of the file's shapes and froze when worked by hand, so it is now four pages: Board, *Board — what opens over it*, Card and *Board — phone*, each row moved whole with its label. §3, §4, §6 and §8 stand.
 - **Date:** 2026-11-25
 - **Scope:** Where the screens and the overlays live in the Penpot file `Collabotask App`, so that a developer finds a screen and everything that opens over it in one place. It settles:
   - the pages and their order
@@ -29,6 +29,8 @@ Three ways were weighed (*Options considered*). The user chose to **split by are
 - **Workspaces**: 2.3 and 2.4, with their states and everything that opens over them.
 - **Board**: 2.5 to 2.15, with their states and everything that opens over them, the card drawer included. The pages are named by area, not by folder, so Board covers both `board/` and `card/`: the card drawer opens over the board.
 - *Account* was the user's pick over *Sign in*, which doesn't cover Register, and over *Auth*. In this app *auth* also reads as permissions: 2.7 read-only, 2.8 join gate and private boards, all of which live on Board or Workspaces.
+
+  > *2026-11-27:* the Board area is now **four pages**: Board (2.5 and its states, 2.7, 2.14), *Board — what opens over it*, Card (2.6) and *Board — phone* (2.15). See [ADR-048](adr-048-board-page-split-in-four.md) §1–§2.
 
 ### 2. Two pages renamed, one created
 
@@ -61,6 +63,8 @@ The ten workspace screens stayed where they were, now on Workspaces, and the oth
 ### 5. The phone's user menu stays on Board
 
 *2.15 + sidebar, user menu* is the third of three boards that show the phone's sidebar step by step, after *2.15 + sidebar* and *2.15 + sidebar, switching workspace*. Moving it alone would break that sequence. Profile and *Sign out* live in the user menu, so the Account page's user-menu row carries a note pointing to it: *On a phone it opens over the sidebar: Board page, row 2.15, “2.15 + sidebar, user menu”.*
+
+> *2026-11-27:* the row and its sequence moved together to **Board — phone**, and the note now names that page ([ADR-048](adr-048-board-page-split-in-four.md) §5).
 
 ### 6. Board names don't change
 
@@ -97,6 +101,8 @@ In a line, a desktop board starts 1640 after the one before it (1440 + 200), and
 | 2.7 Read-only board (5000) | *At rest, then the toast for an edit you can’t make.* | 5160: 2.7 Read-only board, *2.7 + an edit you can’t make* |
 | 2.14 Drag (6300) | *A card, then a column.* | 6460: 2.14 Drag — a card, 2.14 Drag — a column |
 | 2.15 Phone board (7600) | *At rest and dragging a card, then what opens over it.* | 7760: 2.15 Phone board, 2.15 Phone — dragging a card, *2.15 + board ⋯*, *+ delete column*, *+ adding a column*, *+ moving a card*, *Board members at 390*, *2.15 + who’s here*, *+ a move that didn’t stick*, *+ sidebar*, *+ sidebar, switching workspace*, *+ sidebar, user menu* |
+
+> *2026-11-27:* the `Board` table above is superseded. Its rows are now on four pages, each starting at 0, 0 with its label: see [ADR-048](adr-048-board-page-split-in-four.md) §2–§3, and inventory §7.2 for today's positions.
 
 ### 8. Adding a board later
 
