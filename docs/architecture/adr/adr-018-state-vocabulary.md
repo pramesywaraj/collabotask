@@ -104,6 +104,8 @@ Newly spent here: **skeleton** (§7) and **border colour** (§6) — ADR-017 res
 
 Opacity covers **1, 2, 6** — and covers them continuously. Pickup → drag-source → drop → pending → confirmed is one unbroken translucency, not two treatments handing off.
 
+> *2026-11-27:* the 4.70:1 above covers the **title and the meta row**. The Stage 6 check measured the avatar's initials on a card at `opacity.in-flight` at **2.38 / 3.92** (Light / Dark), and everything inside a dragged column's dimmed place between 2.44 and 4.44 in Light. [ADR-046](adr-046-stage-6-final-check.md) §1 **records both as an exception**: the object is inert, and a full-strength copy or the settled card replaces it. The title and the meta row keep 4.70:1.
+
 ### 4. Drag
 
 | State | Channel | Value |

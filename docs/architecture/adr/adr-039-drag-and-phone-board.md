@@ -64,6 +64,8 @@ The rejected options: *Add card* tinted with the body, which hides a long column
 - **The same three looks at column size**: the column's place at 60% (`opacity.in-flight` on the whole panel), a lifted copy with `shadow.dragged`, and a dashed outline the size of the dragged column where it will land.
 - **Nothing is tinted.** A column isn't dropped into anything.
 - **Every column keeps its own height.** §1 holds here too.
+
+> *2026-11-27:* the column's place at 60% has nothing inside it promoted to `color.foreground`, so its date, count, initials and *Add card* label measure 2.44 to 4.44:1 in Light (3.06 to 4.45 in Dark). [ADR-046](adr-046-stage-6-final-check.md) §1 **records this as an exception**: the lifted copy is at full strength, and what stays behind is a slot.
 - **Only from 640 up.** Below 640 a column moves with *Move left* and *Move right* in its ⋯ (ADR-021 §4).
 
 ### 5. The `Card` part gains `Armed` and `Lifted`

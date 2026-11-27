@@ -144,6 +144,8 @@ The column header's `DotsThree`, at `size.icon` in a `size.target-min` box, afte
 - **Where:** centred in the grid's place. A block with `spacing.section-gap` above and below holds the illustration, `spacing.illustration-gap` (16), and the sentence, centred, in `type.body` and `color.muted-foreground`.
 - **The one button is still the heading's** *Create workspace* or *Create board*. The empty state adds no button of its own.
 - **Size:** `size.illustration` 128, at both densities. A drawing is not a touch target.
+
+  > *2026-11-27:* **192**, not 128. [ADR-047](adr-047-illustration-size-192.md) supersedes this size and §9 rule 1's box. The line stays 2px, the colours are unchanged, and the shapes in the part now scale with their box.
 - **Colours:**
 
 | Token | Light | Dark | On the page | Ink on it |

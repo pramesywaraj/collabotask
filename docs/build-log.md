@@ -284,3 +284,28 @@ Things drawing and the backend code found that reading the design docs would not
 Every board passes the binding check (inventory §7.5) apart from the card `⋯` glyph and the calendar's today, whose sizes have no token. Next is Stage 6, the final check.
 
 **Regrouped 2026-11-25, before Stage 6** ([ADR-045](architecture/adr/adr-045-design-file-pages-by-area.md)): a screen on `Page 1` and what opens over it on `Overlays` were drawn far apart, so a developer couldn't tell which flow to build. The 73 boards now sit on three pages by area, **Account**, **Workspaces** and **Board**, one row per screen: at rest, its states, what opens over it, its phone versions last. 31 boards moved by copy and paste, each checked against its original before the original was deleted.
+
+---
+
+## Design file, Stage 6 ✅ checked 2026-11-27
+
+[ADR-046](architecture/adr/adr-046-stage-6-final-check.md) · [design-file-inventory.md](architecture/design-file-inventory.md) §7.5–§7.6 are the record · Penpot `Collabotask App`, which is **not in git**
+
+The final check ran 2026-11-25 to 2026-11-27 over all five pages and all four Theme × Density combinations. The binding check is **clean on every board**: about 26,000 shapes, and every row it returned is on the expected list. The flips looked at every page for text at the wrong size, text that doesn't fit and text too faint to read, and at the screens the ADRs say change most. **No token (222), no part (34), no board added.** The file is left in Light + Fine.
+
+Four findings, all taken as recommended:
+- **Initials on a dimmed card, and the contents of a dragged column's place, fall under 4.5:1** (2.38 to 4.44 in Light). ADR-018 measured only the title and meta row; `Card` gained the avatar later. **Recorded as an exception**, since the object is inert and a full-strength copy or the settled card replaces it (ADR-046 §1).
+- **Twelve documentation boards had no fill**, so their captions were 1.49:1 in Dark. Filled with `color.background`.
+- **The Count chip board draws three chips clipped.** Five repairs did not hold; the real screens are correct. Left as a known fault, and noted in the inventory.
+- **Four Penpot repairs**: the `List` head's padding mode, the `Form`'s clipped focus ring, one blank email chip, and the two `Footer` boards.
+
+**Not looked at by eye**, and said so in the ADR: 17 of Board's 30 desktop screens in Dark + Fine, and every part but `Button` in Dark + Fine. The data checks covered all of it.
+
+Things the check found that reading would not have:
+- **A page that isn't open reads every text as 0 × 0**, so a fit check passes everything on it, and an export draws stale text (*Add cc* for *Add column*).
+- **A flex board in *simple* padding mode ignores a different left padding.** The `List` head's 12 never applied.
+- **A board that clips its content cuts a focus ring**, which is a shadow.
+
+**This closes the design file.** What remains is ① scaffolding and the five backend items, in one pass before the frontend reaches the screens that need them.
+
+**Illustrations resized 2026-11-27** ([ADR-047](architecture/adr/adr-047-illustration-size-192.md)), after Stage 6 closed: the user tried to change `size.illustration` from 128 to 256 and only the wrapper grew, because the shapes inside were pinned to the top-left corner. The user looked at 1.5× and 2× on test copies of *2.4 Workspace detail — empty* and **chose 192**. All eight looks now scale with their box, the line stays 2px, the nine screens that show a drawing grew by 64px and still fit, and the part's own board was re-laid out. The code needs `--illustration-size: 192px` and a stroke that does not scale. No token added (222), no part (34).
