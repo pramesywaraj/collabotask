@@ -7,7 +7,7 @@
   - *Your boards* sits `spacing.list-gap` above its rows
   - the user row's avatar takes the slot's place
 
-  The parts and 2.4's six boards are drawn. **§5's user menu drawn by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): your face, name and email, then *Sign out*, 224 wide, opening upward from the user row with its left edge on the row's. Below 640 it is a bottom sheet whose head is you. §10.8's `color.scrim` dims behind every dialog and sheet. **§4's slide-over drawn, and its *never stacks on another layer* clarified, by [ADR-044](adr-044-the-sidebar-sliding-over-and-the-toast.md)** (2026-11-24): it is drawn on the phone, closed and with the switcher open, and focus opens on the current row. Nothing opens the panel from inside another layer, which stays true, but one layer opens over it: below 640 the user menu is the bottom sheet over a second dimming. *Out of scope*'s *Drawing the slide-over panel* is done. Everything else stands as written.
+  The parts and 2.4's six boards are drawn. **§5's user menu drawn by [ADR-040](adr-040-menus-and-the-confirmation.md)** (2026-11-23): your face, name and email, then *Sign out*, 224 wide, opening upward from the user row with its left edge on the row's. Below 640 it is a bottom sheet whose head is you. §10.8's `color.scrim` dims behind every dialog and sheet. **§4's slide-over drawn, and its *never stacks on another layer* clarified, by [ADR-044](adr-044-the-sidebar-sliding-over-and-the-toast.md)** (2026-11-24): it is drawn on the phone, closed and with the switcher open, and focus opens on the current row. Nothing opens the panel from inside another layer, which stays true, but one layer opens over it: below 640 the user menu is the bottom sheet over a second dimming. *Out of scope*'s *Drawing the slide-over panel* is done. **§10.1's *CollaboTask* superseded by [ADR-049](adr-049-the-logo.md)** (2026-11-28): the top row holds the button and the logo's lockup, the mark at 28 and the name at 17.5, at both densities. Everything else stands as written.
 - **Date:** 2026-11-21
 - **Scope:** A side menu (the **sidebar**) in the app zone. It settles:
   - what the sidebar holds, and which screens show it
@@ -176,6 +176,8 @@ These follow from WCAG 2.2 AA, PRD §5.4's target:
 Each of these was chosen on the rendered page. Only that choice changed between options, and every option was drawn in Light and Dark with the file's values.
 
 **10.1 Full height.** The sidebar runs from the top of the screen to the bottom. Its top row is `size.app-bar` (56) tall, with `spacing.screen-x` (16) at the sides, and holds the button and *CollaboTask* (`type.title`). Its bottom rule continues the app bar's. The app bar starts at the sidebar's edge. When the sidebar is hidden, the app bar runs the full width and the button sits at its left, at the same spot on screen. Below 1024 the slide-over panel is this same column. The cost: when the sidebar hides, the page title slides 240px left.
+
+> *2026-11-28:* the top row holds the button and **the logo's lockup** in place of *CollaboTask* in `type.title`: the mark at 28, a gap of 8 and the name at 17.5 in Poppins SemiBold, deep plum, at both densities, so it fits beside the 44 button at Coarse. See [ADR-049](adr-049-the-logo.md) §7.
 
 **10.2 Page white, with a rule.** The fill is `color.background`, with a `border.width` rule in `color.border` on its right. This is how the app bar is drawn.
 

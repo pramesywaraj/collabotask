@@ -57,7 +57,7 @@ src/
       components/        ← redirect logic only (login/register live in routes/)
       hooks/             ← useCurrentUser
   shared/
-    components/          ← Button, Modal, Avatar, Toast, Spinner (shadcn/ui wrappers)
+    components/          ← Button, Modal, Avatar, Toast, Spinner (shadcn/ui wrappers), Logo
     hooks/               ← useDebounce, useClickOutside
   routes/                ← React Router v7 file-based route modules
   lib/
@@ -66,6 +66,27 @@ src/
     wsStore.ts           ← Zustand: WS connection + room management + presence
     uiStore.ts           ← Zustand: modals, drag state, toasts
 ```
+
+---
+
+## The logo and the brand files
+
+[ADR-049](adr/adr-049-the-logo.md) settles the logo. The source files are in `brand/` at the repository's root.
+
+- **`shared/components/Logo.tsx`** draws the mark as an **inline SVG**, not an `<img>`, so its fills can read `--logo-still` and `--logo-moving` and follow Dark. The mark is `aria-hidden`. **The name is real text**, Poppins 600 in `--logo-name`, so a screen reader reads *CollaboTask*. It takes a `size`:
+  - **32 with a 20px name**: 2.3's app bar, and above the Sign in and Register forms
+  - **28 with a 17.5px name, at both densities**: the sidebar's top row, where it sits beside the toggle
+  - the gap is 8 in both (`gap-2`, the design file's `spacing.icon-gap`)
+  - below 24 the component draws the straight version, and it never goes below 16 (ADR-049 §2, §5)
+- **The browser and phone icons** are copied from `brand/` into **`public/`** in both the Vite app and the Astro landing, and linked in each `<head>`:
+  ```html
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  ```
+  The manifest lists `icon-192.png` and `icon-512.png` (`"purpose": "any"`), and `icon-512.png` again with `"purpose": "maskable"`.
+- **`logo.svg`, `logo-dark.svg` and `logo-mono.svg`** have the name outlined, so they need no font. They are for places outside the app: the README, emails, a link preview. The app itself uses `Logo.tsx`.
 
 ---
 

@@ -1,6 +1,6 @@
 # ADR-045: The Design File's Pages, by Area of the App
 
-- **Status:** Accepted — **§1's page list, §5's page and §7's `Board` table superseded by [ADR-048](adr-048-board-page-split-in-four.md)** (2026-11-27): `Board` held 64% of the file's shapes and froze when worked by hand, so it is now four pages: Board, *Board — what opens over it*, Card and *Board — phone*, each row moved whole with its label. §3, §4, §6 and §8 stand.
+- **Status:** Accepted — **§1's page list, §5's page and §7's `Board` table superseded by [ADR-048](adr-048-board-page-split-in-four.md)** (2026-11-27): `Board` held 64% of the file's shapes and froze when worked by hand, so it is now four pages: Board, *Board — what opens over it*, Card and *Board — phone*, each row moved whole with its label. §3, §4, §6 and §8 stand. **§1's page list extended by [ADR-049](adr-049-the-logo.md)** (2026-11-28): a `Brand` page, first in the file, holds the logo.
 - **Date:** 2026-11-25
 - **Scope:** Where the screens and the overlays live in the Penpot file `Collabotask App`, so that a developer finds a screen and everything that opens over it in one place. It settles:
   - the pages and their order
@@ -31,6 +31,8 @@ Three ways were weighed (*Options considered*). The user chose to **split by are
 - *Account* was the user's pick over *Sign in*, which doesn't cover Register, and over *Auth*. In this app *auth* also reads as permissions: 2.7 read-only, 2.8 join gate and private boards, all of which live on Board or Workspaces.
 
   > *2026-11-27:* the Board area is now **four pages**: Board (2.5 and its states, 2.7, 2.14), *Board — what opens over it*, Card (2.6) and *Board — phone* (2.15). See [ADR-048](adr-048-board-page-split-in-four.md) §1–§2.
+
+  > *2026-11-28:* a **Brand** page now comes first, before Foundations. It holds the logo: the `Logo` part, how it is built, its fixed colours and its rules. See [ADR-049](adr-049-the-logo.md) §8.
 
 ### 2. Two pages renamed, one created
 
