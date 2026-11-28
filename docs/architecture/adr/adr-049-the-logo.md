@@ -1,6 +1,13 @@
 # ADR-049: The Logo — Three Cards Make a C
 
-- **Status:** Accepted
+- **Status:** Accepted — **§7 drawn, and §8's fourth look added, after acceptance** (later on 2026-11-28):
+  - the `Logo` part's `Sidebar lockup` look (147 × 28)
+  - the lockup in all five `Sidebar` looks' top rows, after the toggle. All 48 copies followed: 1 on Account, 14 on Workspaces, 33 on the Board pages
+  - the full lockup on the left of 2.3's six app bars, where *CollaboTask* was
+  - the full lockup first in the form on 2.1, 2.2 and 2.13. The form's gap, `spacing.section-gap`, puts it 24 above the heading (the user's call). Register's form grows to 640 and still fits its board
+  - the Foundations catalogue's three rows, its title reading 228 and the theme table 70 each
+
+  The binding check on every board touched reports only the expected `Name`, at 20 and at 17.5. **Left as it is:** the mark's cards start 5px inside its box, so on the forms the logo sits 5px in from the heading's left edge. **Not looked at by eye:** the sidebar copies on the four Board pages, which were not opened. Their data reads `Toggle | Logo`.
 - **Date:** 2026-11-28
 - **Scope:** CollaboTask's logo, and what follows from it. It settles:
   - **the mark**: three cards set out as a C, one of them tilted, on a 32 × 32 grid, with a straight version for small sizes

@@ -317,4 +317,11 @@ Things the check found that reading would not have:
 - **In the repository:** `brand/` holds the SVGs, a favicon that switches with the browser's theme, the `.ico`, and the PNG app icons. The SVGs are written from the geometry. Penpot can neither outline text nor export it as shapes, so the name was outlined from Poppins with opentype.js, at Penpot's width and baseline.
 - **Found on the way:** a typed colour equal to its token's value keeps the binding, so the Light "fixed" copy would have turned Dark on a theme switch. It is unbound now.
 
-**Not yet:** the logo on the screens (the sidebar's top row, 2.3's bar, 2.1, 2.2, 2.13), the Foundations catalogue's three rows, and the link-preview image.
+**Drawn on the screens later on 2026-11-28:**
+- the part's `Sidebar lockup` look
+- the lockup in the five `Sidebar` looks, which all 48 copies followed across six pages
+- 2.3's six app bars
+- 2.1, 2.2 and 2.13, with the logo first in the form, 24 above the heading (the user's call)
+- the Foundations catalogue's three rows
+
+The binding check reports only the expected name text. **Not yet:** the link-preview image, with the landing page. Not looked at by eye: the sidebar copies on the four Board pages, which weren't opened.
